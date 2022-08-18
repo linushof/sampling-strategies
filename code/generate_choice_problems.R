@@ -1,5 +1,5 @@
 pacman::p_load(tidyverse)
-source("code/fun_generate_choice_problems.R") # call function for generating choice problems
+source("code/helper_functions/fun_generate_choice_problems.R") # call function for generating choice problems
 
 # generate 10,000 safe-risky choice problems
 

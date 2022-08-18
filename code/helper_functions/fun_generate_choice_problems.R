@@ -43,5 +43,5 @@ generate_choice_problems <- function(n, lower, upper) {
              ev_diff = round(x_ev - safe, 2),
              ev_ratio = round(x_ev/safe, 2)
       ) %>%
-      select(p_x_low, x_low, p_x_high, x_high, p_safe, x_ev, safe, ev_diff, ev_ratio) # sort features
+      select(p_x_low, x_low, p_x_high, x_high, x_ev, p_safe, safe, ev_diff, ev_ratio) # sort features
 }

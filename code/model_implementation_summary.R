@@ -40,7 +40,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
         if(attend == "r") {
           single_smpl <- choice_problems[problem, ] %>%
             mutate(attended = attend,
-                   r = sample(x = c(x_low, x_high), size = 1, prob = c(p_x_low, p_x_high)),
+                   r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)),
                    s = NA)
           psi <- param[[set, "psi"]] # to update the probability of sampling from r again
         } else {
@@ -92,7 +92,7 @@ simulation_summary <- param_list %>% map_dfr(as.list)
 # Data validation: 
 ## the hash function (sha-256 algorithm) must return the checksum displayed below. If not, the newly simulated data is not the same as the original data.
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
-if(checksum_simulation_summary != "8d6fbdd4a1af26bf10185be10cbf379a2161f57e1f4699f8c58036ef579c7377"){
+if(checksum_simulation_summary != "f7211d17408d8cd5ae8d0117530681bd3e3e93d370c96aa1b1759ebda838109a"){
   warning("\u2716 Mismatch between current and original data. Current checksum is: '", checksum_simulation_roundwise, "'")
 } else{cat(green("\u2713 Data validated. Current data matches the original data."))
 }

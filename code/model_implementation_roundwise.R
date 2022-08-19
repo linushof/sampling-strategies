@@ -49,7 +49,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
             single_smpl <- choice_problems[problem, ] %>%
               mutate(round = round,
                      attended = attend,
-                     r = sample(x = c(x_low, x_high), size = 1, prob = c(p_x_low, p_x_high)),
+                     r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)),
                      s = NA)
             psi <- param[[set, "psi"]] # to update the probability of sampling from r again
           } else {
@@ -72,7 +72,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
             single_smpl <- choice_problems[problem, ] %>%
               mutate(round = round,
                      attended = attend,
-                     r = sample(x = c(x_low, x_high), size = 1, prob = c(p_x_low, p_x_high)),
+                     r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)),
                      s = NA)
             psi <- theta[[set, "psi"]]
           } else {
@@ -140,7 +140,7 @@ simulation_roundwise <- param_list %>% map_dfr(as.list)
 # Data validation: 
 ## the hash function (sha-256 algorithm) must return the checksum displayed below. If not, the newly simulated data is not the same as the original data.
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
-if(checksum_simulation_roundwise != "d4cdd2eb149d1802a0173dddb615cb4d494d3081b00b4d50607f3c73e4a4f854"){
+if(checksum_simulation_roundwise != "953f04444507768b957e4f3ef93aa11649b6b1fde6734cc17dfa240bd4a2c1ca"){
   warning("\u2716 Mismatch between current and original data. Current checksum is: '", checksum_simulation_roundwise, "'")
 } else{cat(green("\u2713 Data validated. Current data matches the original data."))
 }

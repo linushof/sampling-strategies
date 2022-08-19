@@ -5,9 +5,9 @@ source("code/helper_functions/fun_generate_choice_problems.R") # call function f
 
 set.seed(349)
 initial_set <- generate_choice_problems(n = 10000, lower = 0, upper = 20)
-initial_set <- initial_set %>% mutate(rare = case_when(p_x_low >= .2 & p_x_low <= .8 ~ "none",
-                                                       p_x_low < .2 ~ "unattractive",
-                                                       p_x_low > .8 ~ "attractive"))
+initial_set <- initial_set %>% mutate(rare = case_when(p_r_low >= .2 & p_r_low <= .8 ~ "none",
+                                                       p_r_low < .2 ~ "unattractive",
+                                                       p_r_low > .8 ~ "attractive"))
 
 # select subset of 60 choice problems
 # stratified sampling of 20 choice problems with no/attractive/unattractive rare outcome

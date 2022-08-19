@@ -8,12 +8,12 @@ pacman::p_load(tidyverse)
 generate_choice_problems <- function(n, lower, upper) {
 
   # define function for computing a prospect's expected value (ev)
-  ## p_x_low: probability of the smaller risky outcome
-  ## x_low: smaller risky outcome
-  ## x_high: higher risky outcome
+  ## p_r_low: probability of the smaller risky outcome
+  ## r_low: smaller risky outcome
+  ## r_high: higher risky outcome
 
-  ev <- function(p_x_low, x_low, x_high) {
-    round(p_x_low * x_low + (1-p_x_low) * x_high, digits = 2)
+  ev <- function(p_r_low, r_low, r_high) {
+    round(p_r_low * r_low + (1-p_r_low) * r_high, digits = 2)
   }
 
   output <- vector("list", n)
@@ -22,11 +22,11 @@ generate_choice_problems <- function(n, lower, upper) {
   
   output %>%
     map(tibble, # create tibble for each choice problem
-        "names" = c("x_low", "safe", "x_high", "p_x_low"),
+        "names" = c("r_low", "safe", "r_high", "p_r_low"),
         "values" = c(runif(3, min = lower, max = upper) %>% # draw 3 outcomes
                        round(2) %>% 
-                        sort(), # sort and assign outcomes to omit dominance, i.e., x_low < safe < x_high
-                     runif(1, min = .01, max = .99) %>% # probability of x_low
+                        sort(), # sort and assign outcomes to omit dominance, i.e., r_low < safe < r_high
+                     runif(1, min = .01, max = .99) %>% # probability of r_low
                        round(2))
         ) %>%
 
@@ -37,11 +37,11 @@ generate_choice_problems <- function(n, lower, upper) {
 
       # add prospect features and compute and compare expected values
 
-      mutate(p_x_high = round(1-p_x_low, 2),
+      mutate(p_r_high = round(1-p_r_low, 2),
              p_safe = 1,
-             x_ev = ev(p_x_low, x_low, x_high),
-             ev_diff = round(x_ev - safe, 2),
-             ev_ratio = round(x_ev/safe, 2)
+             r_ev = ev(p_r_low, r_low, r_high),
+             ev_diff = round(r_ev - safe, 2),
+             ev_ratio = round(r_ev/safe, 2)
       ) %>%
-      select(p_x_low, x_low, p_x_high, x_high, x_ev, p_safe, safe, ev_diff, ev_ratio) # sort features
+      select(p_r_low, r_low, p_r_high, r_high, r_ev, p_safe, safe, ev_diff, ev_ratio) # sort features
 }

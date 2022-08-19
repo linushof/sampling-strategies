@@ -137,5 +137,13 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
 }
 simulation_roundwise <- param_list %>% map_dfr(as.list)
 
+# Data validation: 
+## the hash function (sha-256 algorithm) must return the checksum displayed below. If not, the newly simulated data is not the same as the original data.
+checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
+if(checksum_simulation_roundwise != "d4cdd2eb149d1802a0173dddb615cb4d494d3081b00b4d50607f3c73e4a4f854"){
+  warning("Mismatch between current and original data. Current checksum is: '", checksum_simulation_roundwise, "'")
+} else{cat(green("Data validated. Current data matches the original data."))
+}
+
 # safe as compressed data file
 write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")

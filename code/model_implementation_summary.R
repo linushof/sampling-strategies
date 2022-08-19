@@ -1,4 +1,4 @@
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, digest, crayon)
 source("R/helper_functions/fun_cumulative_stats.R") # call functions for computing cumulative stats
 
 # test set
@@ -93,8 +93,8 @@ simulation_summary <- param_list %>% map_dfr(as.list)
 ## the hash function (sha-256 algorithm) must return the checksum displayed below. If not, the newly simulated data is not the same as the original data.
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
 if(checksum_simulation_summary != "8d6fbdd4a1af26bf10185be10cbf379a2161f57e1f4699f8c58036ef579c7377"){
-  warning("Mismatch between current and original data. Current checksum is: '", checksum_simulation_summary, "'")
-} else{cat(green("Data validated. Current data matches the original data."))
+  warning("\u2716 Mismatch between current and original data. Current checksum is: '", checksum_simulation_roundwise, "'")
+} else{cat(green("\u2713 Data validated. Current data matches the original data."))
 }
 
 # save as compressed data file

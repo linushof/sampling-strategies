@@ -43,5 +43,5 @@ choice_data_roundwise <- choice_data_roundwise %>%
   select(model, psi:problem, rare, p_r_low:ev_ratio, agent, n_sample, n_s, n_r, ep_r_low, ep_r_high, mean_r, r_sum, s_sum, diff, choice)
 
 # join data sets and save as compressed data file
-choice_data <- bind_rows(choice_data_summary, choice_data_summary)
+choice_data <- bind_rows(choice_data_summary, choice_data_roundwise)
 write_rds(choice_data, "data/choice_data.rds.bz2", compress = "bz2")

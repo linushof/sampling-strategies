@@ -16,4 +16,4 @@ The model-implied differences in the choice patterns translate to distinct signa
 
 ## License
 
-[![licensebuttons by](https://licensebuttons.net/l/by/3.0/88x31.png)](https://creativecommons.org/licenses/by/4.0) &copy; The Authors 2022
+[![licensebuttons by](https://licensebuttons.net/l/by/3.0/88x31.png)](https://creativecommons.org/licenses/by/4.0)

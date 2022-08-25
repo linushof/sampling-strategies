@@ -44,7 +44,7 @@ for(set in seq_len(nrow(params_sim))){
   current_sample <- jags.parallel(data = current_trials,
                                   inits = inits_MCMC,
                                   parameters.to.save = params_cpt,
-                                  model.file = "code/JAGS_model.txt",
+                                  model.file = "code/helper_functions/JAGS_model.txt",
                                   n.chains = n_chains,
                                   n.iter = 21000,
                                   n.burnin = 1000,

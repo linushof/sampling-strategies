@@ -1,0 +1,264 @@
+---
+title: "Sampling Strategies in DfE"
+subtitle: "Data Analysis Report"
+author: "Linus Hof [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-2257-2136)"
+date: "`r Sys.Date()`"
+output: 
+  prettydoc::html_pretty:
+    theme: hpstr
+    toc: true
+    toc_depth: 1
+    collapsed: true
+    keep_md: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+# set global chunk options
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.align = "c", 
+                      fig.height = 12, 
+                      fig.width = 12)
+```
+
+
+```{r pkgs}
+pacman::p_load(tidyverse, viridis, ggpubr, latex2exp)
+```
+
+```{r data}
+simulation_roundwise <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/simulation_roundwise.rds.bz2")
+simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5))
+choices <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
+cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimates.rds")
+```
+
+# Description
+
+...
+
+# Sampling Behavior
+
+In this section, I look at how the roundwise integration model (RIM) and the summary integration model (SIM) affect the sampling process.
+Specifically, I show how the interplay of the models and parameter combinations - i.e., the switching probability $\psi$, the threshold $\theta$, and the threshold type (absolute vs. relative) - impact the number of outcomes sampled prior a final choice.
+I further look at whether and how the sampled relative frequencies of outcomes deviate from their objective probabilities.
+
+## Number of sampled outcomes
+
+I start by plotting the total number of outcomes sampled prior each final choice.
+The following figure displays the median for each model and parameter combination:
+
+```{r labeller functions, include=FALSE}
+label_theta <- function(string) {
+  TeX(paste("$\\theta=$", string, sep = "")) #threshold parameter theta
+}
+
+label_psi <- function(string) {
+  TeX(paste("$\\psi=$", string, sep = "")) #switching probability parameter psi
+}
+```
+
+```{r total sample sizes}
+trial_n_median <- choices %>% 
+  group_by(model, psi, threshold, theta) %>% 
+  summarise(med = median(n_sample))
+
+trial_n_median %>% 
+  ggplot(aes(x = psi, y = med, color = threshold)) + 
+  facet_wrap(~model~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  labs(x = expression(paste("Switching probability ", psi)),
+       y = "Median sample size", 
+       color = "Threshold") +
+  geom_hline(yintercept = 14, linetype = "dashed", color = "white") + # meta-analytic median for choices between a safe and a risky prospect
+  geom_point(size = 2) + 
+  geom_line() + 
+  ggtitle("Total sample size prior final choice") +
+  theme_dark()
+```
+
+### Roundwise integration model
+
+* For the RIM, as expected, **increases in the switching probability cause decreases in the total sample size**.
+The following figure demonstrates that this inverse relationship is driven by the effect of the switching probability on the number of sampled outcomes encompassed in each comparison round.
+I.e., **high switching probabilities cause each (mean) comparison round to be based on a small number of samples and vice versa**.
+
+```{r round sample sizes}
+n_round <- simulation_roundwise %>% 
+  group_by(psi, threshold, theta, problem, agent, round) %>% 
+  summarise(n_round = n())
+
+n_round_median <- n_round %>% 
+  group_by(psi, threshold, theta) %>% 
+  summarise(med = median(n_round))
+
+n_round_median %>% 
+  ggplot(aes(psi, med, color = threshold)) +
+  facet_wrap(~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  labs(x = expression(paste("Switching probability ", psi)),
+       y = "Median sample size", 
+       color = "Threshold") +
+  geom_point(size = 2) + 
+  geom_line() +
+  ggtitle("Median sample size within a comparison round") + 
+  theme_dark()
+```
+
+* An increase in the threshold - i.e., the required number of won comparisons - leads to a **proportional increase in the total sample size**.
+
+* The median total sample sizes show that switching probabilities and thresholds elsewhere assumed to relate closely to the roundwise strategy - i.e., high switching probabilities and high thresholds - lead to **total sample sizes that approximate the meta-analytic mean found by Wulff et al. (2018)** (see dashed line). 
+In contrast, low (high) switching probabilities and large (small) thresholds produce total sample sizes that are considerably larger (smaller) than than the meta-analytic median.
+Assuming that people make systematic choices - i.e., choices that are based on true differences in the latent properties of choice alternatives - then whatever property is used to assess differences between the options may be accurately inferred at a total sample size of about 14. 
+One might reverse-engineer what property that is depending on the model and parameter combinations.
+
+### Summary integration model
+
+* For the SIM and relative thresholds, increases in the switching probability cause increases in the total sample size.
+However, this effect is caused by **random temporal imbalances between options for small switching probabilities** that are introduced by the method of implementation (i.e., the use of cumulative sums instead of means).
+Specifically, the evidence accumulation process starts at random on one of the options.
+This option obtains a temporal advantage over the other option because the accumulation of evidence starts sooner. 
+The smaller the switching probability, the larger the temporal advantage.
+Vice versa, the higher the switching probability, the smaller the temporal advantage.
+These **random temporal imbalances must be taken into account when interpreting the choice data and CPT estimates**
+
+* The **temporal imbalances have severe effects on the number of sampled outcomes for relative thresholds** but not so much for absolute thresholds.
+That is, for absolute thresholds, the number of outcomes that must be sampled from a given option in order to reach a threshold is not affected by the switching probability. 
+In contrast, the lower the switching probability and the larger the temporal imbalances between options, the less outcomes must be sampled from the advantageous option for it to reach the relative threshold. 
+
+* For both absolute and relative thresholds, increases in the threshold naturally lead to proportional increases in the total number of samples.
+
+## Objective probabilities vs. sampled relative frequencies
+
+Below, it is shown how the sampled relative frequencies of outcomes match the objective probabilities.
+A deviation of the sampled from the latent (objective) information is commonly used to explain the *as-if* underweighting of rare outcomes pattern in decisions from experience. 
+That is, in samples of small size, outcomes of small probability tend to be sample less rather than more often than objectively warranted (undersampling or underrepresentation).
+The relation between objective probabilities and sampled relative frequencies is displayed separately for each model and threshold type.  
+
+```{r median relative frequencies}
+ep_median_low <- choices %>% 
+  group_by(model, psi, threshold, theta, p_r_low) %>% 
+  summarise(median = median(ep_r_low, na.rm = TRUE))
+```
+
+### Roundwise
+
+```{r median relative frequencies RIM absolute}
+
+ep_median_low_ra <- ep_median_low %>% filter(model == "roundwise" & threshold == "absolute")
+
+choices %>% 
+  filter(model == "roundwise" & threshold == "absolute") %>%
+  ggplot(aes(x = p_r_low, y = ep_r_low)) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  geom_density_2d_filled(contour_var = "ndensity") + 
+  geom_abline(slope = 1, intercept = 0, color = "gray", linetype = "dashed", size = .7) + 
+  geom_point(data = ep_median_low_ra, aes(y  = median), color = "white", size = .5) + 
+  labs(x = "Objective probability of low-ranked outcome",
+       y = "Sampled relative frequency of low-ranked outcome", 
+       title = "Density and median of sampled relative frequencies | RIM absolute threshold") +
+  theme_dark()
+```
+
+```{r median relative frequencies RIM relative}
+
+ep_median_low_rr <- ep_median_low %>% filter(model == "roundwise" & threshold == "relative")
+
+choices %>% 
+  filter(model == "roundwise" & threshold == "relative") %>%
+  ggplot(aes(x = p_r_low, y = ep_r_low)) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  geom_density_2d_filled(contour_var = "ndensity") + 
+  geom_abline(slope = 1, intercept = 0, color = "gray", linetype = "dashed", size = .7) + 
+  geom_point(data = ep_median_low_rr, aes(y  = median), color = "white", size = .5) + 
+  labs(x = "Objective probability of low-ranked outcome",
+       y = "Sampled relative frequency of low-ranked outcome", 
+       title = "Density and median of sampled relative frequencies | RIM, relative threshold") +
+  theme_dark()
+```
+
+* *Threshold level*: As expected, the **sampled relative frequencies match the objective probabilities more closely the higher the thresholds are** (horizontal grid dimension, from left to right). 
+That is, the higher the thresholds, the more outcomes are sampled, the more closely the sampled relative frequencies converge to the objective relative frequencies.
+**For low thresholds, the majority of sampled relative frequencies tends to underrepresent small-probability outcomes** and overrepresent high-probability outcomes. 
+This is expected from the **positive skew of the binomial distribution** of small-probability outcomes.
+
+* *Switching probability*: **For low switching probabilities, sampled relative frequencies tend to match the objective probabilities more closely than for high switching probabilities** (vertical grid dimension, from top to bottom). 
+This is because the total number of sampled outcomes increases with decreasing switching probabilities.
+Again, because of the positive skew of their binomial distribution, small-probability outcomes then tend to be underrepresented rather than overrepresented the majority of times.
+
+### Summary 
+
+```{r median relative frequencies SIM absolute}
+ep_median_low_sa <- ep_median_low %>% filter(model == "summary" & threshold == "absolute")
+
+choices %>% 
+  filter(model == "summary" & threshold == "absolute") %>%
+  ggplot(aes(x = p_r_low, y = ep_r_low)) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  geom_density_2d_filled(contour_var = "ndensity") + 
+  geom_abline(slope = 1, intercept = 0, color = "gray", linetype = "dashed", size = .7) + 
+  geom_point(data = ep_median_low_sa, aes(y  = median), color = "white", size = .5) + 
+  labs(x = "Objective probability of low-ranked outcome",
+       y = "Sampled relative frequency of low-ranked outcome", 
+       title = "Density and median of sampled relative frequencies | SIM absolute threshold") +
+  theme_dark()
+```
+
+```{r median relative frequencies SIM relative}
+ep_median_low_sr <- ep_median_low %>% filter(model == "summary" & threshold == "relative")
+
+choices %>% 
+  filter(model == "summary" & threshold == "relative") %>%
+  ggplot(aes(x = p_r_low, y = ep_r_low)) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  geom_density_2d_filled(contour_var = "ndensity") + 
+  geom_abline(slope = 1, intercept = 0, color = "gray", linetype = "dashed", size = .7) + 
+  geom_point(data = ep_median_low_sr, aes(y  = median), color = "white", size = .5) + 
+  labs(x = "Objective probability of low-ranked outcome",
+       y = "Sampled relative frequency of low-ranked outcome", 
+       title = "Density and median of sampled relative frequencies | SIM relative threshold") +
+  theme_dark()
+```
+
+* *Threshold level*: As expected from the laws of large numbers and similar to the roundwise integration model, the sampled relative frequencies match the objective probabilities more closely the higher the thresholds are. 
+That is, the higher the thresholds, the more outcomes are sampled, the more closely the sampled relative frequencies converge to the objective relative frequencies.
+
+* *Switching probability*: For absolute thresholds, switching probabilities have a rather negligible effect on the relative sampled frequencies.
+This can be explained by the fact, that for absolute thresholds changes in the switching probability have no effect on the total number of sampled outcomes.
+However, for relative thresholds, a pattern to that of the roundwise integration model emerges.
+That is, **for high (rather than low) switching probabilities, sampled relative frequencies tend to match the objective probabilities more closely**. 
+This is because the total number of sampled outcomes increases with increasing switching probabilities.
+Again, because of the positive skew of their binomial distribution, small-probability outcomes then tend to be underrepresented rather than overrepresented the majority of times.
+
+# Choice Behavior
+
+In this section, I show how the interplay between the models and the parameter combinations shape the final choice. 
+The models entail different mechanisms for how the sampled outcomes are integrated and evaluated.
+The parameter combinations govern how (and how many) outcomes are sampled in the first place.
+Thus, the choice patterns below show how **sampling strategies and integration strategies may act together to shape the final choice in DfE**.
+However, to inquire whether the interplay between sampling and integration strategies exercises an effect on the choice behavior - more concretely, on deviations from expected value maximization - beyond the well-known effect of small samples, I take the deviation of the sampled relative frequencies from the objective probabilities into account.
+That is, the choice patterns are displayed as both deviations from the sampled mean and from the latent expected value. 
+
+I start by plotting the rates of choices that did not maximize the EV and sampled mean (false response rates), separately for models, parameter combinations and the existence and rank (desirability) of a small-probability outcome. 
+
+```{r}
+
+```
+
+
+
+# Cumulative Prospect Theory (CPT)
+
+
+
+
+

@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE, 
                       warning = FALSE, 
                       fig.align = "c", 
-                      fig.height = 12, 
+                      fig.height = 8, 
                       fig.width = 12)
 ```
 
@@ -66,7 +66,7 @@ label_rare <- function(string) {
 ```
 
 ```{r total sample sizes}
-trial_n_median <- choices %>% 
+trial_n_median <- choice_data %>% 
   group_by(model, psi, threshold, theta) %>% 
   summarise(med = median(n_sample))
 
@@ -141,7 +141,7 @@ That is, in samples of small size, outcomes of small probability tend to be samp
 The relation between objective probabilities and sampled relative frequencies is displayed separately for each model and threshold type.  
 
 ```{r median relative frequencies}
-ep_median_low <- choices %>% 
+ep_median_low <- choice_data %>% 
   group_by(model, psi, threshold, theta, p_r_low) %>% 
   summarise(median = median(ep_r_low, na.rm = TRUE))
 ```
@@ -152,7 +152,7 @@ ep_median_low <- choices %>%
 
 ep_median_low_ra <- ep_median_low %>% filter(model == "roundwise" & threshold == "absolute")
 
-choices %>% 
+choice_data %>% 
   filter(model == "roundwise" & threshold == "absolute") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
@@ -171,7 +171,7 @@ choices %>%
 
 ep_median_low_rr <- ep_median_low %>% filter(model == "roundwise" & threshold == "relative")
 
-choices %>% 
+choice_data %>% 
   filter(model == "roundwise" & threshold == "relative") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
@@ -200,7 +200,7 @@ Again, because of the positive skew of their binomial distribution, small-probab
 ```{r median relative frequencies SIM absolute}
 ep_median_low_sa <- ep_median_low %>% filter(model == "summary" & threshold == "absolute")
 
-choices %>% 
+choice_data %>% 
   filter(model == "summary" & threshold == "absolute") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
@@ -218,7 +218,7 @@ choices %>%
 ```{r median relative frequencies SIM relative}
 ep_median_low_sr <- ep_median_low %>% filter(model == "summary" & threshold == "relative")
 
-choices %>% 
+choice_data %>% 
   filter(model == "summary" & threshold == "relative") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 

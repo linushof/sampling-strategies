@@ -32,7 +32,7 @@ pacman::p_load(tidyverse, viridis, ggpubr, latex2exp)
 ```{r data}
 simulation_roundwise <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/simulation_roundwise.rds.bz2")
 simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5))
-choices <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
+choice_data <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
 cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimates.rds")
 ```
 
@@ -58,6 +58,10 @@ label_theta <- function(string) {
 
 label_psi <- function(string) {
   TeX(paste("$\\psi=$", string, sep = "")) #switching probability parameter psi
+}
+
+label_rare <- function(string) {
+  TeX(paste("$\\p_{High}$", string, sep = "")) #type of rare event
 }
 ```
 
@@ -250,10 +254,161 @@ That is, the choice patterns are displayed as both deviations from the sampled m
 
 I start by plotting the rates of choices that did not maximize the EV and sampled mean (false response rates), separately for models, parameter combinations and the existence and rank (desirability) of a small-probability outcome. 
 
-```{r}
+```{r choice-rates}
 
+#prepare data
+
+## omit trials where only one option was attended 
+choice_data <- choice_data %>% 
+  filter(!c(n_s == 0 | n_r == 0))
+
+## determine normative choice according to latent EV and sampled mean
+
+### latent EV
+
+fr_rates_ev <- choice_data %>%
+  mutate(norm = case_when(ev_ratio > 1 ~ "r", ev_ratio < 1 ~ "s")) %>% # determine normative choice
+  filter(!is.na(norm)) %>% #exclude trials with equal EV
+  group_by(model, psi, threshold, theta, rare, norm, choice) %>% # separate by model parameter and type of rare event
+  summarise(n = n()) %>%
+  mutate(rate = round(n/sum(n), 2), #compute response rates
+         type = case_when(norm == "r" & choice == "s" ~ "Safe", #determine false response type
+                          norm == "s" & choice == "r" ~ "Risky")) %>%
+  ungroup() %>%
+  filter(!is.na(type)) %>% #remove correct responses
+  select(-c(norm, choice, n)) %>% 
+  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", #change facet labels for rare events
+                          rare == "attractive" ~ "\\in (0,.2)",
+                          rare == "unattractive" ~ "\\in (.8,1)"),
+         norm = "EV")
+
+### sampled mean
+
+fr_rates_mean <- choice_data %>%
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", mean_r/safe < 1 ~ "s")) %>% # determine normative choice
+  filter(!is.na(norm)) %>% #exclude trials with equal EV
+  group_by(model, psi, threshold, theta, rare, norm, choice) %>% #separate by model parameter and type of rare event
+  summarise(n = n()) %>%
+  mutate(rate = round(n/sum(n), 2), #compute response rates
+         type = case_when(norm == "r" & choice == "s" ~ "Safe", #determine false response type
+                          norm == "s" & choice == "r" ~ "Risky")) %>%
+  ungroup() %>%
+  filter(!is.na(type)) %>% #remove correct responses
+  select(-c(norm, choice, n)) %>% 
+  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", #change facet labels for rare events
+                          rare == "attractive" ~ "\\in (0,.2)",
+                          rare == "unattractive" ~ "\\in (.8,1)"),
+         norm = "Mean")
+
+fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 ```
 
+
+## Roundwise integration model
+
+```{r choice-rates RIM absolute}
+
+fr_rates_ra_risky <- fr_rates %>% filter(model == "roundwise" & threshold == "absolute" & type == "Risky")
+fr_rates_ra_safe <- fr_rates %>% filter(model == "roundwise" & threshold == "absolute" & type == "Safe")
+
+fr_rates_ra_risky %>%
+  ggplot(aes(psi, rate, color = norm)) +
+  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
+                                             theta = as_labeller(label_theta, default = label_parsed))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "False Response Rate",
+       color = "Norm",
+       shape = "False\nResponse",
+       title = "False response rates | RIM absolute thresholds") +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  geom_point(aes(shape = type), size = 2) +
+  geom_line() + 
+  geom_point(data = fr_rates_ra_safe, aes(shape = type), size = 2) +
+  geom_line(data = fr_rates_ra_safe) +
+  scale_shape_manual(values = c(8, 16)) +
+  scale_color_manual(values = c("#d3d3d3", "#35b779")) + 
+  theme_dark()
+```
+
+
+```{r choice-rates RIM relative}
+
+fr_rates_rr_risky <- fr_rates %>% filter(model == "roundwise" & threshold == "relative" & type == "Risky")
+fr_rates_rr_safe <- fr_rates %>% filter(model == "roundwise" & threshold == "relative" & type == "Safe")
+
+fr_rates_rr_risky %>%
+  ggplot(aes(psi, rate, color = norm)) +
+  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
+                                             theta = as_labeller(label_theta, default = label_parsed))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "False Response Rate",
+       color = "Norm",
+       shape = "False\nResponse",
+       title = "False response rates | RIM relative thresholds") +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  geom_point(aes(shape = type), size = 2) +
+  geom_line() + 
+  geom_point(data = fr_rates_rr_safe, aes(shape = type), size = 2) +
+  geom_line(data = fr_rates_rr_safe) +
+  scale_shape_manual(values = c(8, 16)) +
+  scale_color_manual(values = c("#d3d3d3", "#35b779")) + 
+  theme_dark()
+```
+
+## Summary integration model
+
+```{r choice-rates SIM absolute}
+
+fr_rates_sa_risky <- fr_rates %>% filter(model == "summary" & threshold == "absolute" & type == "Risky")
+fr_rates_sa_safe <- fr_rates %>% filter(model == "summary" & threshold == "absolute" & type == "Safe")
+
+fr_rates_sa_risky %>%
+  ggplot(aes(psi, rate, color = norm)) +
+  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
+                                             theta = as_labeller(label_theta, default = label_parsed))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "False Response Rate",
+       color = "Norm",
+       shape = "False\nResponse",
+       title = "False response rates | SIM absolute thresholds") +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  geom_point(aes(shape = type), size = 2) +
+  geom_line() + 
+  geom_point(data = fr_rates_sa_safe, aes(shape = type), size = 2) +
+  geom_line(data = fr_rates_sa_safe) +
+  scale_shape_manual(values = c(8, 16)) +
+  scale_color_manual(values = c("#d3d3d3", "#3e4989")) + 
+  theme_dark()
+```
+
+
+```{r choice-rates SIM relative}
+
+fr_rates_sr_risky <- fr_rates %>% filter(model == "summary" & threshold == "relative" & type == "Risky")
+fr_rates_sr_safe <- fr_rates %>% filter(model == "summary" & threshold == "relative" & type == "Safe")
+
+fr_rates_sr_risky %>%
+  ggplot(aes(psi, rate, color = norm)) +
+  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
+                                             theta = as_labeller(label_theta, default = label_parsed))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "False Response Rate",
+       color = "Norm",
+       shape = "False\nResponse",
+       title = "False response rates | SIM relative thresholds") +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  geom_point(aes(shape = type), size = 2) +
+  geom_line() + 
+  geom_point(data = fr_rates_sr_safe, aes(shape = type), size = 2) +
+  geom_line(data = fr_rates_sr_safe) +
+  scale_shape_manual(values = c(8, 16)) +
+  scale_color_manual(values = c("#d3d3d3", "#3e4989")) + 
+  theme_dark()
+```
 
 
 # Cumulative Prospect Theory (CPT)

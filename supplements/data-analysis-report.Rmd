@@ -4,14 +4,12 @@ subtitle: "Data Analysis Report"
 author: "Linus Hof [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-2257-2136)"
 date: "`r Sys.Date()`"
 output: 
-  prettydoc::html_pretty:
-    theme: hpstr
+  html_document:
     toc: true
-    toc_depth: 1
+    toc_float: true
+    toc_depth: 2
     collapsed: true
     keep_md: true
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
@@ -26,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE,
 
 
 ```{r pkgs}
-pacman::p_load(tidyverse, viridis, ggpubr, latex2exp)
+pacman::p_load(tidyverse, viridis, ggpubr, latex2exp, stringr, scico, papaja)
 ```
 
 ```{r data}
@@ -37,6 +35,10 @@ cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimate
 ```
 
 # Description
+
+...
+
+# Core Results and Message
 
 ...
 
@@ -80,7 +82,7 @@ trial_n_median %>%
   geom_point(size = 2) + 
   geom_line() + 
   ggtitle("Total sample size prior final choice") +
-  theme_dark()
+  theme_apa()
 ```
 
 ### Roundwise integration model
@@ -107,7 +109,7 @@ n_round_median %>%
   geom_point(size = 2) + 
   geom_line() +
   ggtitle("Median sample size within a comparison round") + 
-  theme_dark()
+  theme_apa()
 ```
 
 * An increase in the threshold - i.e., the required number of won comparisons - leads to a **proportional increase in the total sample size**.
@@ -155,7 +157,7 @@ ep_median_low_ra <- ep_median_low %>% filter(model == "roundwise" & threshold ==
 choice_data %>% 
   filter(model == "roundwise" & threshold == "absolute") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
-  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   geom_density_2d_filled(contour_var = "ndensity") + 
@@ -164,7 +166,7 @@ choice_data %>%
   labs(x = "Objective probability of low-ranked outcome",
        y = "Sampled relative frequency of low-ranked outcome", 
        title = "Density and median of sampled relative frequencies | RIM absolute threshold") +
-  theme_dark()
+  theme_apa()
 ```
 
 ```{r median relative frequencies RIM relative}
@@ -174,7 +176,7 @@ ep_median_low_rr <- ep_median_low %>% filter(model == "roundwise" & threshold ==
 choice_data %>% 
   filter(model == "roundwise" & threshold == "relative") %>%
   ggplot(aes(x = p_r_low, y = ep_r_low)) + 
-  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   geom_density_2d_filled(contour_var = "ndensity") + 
@@ -182,8 +184,8 @@ choice_data %>%
   geom_point(data = ep_median_low_rr, aes(y  = median), color = "white", size = .5) + 
   labs(x = "Objective probability of low-ranked outcome",
        y = "Sampled relative frequency of low-ranked outcome", 
-       title = "Density and median of sampled relative frequencies | RIM, relative threshold") +
-  theme_dark()
+       title = "Density and median of sampled relative frequencies | RIM relative threshold") +
+  theme_apa()
 ```
 
 * *Threshold level*: As expected, the **sampled relative frequencies match the objective probabilities more closely the higher the thresholds are** (horizontal grid dimension, from left to right). 
@@ -212,7 +214,7 @@ choice_data %>%
   labs(x = "Objective probability of low-ranked outcome",
        y = "Sampled relative frequency of low-ranked outcome", 
        title = "Density and median of sampled relative frequencies | SIM absolute threshold") +
-  theme_dark()
+  theme_apa()
 ```
 
 ```{r median relative frequencies SIM relative}
@@ -230,7 +232,7 @@ choice_data %>%
   labs(x = "Objective probability of low-ranked outcome",
        y = "Sampled relative frequency of low-ranked outcome", 
        title = "Density and median of sampled relative frequencies | SIM relative threshold") +
-  theme_dark()
+  theme_apa()
 ```
 
 * *Threshold level*: As expected from the laws of large numbers and similar to the roundwise integration model, the sampled relative frequencies match the objective probabilities more closely the higher the thresholds are. 
@@ -303,7 +305,6 @@ fr_rates_mean <- choice_data %>%
 fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 ```
 
-
 ## Roundwise integration model
 
 ```{r choice-rates RIM absolute}
@@ -327,10 +328,9 @@ fr_rates_ra_risky %>%
   geom_point(data = fr_rates_ra_safe, aes(shape = type), size = 2) +
   geom_line(data = fr_rates_ra_safe) +
   scale_shape_manual(values = c(8, 16)) +
-  scale_color_manual(values = c("#d3d3d3", "#35b779")) + 
-  theme_dark()
+  scale_color_manual(values = c("#919191", "#9EB0FF")) + 
+  theme_apa()
 ```
-
 
 ```{r choice-rates RIM relative}
 
@@ -346,16 +346,33 @@ fr_rates_rr_risky %>%
        color = "Norm",
        shape = "False\nResponse",
        title = "False response rates | RIM relative thresholds") +
-  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, .5)) +
   geom_point(aes(shape = type), size = 2) +
   geom_line() + 
   geom_point(data = fr_rates_rr_safe, aes(shape = type), size = 2) +
   geom_line(data = fr_rates_rr_safe) +
   scale_shape_manual(values = c(8, 16)) +
-  scale_color_manual(values = c("#d3d3d3", "#35b779")) + 
-  theme_dark()
+  scale_color_manual(values = c("#919191", "#9EB0FF")) + 
+  theme_apa()
 ```
+
+
+* The roundwise integration model behaves similar for absolute and relative thresholds.
+For small-probability outcomes of high rank, the rates of false safe choices increase with the switching probability, whereas the rates of false risky choices remain low.
+Vice versa, for small-probability outcomes of low rank, the rate of false risky choices increases with the switching probability, whereas the rates of false safe choices remain low. 
+Both patterns, similar in structure, can be explained by the inverse relationship between the switching probability and sample size and the positive skew of of small-probability outcomes. 
+That is, in small samples, small-probability outcomes tend to be undersampled, causing the mean of the risky prospect to be inflated (deflated) if the low (high) rank outcome is of small probability. 
+In turn, for inflated (deflated) means, there is a higher chance that the risky prospect is falsely chosen (dismissed) and this chance increases with the switching probability.
+
+* The effect of total sampling error is represented by the divergence of the colored (mean) line from the gray (EV) line:
+False response rates tend to be higher if compared to the latent EV instead of the sampled mean, where the latter controls for sampling error.
+The sampling error causes the sampled relative frequencies to deviate from the objective probabilities both unsystematically (random random) and systematically (systematic underrepresenation of small probability outcomes).
+With increasing thresholds, both error types are reduced as reflected by the convergence of the two lines. 
+I.e., the higher the total number of sampled outcomes, the more does the sampled mean converge against the expected value.
+The similarity of the curve-pairs demonstrates that the interplay between sampling and integration strategies can have a nuanced and severe effect on the choice behavior beyond sampling error. 
+
+* For choice problems with no small-probability outcomes, false response rates increase with switching probabilities, however, on a low level.
+Together with the reversed choice patterns for problems that contain desirable rare outcomes on the one hand and undesirable rare outcomes on the other hand, this shows that the structure of the environment (choice problems) is an important factor.
 
 ## Summary integration model
 
@@ -380,8 +397,8 @@ fr_rates_sa_risky %>%
   geom_point(data = fr_rates_sa_safe, aes(shape = type), size = 2) +
   geom_line(data = fr_rates_sa_safe) +
   scale_shape_manual(values = c(8, 16)) +
-  scale_color_manual(values = c("#d3d3d3", "#3e4989")) + 
-  theme_dark()
+  scale_color_manual(values = c("#919191", "#FFACAC")) + 
+  theme_apa()
 ```
 
 
@@ -406,12 +423,95 @@ fr_rates_sr_risky %>%
   geom_point(data = fr_rates_sr_safe, aes(shape = type), size = 2) +
   geom_line(data = fr_rates_sr_safe) +
   scale_shape_manual(values = c(8, 16)) +
-  scale_color_manual(values = c("#d3d3d3", "#3e4989")) + 
-  theme_dark()
+  scale_color_manual(values = c("#919191", "#FFACAC")) + 
+  theme_apa()
 ```
+
+* In contrast to the roundwise integration model, false response rates decrease with increasing switching probabilities.
+Specifically, the false response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean (EV) for high switching probabilities. 
+This demonstrates that changes in the sampling strategy do not cause the summary integration model to make systematically different choices.
+That is, the mechanisms of the summary integration model are such that evidence is accumulated for differences in the latent EVs, given that approximately the same number of outcomes is sampled from *both* prospects.
+The more outcomes are sampled from both prospects, i.e., the higher the thresholds, the more accurately these differences should be assessed. 
+Changes on the sampling strategy do not change the latent property for which evidence is accumulated in the summary integration model.
+Rather, they affect whether approximately the same number of outcomes is sampled from both prospects or whether one of the prospects, obtains, by chance, a temporal advantage, rendering the decision either systematic or unsystematic, respectively. 
+
+* For small switching probabilities, the effect of sampling error should be overshadowed by the temporal imbalances. 
+That is, as no systematic choices are made, deviations from the sampled mean and the latent expected value should be equally random. 
+As the switching probability increases, false response rates should be larger for the latent EV than for the sampled mean.
+However, as the number of sampled outcomes increases with the switching probabilities, the effect of systematic sampling error is generally low.  
 
 
 # Cumulative Prospect Theory (CPT)
+
+In the following, I analyse whether and how the choice patterns translate to the parameters of cumulative prospect theory's value and weighting function.
+Critically, these functions offer an description for how sensitive choices are to changes in the probability and outcome magnitude.
+Because I am interested in the effects of sampling and integration strategies beyond total sampling error, the sampled relative frequencies are supplied as probability information to CPT's weighting function.
+
+```{r fig.height=16}
+
+# gamma estimates
+
+gamma <- cpt %>%
+  filter(parameter == "gamma", threshold == "absolute") %>%
+  ggplot(aes(psi, mean, color = model)) + 
+  facet_wrap(~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(0,2), breaks = seq(0,2, 1)) + 
+  labs(x = element_blank(), 
+       y = expression(paste("Curvature ", gamma)),
+       color = "Model") +
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 1, linetype = "dashed") + 
+  scale_color_scico_d(palette = "berlin") + 
+  theme_apa()
+
+# delta estimates
+
+delta <- cpt %>%
+  filter(parameter == "delta", threshold == "absolute") %>%
+  ggplot(aes(psi, mean, color = model)) +
+  facet_wrap(~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(0,10), breaks = seq(0,10,5)) + 
+  labs(x = element_blank(), 
+       y = expression(paste("Elevation ", delta)),
+       color = "Model") +
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point() +
+  geom_line() +
+  scale_color_scico_d(palette = "berlin") + 
+  geom_hline(yintercept = 1, linetype = "dashed") + 
+  theme_apa()
+
+# alpha estimates
+
+alpha <- cpt %>%
+  filter(parameter == "alpha", threshold == "absolute") %>%
+  ggplot(aes(psi, mean, color = model)) +
+  facet_wrap(~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) +
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.5)) + 
+  labs(x = expression(paste("Switching Probability ", psi)), 
+       y = expression(paste("Concavity ", alpha)),
+       color = "Model") +
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point() +
+  geom_line() +
+  scale_color_scico_d(palette = "berlin") + 
+  geom_hline(yintercept = 1, linetype = "dashed") + 
+  theme_apa()
+
+parameters <-  ggarrange(gamma, delta, alpha, ncol = 1, nrow = 3, common.legend = TRUE, legend = "top")
+
+parameters
+```
+
+
+
+
+
 
 
 

@@ -65,6 +65,8 @@ label_psi <- function(string) {
 label_rare <- function(string) {
   TeX(paste("$\\p_{High}$", string, sep = "")) #type of rare event
 }
+
+
 ```
 
 ```{r total sample sizes}
@@ -315,7 +317,7 @@ fr_rates_ra_safe <- fr_rates %>% filter(model == "roundwise" & threshold == "abs
 fr_rates_ra_risky %>%
   ggplot(aes(psi, rate, color = norm)) +
   facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
-                                             theta = as_labeller(label_theta, default = label_parsed))) +
+                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   labs(x = expression(paste("Switching Probability ", psi)),
        y = "False Response Rate",
        color = "Norm",
@@ -329,7 +331,7 @@ fr_rates_ra_risky %>%
   geom_line(data = fr_rates_ra_safe) +
   scale_shape_manual(values = c(8, 16)) +
   scale_color_manual(values = c("#919191", "#9EB0FF")) + 
-  theme_apa()
+  theme_minimal()
 ```
 
 ```{r choice-rates RIM relative}
@@ -353,7 +355,7 @@ fr_rates_rr_risky %>%
   geom_line(data = fr_rates_rr_safe) +
   scale_shape_manual(values = c(8, 16)) +
   scale_color_manual(values = c("#919191", "#9EB0FF")) + 
-  theme_apa()
+  theme_minimal()
 ```
 
 
@@ -397,8 +399,8 @@ fr_rates_sa_risky %>%
   geom_point(data = fr_rates_sa_safe, aes(shape = type), size = 2) +
   geom_line(data = fr_rates_sa_safe) +
   scale_shape_manual(values = c(8, 16)) +
-  scale_color_manual(values = c("#919191", "#FFACAC")) + 
-  theme_apa()
+  scale_color_manual(values = c("#919191","#FFACAC")) + 
+  theme_minimal()
 ```
 
 
@@ -424,7 +426,7 @@ fr_rates_sr_risky %>%
   geom_line(data = fr_rates_sr_safe) +
   scale_shape_manual(values = c(8, 16)) +
   scale_color_manual(values = c("#919191", "#FFACAC")) + 
-  theme_apa()
+  theme_minimal()
 ```
 
 * In contrast to the roundwise integration model, false response rates decrease with increasing switching probabilities.
@@ -441,13 +443,77 @@ As the switching probability increases, false response rates should be larger fo
 However, as the number of sampled outcomes increases with the switching probabilities, the effect of systematic sampling error is generally low.  
 
 
-# Cumulative Prospect Theory (CPT)
+# Stochastic Cumulative Prospect Theory (CPT)
 
 In the following, I analyse whether and how the choice patterns translate to the parameters of cumulative prospect theory's value and weighting function.
 Critically, these functions offer an description for how sensitive choices are to changes in the probability and outcome magnitude.
 Because I am interested in the effects of sampling and integration strategies beyond total sampling error, the sampled relative frequencies are supplied as probability information to CPT's weighting function.
 
-```{r fig.height=16}
+## Choice Sensitivity
+
+I start by plotting the estimates for the choice sensitivity parameter $\rho \geq 0$, which indicates how sensible the model-implied choices are regarding the evaluations of the core model.
+
+```{r}
+
+# rho estimates
+
+rho <- cpt %>%
+  filter(parameter == "rho", threshold == "absolute") %>%
+  ggplot(aes(psi, mean, color = model)) + 
+  facet_wrap(~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(0,5), breaks = seq(0,5, 2.5)) + 
+  labs(x = expression(paste("Switching probability", psi)), 
+       y = expression(paste("Choice sensitivity ", rho)),
+       color = "Model") +
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  scale_color_scico_d(palette = "berlin") + 
+  theme_minimal()
+rho
+```
+
+* For the **roundwise integration model**, all estimates of $rho$ take values $> 1$, indicating that the choices are not random.
+However, the estimates decrease with increasing switching probabilities, indicating a diminishing degree of consistency of the model-implied choices with the evaluations - i.e., the strength of preferences - derived from the core CPT model.
+*This may indicate that the degree to which the assumptions of the descriptive CPT model fit the assumptions of the generative roundwise model decreases with increasing switching probabilities*. 
+
+```{r include = FALSE}
+wf <- tibble(p = seq(0, 1, .01)) %>%  #cumulative probabilities
+  expand_grid(gamma = seq(.1, 10, .1), #gamma values
+              delta = c(.1, .5, 1, 2, 5, 10)) %>% #delta values
+  mutate(wp = (delta*(p^gamma))/((delta*p^gamma)+(1-p)^gamma)) #images of wf
+
+#labeller function for facet labels with LateX math expressions 
+label_delta <- function(string) {
+  TeX(paste("$\\delta=$", string, sep = ""))  
+}
+
+#plot shapes of weighting function
+wf %>% 
+  ggplot(aes(p, wp, group = gamma)) +
+  facet_wrap(~delta, labeller = as_labeller(label_delta, default = label_parsed)) + 
+  scale_x_continuous(breaks = seq(0, 1, .5)) +
+  scale_y_continuous(breaks = seq(0, 1, .5)) + 
+  labs(x = "Probability of High-Rank Risky Outcome",
+       y = "Transformed Probability (Decision Weight)", 
+       color = expression(gamma)) + 
+  theme_dark() + 
+  geom_line(aes(color = gamma), size = .5) +
+  scale_color_scico(palette = "tokyo") + 
+  geom_abline(intercept = 0, slope = 1, color = "gray", linetype = "dashed")
+```
+
+
+* For the **summary integration model**, the estimates of $\rho$ increase with switching probabilities. 
+Because $\rho = 0$ indicates that the model-implied choices are insensitive to the evaluations of the core CPT model and thus, random, the estimates fit well with the finding of random temporal imbalances that govern the choices of the summary integration for low switching probabilities.  
+
+## Weighing function
+
+Below, the parameter estimates the weighting function are plotted. 
+
+```{r fig.height= 12}
 
 # gamma estimates
 
@@ -465,7 +531,7 @@ gamma <- cpt %>%
   geom_line() +
   geom_hline(yintercept = 1, linetype = "dashed") + 
   scale_color_scico_d(palette = "berlin") + 
-  theme_apa()
+  theme_minimal()
 
 # delta estimates
 
@@ -483,7 +549,43 @@ delta <- cpt %>%
   geom_line() +
   scale_color_scico_d(palette = "berlin") + 
   geom_hline(yintercept = 1, linetype = "dashed") + 
-  theme_apa()
+  theme_minimal()
+
+
+wf_parameters <-  ggarrange(gamma, delta, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right", labels = "AUTO")
+wf_parameters
+```
+
+### Roundwise integration model
+
+* For ($\theta = 1$, $\psi = 1$), the 95%-intervals of the posterior distributions are large.
+Here, no relative frequencies other than 0 and 1 are supplied to the weighting function, which explains that the values in between cannot be reliably accounted for.
+
+* For ($\theta = 1$, $\psi < 1$), the estimates imply a linear weighting pattern, i.e., ($\gamma \approx 1, \delta \approx1$). 
+This is because only a single mean comparison is carried, therefore causing roundwise integration strategy to always choose the prospect that produces the larger mean.
+This result is well in line with the explanation that if the mind were to infer the latent objective probabilities of outcomes from the sampled relative frequencies and to follow the principle of EV maximization, sampling error can account for any deviations from it.
+This is also demonstrated by the false response rates displayed above, where there are no choices for $\theta = 1$ that do not maximize the sampled mean.
+
+* For $\theta > 1$, the curvature parameter $\gamma$ takes values $\geq 1$ which increase with switching probabilities, resulting in a increasingly pronounced S-shaped weighting function (see below).
+In other words, the higher the switching probability, the more severe is the underweighting (overweighting) of the high-rank outcome of the risky prospect in CPT, if it is of small (large) probability.
+That is, the as-if underweighting of rare outcomes pattern indicated by the final choices (i.e., the false response rates) translates rather directly to an underweighting of small-probability outcomes in CPT.
+
+* The elevation parameter $\delta$ takes values $> 1$, however, the estimates increase slightly with switching probabilities, causing the overweighting of the high-rank outcome of the risky prospect to extend across the mid-point of the probability scale.
+*It is open for discussion whether this extension of overweighting beyond the mid-point is theoretically implied by the mechanisms of the round-wise integration model: That is, for high switching probabilities, the model is expected to choose the risky prospect, if the probability of its high-rank outcome is $> .5$. To account for the implied choice behavior, CPT might have to overweight high-rank outcomes with a probability far larger than .5 less severely than high-rank outcomes with a probability only a little larger than .5. Such a pattern is implied for $\delta > 1$.*
+
+* Leaving aside this open issue, the estimates for the $\gamma$ and $\delta$ parameter show that the choices implied by the potential interplay of different sampling strategies and the round-wise integration/decision strategy can lead to distinct signatures in CPT's weighting function (see Figure\ \@ref(fig:function-forms), for the resulting graphs of the weighting function).
+Once again, these signatures cannot be due to sampling error.
+
+### Summary integration model
+
+* The estimates for the choice sensitivity parameter $rho$ tend to be low for small switching probabilities, implying that in these cases the highest model fit is achieved, if a random choice is assumed.
+Thus, for small switching probabilities, interpretations of the parameter estimates for the core CPT model should be made with great caution (if at all).
+
+* For high switching probabilities, the estimates for the weighting function's $\gamma$ and $\delta$ parameter imply a linear weighting of sampled relative frequencies, i.e., $\gamma \approx 1$ and $\delta \approx 1$.
+
+## Value function
+
+```{r fig.height=12}
 
 # alpha estimates
 
@@ -501,19 +603,65 @@ alpha <- cpt %>%
   geom_line() +
   scale_color_scico_d(palette = "berlin") + 
   geom_hline(yintercept = 1, linetype = "dashed") + 
-  theme_apa()
+  theme_minimal()
 
-parameters <-  ggarrange(gamma, delta, alpha, ncol = 1, nrow = 3, common.legend = TRUE, legend = "top")
-
-parameters
+alpha
 ```
 
+## Graphs
 
+```{r fig.height = 12}
 
+# weighting function
 
+weights <- cpt %>%
+  select(model, psi, threshold, theta, parameter, mean) %>%
+  pivot_wider(names_from = parameter, values_from = mean) %>%
+  select(-c(alpha, rho)) %>%
+  expand_grid(p = seq(0, 1, .05)) %>%
+  mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2))
 
+wf <- weights %>% 
+  filter(threshold == "absolute") %>% 
+  ggplot(aes(p, w, group = psi, color = psi)) +
+  facet_wrap(~model~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  labs(x = "Sampled relative frequency",
+       y = expression(paste("Decision weight ", pi)),
+       color = expression(paste("Switching\nProbability ", psi))) +
+  scale_x_continuous(breaks = seq(0, 1, .5)) +
+  scale_y_continuous(breaks = seq(0, 1, .5)) +
+  geom_line(size = .7) +
+  scale_color_scico(palette = "acton", end = .8) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  theme_minimal() 
+  
+# value function
 
+values <- cpt %>%
+  select(model, psi, threshold, theta, parameter, mean) %>%
+  pivot_wider(names_from = parameter, values_from = mean) %>%
+  select(-c(gamma, delta, rho)) %>%
+  expand_grid(x = seq(0, 20, .5)) %>%  
+  mutate(v = round(x^alpha, 2)) 
 
+vf <- values %>% 
+  filter(threshold == "absolute") %>% 
+  ggplot(aes(x, v, group = psi, color = psi)) +
+  facet_wrap(~model~theta, nrow = 2, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  labs(x = "Objective outcome",
+       y = "Subjective value",
+       color= expression(paste("Switching Probability ", psi))) +
+  scale_x_continuous(limits = c(0,20), breaks = seq(0, 20, 10)) +
+  scale_y_continuous(limits = c(0,20), breaks = seq(0,20,10)) + 
+  geom_line(size = .7) +
+  scale_color_scico(palette = "acton", end = .8) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  theme_minimal()
 
+# merge plots
+
+cpt_summary <- ggarrange(wf, vf, ncol = 1, nrow = 2, common.legend = TRUE, legend = "right", labels = "AUTO")
+cpt_summary
+```
 
 

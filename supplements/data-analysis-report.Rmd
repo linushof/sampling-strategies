@@ -39,13 +39,14 @@ The analyses comprise of the description and explanation of the sampling and cho
 
 # Core Results
 
-* The interplay of sampling and integration strategies can produce distinct choice patterns in decisions from experience. 
+* The interplay of sampling and integration strategies can produce distinct choice patterns in decisions from experience.
 
-* The choice patterns depend on the structure of the choice problem.
+* These choice patterns translate into characteristic shapes of CPT's value and weighting function.
 
-* The choice patterns translate to characteristic shapes of CPT's value and weighting function. 
+* Both choice patterns and their psychoeconomic translations arise in the absence of sampling error. 
 
-* A roundwise integration strategy can cause the as-if underweighting of rare outcomes pattern in the absence of sampling error. 
+* A roundwise integration of sampled outcomes can cause the as-if underweighting of rare outcomes pattern, which becomes more robust with increasing sample sizes.
+
 
 # Sampling Behavior
 
@@ -408,7 +409,7 @@ fr_rates_mean <- choices %>%
 fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 ```
 
-## Roundwise Integration model
+## Roundwise Integration Model
 
 ```{r choice-rates roundwise}
 fr_rates_round_r <- fr_rates %>%  filter(model == "roundwise" & threshold == "relative") %>% 
@@ -441,24 +442,27 @@ ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-an
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_roundwise.png")
 ```
 
-* The roundwise integration model behaves similar for absolute and relative thresholds.
-For small-probability outcomes of high rank, the rates of false safe choices increase with the switching probability, whereas the rates of false risky choices remain low.
-Vice versa, for small-probability outcomes of low rank, the rate of false risky choices increases with the switching probability, whereas the rates of false safe choices remain low. 
-Both patterns, similar in structure, can be explained by the inverse relationship between the switching probability and sample size and the positive skew of of small-probability outcomes. 
-That is, in small samples, small-probability outcomes tend to be undersampled, causing the mean of the risky prospect to be inflated (deflated) if the low (high) rank outcome is of small probability. 
-In turn, for inflated (deflated) means, there is a higher chance that the risky prospect is falsely chosen (dismissed) and this chance increases with the switching probability.
+* For **small-probability outcomes of low rank, the rates of false risky choices increase with the switching probability**, whereas the rates of false safe choices remain low (top row).
+Vice versa, for **small-probability outcomes of high rank, the rates of false safe choices increase with the switching probability**, whereas the rates of false risky choices remain low (middle row). 
 
-* The effect of total sampling error is represented by the divergence of the colored (mean) line from the gray (EV) line:
-False response rates tend to be higher if compared to the latent EV instead of the sampled mean, where the latter controls for sampling error.
-The sampling error causes the sampled relative frequencies to deviate from the objective probabilities both unsystematically (random random) and systematically (systematic underrepresenation of small probability outcomes).
-With increasing thresholds, both error types are reduced as reflected by the convergence of the two lines. 
-I.e., the higher the total number of sampled outcomes, the more does the sampled mean converge against the expected value.
-The similarity of the curve-pairs demonstrates that the interplay between sampling and integration strategies can have a nuanced and severe effect on the choice behavior beyond sampling error. 
+* Both patterns, similar in structure, can be explained by the inverse relationship between switching probabilities and round-level sample sizes, the positive skewness of small-probability outcomes in small samples, and the independence of comparison rounds.
+That is, **for high switching probabilities, small-probability outcomes tend to be undersampled within each comparison round, causing the respective outcome to contribute less to the majority of the mean comparisons than would be warranted by both its objective probability and the sampled relative frequency on the trial level**. 
+In other words, if the low (high) rank outcome is of low probability, the mean of the risky prospect tends to be inflated (deflated) compared to the latent EV and the trial-level mean in the majority of comparison rounds.
+Because each mean comparison is independent and weighted equally, there is, in turn, a higher chance that the risky prospect is falsely chosen (dismissed) and this chance increases with switching probabilities and thresholds.
 
-* For choice problems with no small-probability outcomes, false response rates increase with switching probabilities, however, on a low level.
-Together with the reversed choice patterns for problems that contain desirable rare outcomes on the one hand and undesirable rare outcomes on the other hand, this shows that the structure of the environment (choice problems) is an important factor.
+* The effect of total sampling error is represented by the color coding.
+**False response rates tend to be higher if compared to latent EV maximization instead of the sampled mean maximization**, where the latter controls for sampling error.
+Sampling error causes the sampled relative frequencies to deviate from the objective probabilities both unsystematically (random random) and systematically (systematic underrepresenation of small probability outcomes).
+With **increasing thresholds and thus an increasing number of sampled outcomes, sampling error is reduced as is reflected by the convergence of the two EV and mean lines**. 
+The similarity of the curve-pairs demonstrates that **the interplay between sampling and integration strategies can have a nuanced and severe effect on the choice behavior beyond sampling error**. 
 
-## Summary Integration model
+* For choice problems with no small-probability outcomes, false response rates increase with switching probabilities, however, on a lower level.
+Together with the reversed choice patterns for problems that contain desirable rare outcomes on the one hand and undesirable rare outcomes on the other hand, this shows that the structure of the environment (choice problems) plays an important role for the roundwise integration model to produce normative or non-normative choice behavior. 
+
+*Discussion Note.*
+*How robust are the analyses to changes in the choice problems, e.g., multiple outcomes, mixed prospects, etc.?* 
+
+## Summary Integration Model
 
 ```{r choice-rates summary}
 fr_rates_summary_r <- fr_rates %>%  
@@ -492,19 +496,19 @@ ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-an
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png")
 ```
 
+* For relative thresholds, **false response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean (EV) for high switching probabilities**.
+This decrease in the false response rates can be explained by diminishing random temporal imbalances and the ability of the summary integration model to approximate the solutions of EV and mean maximization, given that roughly the same large number of outcomes is sampled from *both* prospects.
+Specifically, for low switching probabilities, the summary integration model tends to choose the prospect that is, by chance, first sampled from due to the temporal advantage this prospect obtains (i.e., the cumulative sum of the starting prospect is based on a larger sample at most times).
+The imbalances diminish with increasing switching probabilities as here cumulative sums are based on roughly the same underlying sample size.
+The rates of sampled mean and EV maximization increase with switching probabilities because the difference in cumulative sums is proportional to the difference in sampled means, given the samples from both prospects are of equal size.
+Similar to the sample mean, then, the effect of sampling error should be low for large sample sizes on both prospects, i.e., with high switching probabilities and thresholds.  
+**For small switching probabilities, the effect of sampling error is overshadowed by the random temporal imbalances**. 
+That is, as no systematic choices are made, deviations from the sampled mean and the latent expected value should be equally random.
+Thus, there is no discernible difference in the rates of EV maximization and sampled mean maximization for relative tresholds. 
 
-* In contrast to the summary integration model, false response rates decrease with increasing switching probabilities.
-Specifically, the false response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean (EV) for high switching probabilities. 
-This demonstrates that changes in the sampling strategy do not cause the summary integration model to make systematically different choices.
-That is, the mechanisms of the summary integration model are such that evidence is accumulated for differences in the latent EVs, given that approximately the same number of outcomes is sampled from *both* prospects.
-The more outcomes are sampled from both prospects, i.e., the higher the thresholds, the more accurately these differences should be assessed. 
-Changes on the sampling strategy do not change the latent property for which evidence is accumulated in the summary integration model.
-Rather, they affect whether approximately the same number of outcomes is sampled from both prospects or whether one of the prospects, obtains, by chance, a temporal advantage, rendering the decision either systematic or unsystematic, respectively. 
+* For absolute thresholds, 
 
-* For small switching probabilities, the effect of sampling error should be overshadowed by the temporal imbalances. 
-That is, as no systematic choices are made, deviations from the sampled mean and the latent expected value should be equally random. 
-As the switching probability increases, false response rates should be larger for the latent EV than for the sampled mean.
-However, as the number of sampled outcomes increases with the switching probabilities, the effect of systematic sampling error is generally low.  
+
 
 # CPT and Logit Choice Rule
 
@@ -605,14 +609,14 @@ knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplemen
 
 # alpha estimates 
 
-cpt_roundwise_relative <- cpt_rondwise %>% filter(parameter == "alpha", threshold == "relative")
+cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "alpha", threshold == "relative")
 
 alpha <- cpt_roundwise %>%
   filter(parameter == "alpha", threshold == "absolute") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
-  scale_y_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.5)) + 
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Concavity  ", alpha)),
        color = expression(psi)) +

@@ -18,7 +18,7 @@ knitr::opts_chunk$set(message = FALSE,
                       fig.width = 14)
 ```
 
-```{r pkgs}
+```{r pkgs, eval = TRUE}
 pacman::p_load(tidyverse,
                scico,
                latex2exp,
@@ -27,7 +27,7 @@ pacman::p_load(tidyverse,
                papaja)
 ```
 
-```{r data}
+```{r data, eval = TRUE}
 choices <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
 cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimates.rds")
 ```
@@ -41,11 +41,11 @@ The analyses comprise of the description and explanation of the sampling and cho
 
 * The interplay of sampling and integration strategies can produce distinct choice patterns in decisions from experience.
 
-* These choice patterns translate into characteristic shapes of CPT's value and weighting function.
+* These choice patterns translate into characteristic shapes of CPT's value and weighting function, suggesting that psychoeconomic representations of experienced-based choices can reflect an agent's strategic response to core tasks involved in the underlying decision-making process. 
 
-* Both choice patterns and their psychoeconomic translations arise in the absence of sampling error. 
+* Both strategy-implied choice patterns and their psychoeconomic translations arise in the absence of sampling error and become more pronounced with increasing sample sizes.
 
-* A roundwise integration of sampled outcomes can cause the as-if underweighting of rare outcomes pattern, which becomes more robust with increasing sample sizes.
+* The roundwise integration of sampled outcomes can cause the typical as-if underweighting of rare outcomes pattern in decisions from experience, challenging the common frugal-sampling explanation.
 
 
 # Sampling Behavior
@@ -470,7 +470,7 @@ fr_rates_summary_r <- fr_rates %>%
   filter(psi > .9 | psi == .5 | psi == (1-.9)) 
   
 fr_rates %>%
-  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(model == "summary" & threshold == "relative") %>% 
   filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate)) +
   facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
@@ -489,6 +489,26 @@ fr_rates %>%
   scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
   theme_apa()
 
+fr_rates %>%
+  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate)) +
+  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
+                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "False Response Rate",
+       linetype = "False Response", 
+       color = "Norm",
+       shape = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(aes(linetype = type, color = norm), size = 1) + 
+  geom_point(aes(shape = threshold, color = norm), size = 4) +
+  geom_line(data = fr_rates_summary_r, aes(linetype = type), size = 1, color = "gray") + 
+  geom_point(data = fr_rates_summary_r, aes(shape = threshold), size = 4, color = "gray") +
+  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
+  theme_apa()
+
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png", width = 14, height = 12)
 ```
 
@@ -496,24 +516,34 @@ ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-an
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png")
 ```
 
-* For relative thresholds, **false response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean (EV) for high switching probabilities**.
-This decrease in the false response rates can be explained by diminishing random temporal imbalances and the ability of the summary integration model to approximate the solutions of EV and mean maximization, given that roughly the same large number of outcomes is sampled from *both* prospects.
-Specifically, for low switching probabilities, the summary integration model tends to choose the prospect that is, by chance, first sampled from due to the temporal advantage this prospect obtains (i.e., the cumulative sum of the starting prospect is based on a larger sample at most times).
-The imbalances diminish with increasing switching probabilities as here cumulative sums are based on roughly the same underlying sample size.
-The rates of sampled mean and EV maximization increase with switching probabilities because the difference in cumulative sums is proportional to the difference in sampled means, given the samples from both prospects are of equal size.
-Similar to the sample mean, then, the effect of sampling error should be low for large sample sizes on both prospects, i.e., with high switching probabilities and thresholds.  
-**For small switching probabilities, the effect of sampling error is overshadowed by the random temporal imbalances**. 
+* **False response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean and the latent EV for high switching probabilities**.
+This decrease in the false response rates can be explained by diminishing random temporal imbalances and the ability of the summary integration model to approximate the solutions of mean and EV maximization, given that roughly the same large number of outcomes is sampled from *both* prospects.
+
+* **For low switching probabilities, the summary integration model tends to choose the prospect that is, by chance, first sampled from** due to the temporal advantage this prospect obtains (i.e., the cumulative sum of the starting prospect is based on a larger sample at most times).
+
+* The temporal imbalances diminish with increasing switching probabilities---yet, they may not fade entirely---since here cumulative sums are based on roughly the same underlying sample size at any point in time.
+The **rates of sampled mean and EV maximization then increase with switching probabilities because the differences in the cumulative sums are proportional to the difference in sampled means**, given equal sample sizes.
+
+* Similar to the sample mean, the effect of sampling error should be larger for small samples.
+However, the sampling error and changes thereof are not easily discernible from the plots, specifically, from the difference between the mean and the EV line. 
+This is because **for small switching probabilities, the effect of sampling error is overshadowed by the random temporal imbalances**. 
 That is, as no systematic choices are made, deviations from the sampled mean and the latent expected value should be equally random.
-Thus, there is no discernible difference in the rates of EV maximization and sampled mean maximization for relative tresholds. 
-
-* For absolute thresholds, 
-
-
 
 # CPT and Logit Choice Rule
 
+```{r eval = TRUE}
+rhat <- cpt %>% select(Rhat) %>% max %>% round(3)
+```
+
+
 In this section, the estimates for the parameters of CPT and the logit choice rule are reported.
-Because I am interested in the effects of sampling and integration strategies beyond total sampling error, the sampled relative frequencies are supplied as probability information to CPT's weighting function.
+CPT is a descriptive model of risky and uncertain choice that describes deviations from EV maximization by subjective transformations of outcomes and probabilities carried out by a value and a weighting function, respectively.
+Here, to control for sampling error, the trial-level sampled relative frequencies were supplied as probability information to CPT's weighting function.
+
+CPT was amended with a stochastic (rather than a deterministic) choice rule to allow for variations in the degree to which the choice predictions are consistent with the strength of preference derived from the evaluations of the core CPT model.
+
+The fitted models were only considered for analysis if the scale reduction factor $\hat{R}$ for all their parameters was below $\leq$ 1.01. 
+All scale reduction factors were $\hat{R} \leq$ `r rhat`, indicating good convergence of all models.
 
 ## Roundwise Integration Model
 
@@ -523,7 +553,7 @@ cpt_roundwise <- cpt %>% filter(model == "roundwise")
 
 ### Weighting Function
 
-Below, the parameter estimates of the weighting function ($\gamma, \delta$) and the value function ($\alpha$) as well as their resulting graphical shapes are displayed. 
+The plot below displays the means and 95%-intervals of the posterior distributions of the estimates for the curvature parameter $\gamma$ and the elevation parameter $\delta$, as well as the resulting graphical shape of the weighting function.
 
 ```{r weighting function roundwise}
 

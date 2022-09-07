@@ -6,6 +6,9 @@ date: "`r Sys.Date()`"
 output: 
   md_document:
     variant: markdown_github
+    toc: true
+    toc_depth: 2
+    
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +17,6 @@ knitr::opts_chunk$set(
 	fig.width = 14,
 	message = FALSE,
 	warning = FALSE,
-	echo = FALSE,
 	eval = FALSE
 )
 ```

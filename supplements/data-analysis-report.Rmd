@@ -4,21 +4,22 @@ subtitle: "Data Analysis Report"
 author: "Linus Hof"
 date: "`r Sys.Date()`"
 output: 
-  rmdformats::robobook:
-    collapsed: true
-    code_folding: hide
-    keep_md: true
+  md_document:
+    variant: markdown_github
 ---
 
-```{r setup}
+```{r setup, include=FALSE}
 # set global chunk options
-knitr::opts_chunk$set(message = FALSE, 
-                      warning = FALSE,
-                      eval = FALSE,
-                      fig.width = 14)
+knitr::opts_chunk$set(
+	fig.width = 14,
+	message = FALSE,
+	warning = FALSE,
+	echo = FALSE,
+	eval = FALSE
+)
 ```
 
-```{r pkgs, eval = TRUE}
+```{r pkgs, eval=TRUE}
 pacman::p_load(tidyverse,
                scico,
                latex2exp,

@@ -2,7 +2,7 @@
 title: "Sampling Strategies in DfE"
 subtitle: "Data Analysis Report"
 author: "Linus Hof"
-date: "`r Sys.Date()`"
+date: "2022-09-07"
 output: 
   rmdformats::robobook:
     collapsed: true
@@ -10,7 +10,8 @@ output:
     keep_md: true
 ---
 
-```{r setup}
+
+```r
 # set global chunk options
 knitr::opts_chunk$set(message = FALSE, 
                       warning = FALSE,
@@ -18,7 +19,8 @@ knitr::opts_chunk$set(message = FALSE,
                       fig.width = 14)
 ```
 
-```{r pkgs, eval = TRUE}
+
+```r
 pacman::p_load(tidyverse,
                scico,
                latex2exp,
@@ -27,7 +29,8 @@ pacman::p_load(tidyverse,
                papaja)
 ```
 
-```{r data, eval = TRUE}
+
+```r
 choices <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
 cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimates.rds")
 ```
@@ -73,7 +76,8 @@ The following figure displays the number of outcomes sampled within choice trial
 Each point represents the median across all trials given the respective parameter combination.
 The dashed horizontal line represents the meta-analytic median reported by Wulff et al. ([2018](https://psycnet.apa.org/doiLanding?doi=10.1037%2Fbul0000115)) for choices between a two-outcome risky prospect and a safe prospect.
 
-```{r ggplot setup}
+
+```r
 # define functions for assigning facet labels in facet_wrap() and facet_grid()
 label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
@@ -89,7 +93,8 @@ label_rare <- function(string) {
 ```
 
 
-```{r trial-level sample sizes roundwise}
+
+```r
 trial_n_median <- choices %>% 
   group_by(model, psi, threshold, theta) %>% 
   summarise(median_n = median(n_sample))
@@ -111,9 +116,12 @@ trial_n_median %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_roundwise.png", width = 14, height = 5)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/trial_n_roundwise.png)<!-- -->
 
 * The **trial-level sample sizes increase with decreasing switching probabilities and increasing thresholds**. 
 
@@ -129,7 +137,8 @@ One might reverse-engineer what property that is depending on the model and para
 The following figure shows how small trial-level sample sizes lead to larger deviations of the trial-level sampled relative frequencies from the objective probabilities (sampling error).
 Each point represents the median across all trials for the respective objective probability and parameter combination.
 
-```{r trial-level relative frequencies roundwise}
+
+```r
 trial_ep_median <- choices %>% 
   group_by(model, psi, threshold, theta, p_r_high) %>% 
   summarise(median_ep_r_high = median(ep_r_high, na.rm = TRUE))
@@ -153,9 +162,12 @@ trial_ep_median %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/trial_ep_roundwise.png)<!-- -->
 
 
 Following from the laws of large numbers, the relative frequencies within a (very) large sample almost surely converge to the objective probabilities.
@@ -169,12 +181,14 @@ Because of the positive skewness of their binomial distribution, small-probabili
 The following plot demonstrates that the inverse relationship between switching probabilities and trial-level sample sizes is driven by the inverse relationship between switching probabilities and round-level sample sizes, i.e., the number of outcomes sampled within a single comparison round.
 Each point represents the median round-level sample sizes across all rounds for the given parameter combination.
 
-```{r}
+
+```r
 simulation_roundwise <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/simulation_roundwise.rds.bz2")
 simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5))
 ```
 
-```{r round-level sample sizes, eval = FALSE}
+
+```r
 round_n_median <- simulation_roundwise %>% 
   group_by(psi, threshold, theta, problem, agent, round) %>% 
   summarise(n_round = n()) %>% 
@@ -196,9 +210,12 @@ round_n_median %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_n_roundwise.png", width = 14, height = 5)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_n_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/round_n_roundwise.png)<!-- -->
 
 * The **round-level sample sizes decrease with increasing switching probabilities**.
 
@@ -208,8 +225,8 @@ However, increasing thresholds naturally lead to a proportional increase of the 
 The roundwise integration mechanism implies that the relative frequencies sampled on the round level can themselves deviate from the relative frequencies sampled on the trial level.
 The figure below displays their relation.
 
-```{r round-level relative frequencies}
 
+```r
 round_ep  <- simulation_roundwise %>% 
   group_by(psi, threshold, theta, problem, agent) %>%
   mutate(n_sample = n(), # total number of single samples
@@ -264,9 +281,12 @@ ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-an
 ```
 
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_ep_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/round_ep_roundwise.png)<!-- -->
 
 * For $\theta = 1$---i.e., when only one mean comparison is carried out---the relative frequencies sampled on the round level are necessarily identical to those sampled on the trial level.
 
@@ -287,7 +307,8 @@ Each point represents the median across all trials for the respective parameter 
 The dashed horizontal line again represents the meta-analytic median reported by Wulff et al. ([2018](https://psycnet.apa.org/doiLanding?doi=10.1037%2Fbul0000115)).
 An analysis of the round level is not applicable for the summary integration model.
 
-```{r trial-level sample sizes summary}
+
+```r
 trial_n_median %>% 
   filter(model == "summary") %>% 
   ggplot(aes(psi, y = median_n, color = threshold)) + 
@@ -305,9 +326,12 @@ trial_n_median %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_summary.png", width = 14, height = 5)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_summary.png")
 ```
+
+![](data-analysis-report_files/figures/trial_n_summary.png)<!-- -->
 
 * For relative thresholds, the trial-level sample sizes increase with switching probabilities.
 This effect is caused by **random temporal imbalances between the prospects for small switching probabilities**, which are introduced by the method of implementation (use of cumulative sums rather than cumulative means).
@@ -323,7 +347,8 @@ In contrast, **the lower the switching probability and thus, the larger the temp
 
 Below, it is shown how the sampled relative frequencies of outcomes match the objective probabilities.
 
-```{r trial-level relative frequencies summary}
+
+```r
 trial_ep_median %>% 
   filter(model == "summary") %>%
   ggplot(aes(p_r_high, y = median_ep_r_high, color = threshold)) + 
@@ -343,9 +368,12 @@ trial_ep_median %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_summary.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_summary.png")
 ```
+
+![](data-analysis-report_files/figures/trial_ep_summary.png)<!-- -->
 
 
 * The **sampled relative frequencies match the objective probabilities more closely the higher the thresholds are**. 
@@ -369,8 +397,8 @@ The false response rates are reported separately for the existence and rank of t
 This is because, depending on the rank of the small-probability outcome, sampled means of the risky prospect on the trial level (round level) can either be inflated or deflated in or against the direction of the differences in the latent EV (sampled means on the trial level).
 Whereas inflation and deflation in the direction of the EV and trial-level mean difference should produce choice patterns consistent with maximization, inflation and deflation in the opposite direction should produce inconsistent choice patterns and thus higher false response rates. 
 
-```{r choice-rates}
 
+```r
 # expected value
 fr_rates_ev <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # drop trials where only one option was attended
@@ -419,7 +447,8 @@ fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 
 ## Roundwise Integration Model
 
-```{r choice-rates roundwise}
+
+```r
 fr_rates_round_r <- fr_rates %>%  filter(model == "roundwise" & threshold == "relative") %>% 
     filter(psi > .9 | psi == .5 | psi == (1-.9)) 
 
@@ -446,9 +475,12 @@ fr_rates %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/choice_rates_roundwise.png)<!-- -->
 
 * For **small-probability outcomes of low rank, the rates of false risky choices increase with the switching probability**, whereas the rates of false safe choices remain low (top row).
 Vice versa, for **small-probability outcomes of high rank, the rates of false safe choices increase with the switching probability**, whereas the rates of false risky choices remain low (middle row). 
@@ -473,7 +505,8 @@ How robust are the analyses to changes in the choice problems, e.g., multiple ou
 
 ## Summary Integration Model
 
-```{r choice-rates summary}
+
+```r
 fr_rates_summary_r <- fr_rates %>%  
   filter(model == "summary" & threshold == "relative") %>% 
   filter(psi > .9 | psi == .5 | psi == (1-.9)) 
@@ -521,9 +554,12 @@ fr_rates %>%
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png")
 ```
+
+![](data-analysis-report_files/figures/choice_rates_summary.png)<!-- -->
 
 * **False response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean and the latent EV for high switching probabilities**.
 This decrease in the false response rates can be explained by diminishing random temporal imbalances and the ability of the summary integration model to approximate the solutions of mean and EV maximization, given that roughly the same large number of outcomes is sampled from *both* prospects.
@@ -540,7 +576,8 @@ That is, as no systematic choices are made, deviations from the sampled mean and
 
 # CPT and Logit Choice Rule
 
-```{r eval = TRUE}
+
+```r
 rhat <- cpt %>% select(Rhat) %>% max %>% round(3)
 ```
 
@@ -552,13 +589,14 @@ Here, to control for sampling error, the trial-level sampled relative frequencie
 CPT was amended with a stochastic (rather than a deterministic) choice rule to allow for variations in the degree to which the choice predictions are consistent with the strength of preference derived from the evaluations of the core CPT model.
 
 The fitted models were only considered for analysis if the scale reduction factor $\hat{R}$ for all their parameters was below $\leq$ 1.01. 
-All scale reduction factors were $\hat{R} \leq$ `r rhat`, indicating acceptable convergence of all models.
+All scale reduction factors were $\hat{R} \leq$ 1.008, indicating acceptable convergence of all models.
 
 For further details on the method, please refer to the manuscript.
 
 ## Roundwise Integration Model
 
-```{r}
+
+```r
 cpt_roundwise <- cpt %>% filter(model == "roundwise")
 ```
 
@@ -566,8 +604,8 @@ cpt_roundwise <- cpt %>% filter(model == "roundwise")
 
 The plot below displays the means and 95%-intervals of the posterior distributions of the curvature parameter $\gamma$ and the elevation parameter $\delta$, as well as the resulting graphical shape of the weighting function.
 
-```{r weighting function roundwise}
 
+```r
 # gamma estimates
 
 cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "gamma", threshold == "relative")
@@ -640,9 +678,12 @@ ggarrange(wf, gamma, delta, nrow = 3, ncol = 1, common.legend = TRUE, labels = "
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval=TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/weighting_function_roundwise.png)<!-- -->
 
 * For the parameter combination ($\theta = 1$, $\psi = 1$) of the generative model, the 95%-intervals of the posterior distributions of $\gamma$ and $\delta$ are large.
 Here, no sampled relative frequencies other than 0 and 1 are supplied to the weighting function, which suggests that the function cannot reliably account for the relative frequencies in between.
@@ -672,8 +713,8 @@ Such a pattern is implied for $\delta > 1$.
 
 The plot below displays the means and 95%-intervals of the posterior distributions of the outcome sensitivity parameter $\alpha$ and the resulting graphical shape of the value function, as well as the means and 95%-intervals of the posterior distributions of the choice consistency parameter $\rho$ of the logit choice rule.
 
-```{r value function roundwise}
 
+```r
 # alpha estimates 
 
 cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "alpha", threshold == "relative")
@@ -748,9 +789,12 @@ ggarrange(vf, alpha, rho, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AU
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_roundwise.png")
 ```
+
+![](data-analysis-report_files/figures/value_function_roundwise.png)<!-- -->
 
 * As for the parameters of the weighting function, the 95%-interval of the posterior distribution of $\alpha$ is large, given the parameter combination ($\theta = 1$, $\psi = 1$) of the generative model.
 
@@ -777,7 +821,8 @@ In the current case, the decrease of the $\rho$-estimates with increasing switch
 
 ## Summary Integration Model
 
-```{r}
+
+```r
 cpt_summary <- cpt %>% filter(model == "summary")
 ```
 
@@ -801,8 +846,8 @@ In this case, difference in the cumulative sums are more strongly shaped by the 
 
 ### Weighting Function
 
-```{r weighting function summary}
 
+```r
 # gamma estimates
 
 cpt_summary_relative <- cpt_summary %>% filter(parameter == "gamma", threshold == "relative")
@@ -875,9 +920,12 @@ ggarrange(wf, gamma, delta, nrow = 3, ncol = 1, common.legend = TRUE, labels = "
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_summary.png", width = 14, height = 12)
 ```
 
-```{r eval=TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_summary.png")
 ```
+
+![](data-analysis-report_files/figures/weighting_function_summary.png)<!-- -->
 
 * **For high switching probabilities, most estimates of $\gamma$ and $\delta$ are approximately 1, implying a linear weighting of sampled relative frequencies**.
 This reflects the choice behavior of the generative model for high switching probabilities in that the rates of choices that did not maximize the sampled mean are close to 0.
@@ -888,8 +936,8 @@ This reflects the choice behavior of the generative model for high switching pro
 
 ### Value Function and Logit Choice Rule
 
-```{r value function summary}
 
+```r
 # alpha estimates 
 
 cpt_summary_relative <- cpt_summary %>% filter(parameter == "alpha", threshold == "relative")
@@ -964,9 +1012,12 @@ ggarrange(vf, alpha, rho, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AU
 ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_summary.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
+
+```r
 knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_summary.png")
 ```
+
+![](data-analysis-report_files/figures/value_function_summary.png)<!-- -->
 
 * **For high switching probabilities, most estimates es of $\alpha$ are little under 1**.
 **This implies that the outcome information is not strongly compressed but rather weighted linearly**. 

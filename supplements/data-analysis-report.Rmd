@@ -1,38 +1,60 @@
 ---
-title: "Sampling Strategies in DfE"
-subtitle: "Data Analysis Report"
+title: "Data Analysis Report"
 author: "Linus Hof"
 date: "`r Sys.Date()`"
 output: 
-  md_document:
-    variant: markdown_github
+  github_document:
+    html_preview: true
     toc: true
-    toc_depth: 2
-    
+    toc_depth: 1
 ---
 
 ```{r setup, include=FALSE}
+# set project path
+here::i_am("supplements/data-analysis-report.Rmd")
+
 # set global chunk options
 knitr::opts_chunk$set(
+	fig.height = 12,
 	fig.width = 14,
 	message = FALSE,
-	warning = FALSE,
-	eval = FALSE
+	warning = TRUE
 )
 ```
 
-```{r pkgs, eval=TRUE}
-pacman::p_load(tidyverse,
-               scico,
-               latex2exp,
-               stringr,
+```{r pkgs}
+# load packages
+pacman::p_load(here,
+               tidyverse,
+               scico, # for scientific color palettes developed by Fabio Crameri
+               latex2exp, # for LaTeX expressions in plots
                ggpubr,
                papaja)
 ```
 
-```{r data, eval = TRUE}
-choices <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/choice_data.rds.bz2")
-cpt <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/cpt_estimates.rds")
+```{r ggplot2 setup}
+# define labeling functions for facet_wrap() and facet_grid()
+
+## threshold level theta
+label_theta <- function(string) {
+  TeX(paste("$\\theta=$", string, sep = ""))
+  }
+
+# switching probability psi
+label_psi <- function(string) {
+  TeX(paste("$\\psi=$", string, sep = ""))
+}
+
+# propbability of high risky outcome
+label_rare <- function(string) {
+  TeX(paste("$\\p_{High}$", string, sep = "")) 
+}
+```
+
+```{r data}
+# load data
+choices <- read_rds(here("data", "choice_data.rds.bz2"))
+cpt <- read_rds(here("data", "cpt_estimates.rds"))
 ```
 
 # Description and Remarks
@@ -43,9 +65,9 @@ The analyses comprise of the description and explanation of the sampling and cho
 
 The results of the analyses, particularly the reported choice rates and CPT estimates, can be understood as theory-implied data, or predictions, that remain to be tested against empirical data. 
 
-If you feel you spotted an error/bug/etc. in the analyses---or any other part of this project---or in the case of questions and remarks, please add an issue to this repository or contact the author.
+If you feel you spotted an error/bug/etc. in the analyses---or any other part of this project---or in the case of questions and remarks, please add an [issue](https://github.com/linushof/sampling-strategies/issues) to this repository or contact the author.
 
-# Summary of the Core Results
+# Summary of Core Results
 
 * The interplay of sampling and integration strategies can produce distinct choice patterns in decisions from experience.
 
@@ -55,7 +77,6 @@ This suggests that psychoeconomic representations of experienced-based choices c
 * Both strategy-implied choice patterns and their psychoeconomic translations arise in the absence of sampling error.
 
 * The roundwise integration of sampled outcomes can cause the typical as-if underweighting of rare outcomes pattern in decisions from experience, challenging the common frugal-sampling explanation.
-
 
 # Sampling Behavior
 
@@ -76,23 +97,7 @@ The following figure displays the number of outcomes sampled within choice trial
 Each point represents the median across all trials given the respective parameter combination.
 The dashed horizontal line represents the meta-analytic median reported by Wulff et al. ([2018](https://psycnet.apa.org/doiLanding?doi=10.1037%2Fbul0000115)) for choices between a two-outcome risky prospect and a safe prospect.
 
-```{r ggplot setup}
-# define functions for assigning facet labels in facet_wrap() and facet_grid()
-label_theta <- function(string) {
-  TeX(paste("$\\theta=$", string, sep = ""))
-  }
-
-label_psi <- function(string) {
-  TeX(paste("$\\psi=$", string, sep = "")) #switching probability parameter psi
-}
-
-label_rare <- function(string) {
-  TeX(paste("$\\p_{High}$", string, sep = "")) #type of rare event
-}
-```
-
-
-```{r trial-level sample sizes roundwise}
+```{r trial-level n roundwise, fig.height=5}
 trial_n_median <- choices %>% 
   group_by(model, psi, threshold, theta) %>% 
   summarise(median_n = median(n_sample))
@@ -110,12 +115,10 @@ trial_n_median %>%
   geom_line(size = 1) +
   scale_color_scico_d(palette = "vik", begin = .2, end = .8)+ 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_roundwise.png", width = 14, height = 5)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_roundwise.png")
+```{r save trial-level n roundwise, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/trial_n_roundwise.png", width = 14, height = 5)
 ```
 
 * The **trial-level sample sizes increase with decreasing switching probabilities and increasing thresholds**. 
@@ -132,7 +135,7 @@ One might reverse-engineer what property that is depending on the model and para
 The following figure shows how small trial-level sample sizes lead to larger deviations of the trial-level sampled relative frequencies from the objective probabilities (sampling error).
 Each point represents the median across all trials for the respective objective probability and parameter combination.
 
-```{r trial-level relative frequencies roundwise}
+```{r trial-level frequencies roundwise}
 trial_ep_median <- choices %>% 
   group_by(model, psi, threshold, theta, p_r_high) %>% 
   summarise(median_ep_r_high = median(ep_r_high, na.rm = TRUE))
@@ -152,14 +155,11 @@ trial_ep_median %>%
   scale_color_scico_d(palette = "vik", begin = .2, end = .8) + 
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", size = 1) + 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_roundwise.png")
+```{r save trial-level frequencies roundwise, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/trial_ep_roundwise.png", width = 14, height = 12)
 ```
-
 
 Following from the laws of large numbers, the relative frequencies within a (very) large sample almost surely converge to the objective probabilities.
 Thus: 
@@ -172,12 +172,11 @@ Because of the positive skewness of their binomial distribution, small-probabili
 The following plot demonstrates that the inverse relationship between switching probabilities and trial-level sample sizes is driven by the inverse relationship between switching probabilities and round-level sample sizes, i.e., the number of outcomes sampled within a single comparison round.
 Each point represents the median round-level sample sizes across all rounds for the given parameter combination.
 
-```{r}
-simulation_roundwise <- read_rds("C:/Users/ge84jux/Projects/sampling-strategies/data/simulation_roundwise.rds.bz2")
-simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5))
-```
+```{r round-level n, eval=FALSE, fig.height=5}
 
-```{r round-level sample sizes, eval = FALSE}
+simulation_roundwise <- read_rds(here("data", "simulation_roundwise.rds")) 
+simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5)
+
 round_n_median <- simulation_roundwise %>% 
   group_by(psi, threshold, theta, problem, agent, round) %>% 
   summarise(n_round = n()) %>% 
@@ -194,13 +193,15 @@ round_n_median %>%
   geom_point(size = 4) + 
   geom_line(size = 1) + 
   scale_color_scico_d(palette = "vik", begin = .2, end = .8) + 
-  theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_n_roundwise.png", width = 14, height = 5)
+  theme_apa
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_n_roundwise.png")
+```{r save round-level n, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_n_roundwise.png", width = 14, height = 5)
+```
+
+```{r insert figure round-level n, include=FALSE}
+knitr::include_graphics(here("supplements", "data-analysis-report_files", "figure-high-resolution", "round_n_roundwise.png"))
 ```
 
 * The **round-level sample sizes decrease with increasing switching probabilities**.
@@ -211,8 +212,7 @@ However, increasing thresholds naturally lead to a proportional increase of the 
 The roundwise integration mechanism implies that the relative frequencies sampled on the round level can themselves deviate from the relative frequencies sampled on the trial level.
 The figure below displays their relation.
 
-```{r round-level relative frequencies}
-
+```{r round-level frequencies, eval=FALSE}
 round_ep  <- simulation_roundwise %>% 
   group_by(psi, threshold, theta, problem, agent) %>%
   mutate(n_sample = n(), # total number of single samples
@@ -245,30 +245,16 @@ round_ep_median %>%
   geom_point(size = .8) +
   scale_color_scico_d(palette = "vik", begin = .2, end = .8) + 
   theme_apa()
-  
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_ep_roundwise.png", width = 14, height = 12)
 
-round_ep_median %>% 
-  ggplot(aes(x = ep_r_high, y = median_ep_round_r_high)) + 
-  facet_grid(psi~theta, 
-             labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
-                                 psi = as_labeller(label_psi, default = label_parsed))) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
-  labs(x = "Trial-Level Sampled Relative Frequency of the High-Rank Risky Outcome",
-       y = "Median Round-Level Sampled Relative Frequency") +
-  geom_density2d_filled(data = round_ep, aes(y = ep_round_r_high)) +
-  scale_fill_scico_d(palette = "devon") + 
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "white") + 
-  geom_point(size = .5, color = "white") +
-  theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_ep_density_roundwise.png", width = 14, height = 12)
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_ep_roundwise.png", width = 14, height = 12)
 ```
 
+```{r save round-level frequencies, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_n_roundwise.png", width = 14, height = 5)
+```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/round_ep_roundwise.png")
+```{r insert figure round-level frequencies, include=FALSE}
+knitr::include_graphics(here("supplements", "data-analysis-report_files", "figure-high-resolution", "round_ep_roundwise.png"))
 ```
 
 * For $\theta = 1$---i.e., when only one mean comparison is carried out---the relative frequencies sampled on the round level are necessarily identical to those sampled on the trial level.
@@ -290,7 +276,7 @@ Each point represents the median across all trials for the respective parameter 
 The dashed horizontal line again represents the meta-analytic median reported by Wulff et al. ([2018](https://psycnet.apa.org/doiLanding?doi=10.1037%2Fbul0000115)).
 An analysis of the round level is not applicable for the summary integration model.
 
-```{r trial-level sample sizes summary}
+```{r trial-level n summary, fig.height=5}
 trial_n_median %>% 
   filter(model == "summary") %>% 
   ggplot(aes(psi, y = median_n, color = threshold)) + 
@@ -304,12 +290,10 @@ trial_n_median %>%
   geom_line(size = 1) +
   scale_color_scico_d(palette = "vik", begin = .2, end = .8)+ 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_summary.png", width = 14, height = 5)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_n_summary.png")
+```{r save trial-level n, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/trial_n_summary.png", width = 14, height = 5)
 ```
 
 * For relative thresholds, the trial-level sample sizes increase with switching probabilities.
@@ -326,7 +310,7 @@ In contrast, **the lower the switching probability and thus, the larger the temp
 
 Below, it is shown how the sampled relative frequencies of outcomes match the objective probabilities.
 
-```{r trial-level relative frequencies summary}
+```{r trial-level frequencies summary}
 trial_ep_median %>% 
   filter(model == "summary") %>%
   ggplot(aes(p_r_high, y = median_ep_r_high, color = threshold)) + 
@@ -342,14 +326,11 @@ trial_ep_median %>%
   scale_color_scico_d(palette = "vik", begin = .2, end = .8) + 
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", size = 1) + 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_summary.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/trial_ep_summary.png")
+```{r save trial_level frequencies, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/trial_ep_summary.png", width = 14, height = 12)
 ```
-
 
 * The **sampled relative frequencies match the objective probabilities more closely the higher the thresholds are**. 
 This is because higher thresholds require larger sample sizes.
@@ -372,7 +353,7 @@ The false response rates are reported separately for the existence and rank of t
 This is because, depending on the rank of the small-probability outcome, sampled means of the risky prospect on the trial level (round level) can either be inflated or deflated in or against the direction of the differences in the latent EV (sampled means on the trial level).
 Whereas inflation and deflation in the direction of the EV and trial-level mean difference should produce choice patterns consistent with maximization, inflation and deflation in the opposite direction should produce inconsistent choice patterns and thus higher false response rates. 
 
-```{r choice-rates}
+```{r choice rates}
 
 # expected value
 fr_rates_ev <- choices %>%
@@ -422,7 +403,7 @@ fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 
 ## Roundwise Integration Model
 
-```{r choice-rates roundwise}
+```{r choice rates roundwise}
 fr_rates_round_r <- fr_rates %>%  filter(model == "roundwise" & threshold == "relative") %>% 
     filter(psi > .9 | psi == .5 | psi == (1-.9)) 
 
@@ -445,12 +426,10 @@ fr_rates %>%
   geom_point(data = fr_rates_round_r, aes(shape = threshold, color = norm), size = 4) +
   scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_roundwise.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_roundwise.png")
+```{r save choice rates roundwise, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/choice_rates_roundwise.png", width = 14, height = 12)
 ```
 
 * For **small-probability outcomes of low rank, the rates of false risky choices increase with the switching probability**, whereas the rates of false safe choices remain low (top row).
@@ -476,30 +455,10 @@ How robust are the analyses to changes in the choice problems, e.g., multiple ou
 
 ## Summary Integration Model
 
-```{r choice-rates summary}
+```{r choice rates summary}
 fr_rates_summary_r <- fr_rates %>%  
   filter(model == "summary" & threshold == "relative") %>% 
   filter(psi > .9 | psi == .5 | psi == (1-.9)) 
-  
-fr_rates %>%
-  filter(model == "summary" & threshold == "relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
-                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  labs(x = expression(paste("Switching Probability ", psi)),
-       y = "False Response Rate",
-       linetype = "False Response", 
-       color = "Norm",
-       shape = "Threshold") +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  geom_line(aes(linetype = type, color = norm), size = 1) + 
-  geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = fr_rates_summary_r, aes(linetype = type, color = norm), size = 1) + 
-  geom_point(data = fr_rates_summary_r, aes(shape = threshold, color = norm), size = 4) +
-  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
-  theme_apa()
 
 fr_rates %>%
   filter(model == "summary" & threshold == "absolute") %>% 
@@ -516,16 +475,14 @@ fr_rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
   geom_line(aes(linetype = type, color = norm), size = 1) + 
   geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = fr_rates_summary_r, aes(linetype = type), size = 1, color = "gray") + 
-  geom_point(data = fr_rates_summary_r, aes(shape = threshold), size = 4, color = "gray") +
+  geom_line(data = fr_rates_summary_r, aes(linetype = type), size = 1) + 
+  geom_point(data = fr_rates_summary_r, aes(shape = threshold), size = 4) +
   scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
   theme_apa()
-
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png", width = 14, height = 12)
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/choice_rates_summary.png")
+```{r save choice rates summary, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/choice_rates_roundwise.png", width = 14, height = 12)
 ```
 
 * **False response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean and the latent EV for high switching probabilities**.
@@ -543,7 +500,7 @@ That is, as no systematic choices are made, deviations from the sampled mean and
 
 # CPT and Logit Choice Rule
 
-```{r eval = TRUE}
+```{r model convergence}
 rhat <- cpt %>% select(Rhat) %>% max %>% round(3)
 ```
 
@@ -561,7 +518,7 @@ For further details on the method, please refer to the manuscript.
 
 ## Roundwise Integration Model
 
-```{r}
+```{r cpt roundwise}
 cpt_roundwise <- cpt %>% filter(model == "roundwise")
 ```
 
@@ -573,9 +530,9 @@ The plot below displays the means and 95%-intervals of the posterior distributio
 
 # gamma estimates
 
-cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "gamma", threshold == "relative")
+gamma_relative_roundwise <- cpt_roundwise %>% filter(parameter == "gamma", threshold == "relative")
 
-gamma <- cpt_roundwise %>%
+gamma_roundwise <- cpt_roundwise %>%
   filter(parameter == "gamma", threshold == "absolute") %>%
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -583,9 +540,9 @@ gamma <- cpt_roundwise %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Curvature  ", gamma)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_roundwise_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_roundwise_relative, color = "gray") +
-  geom_line(data = cpt_roundwise_relative, color = "gray") +
+  geom_errorbar(data = gamma_relative_roundwise, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = gamma_relative_roundwise, color = "gray") +
+  geom_line(data = gamma_relative_roundwise, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -594,9 +551,9 @@ gamma <- cpt_roundwise %>%
 
 # delta estimates
 
-cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "delta", threshold == "relative")
+delta_relative_roundwise <- cpt_roundwise %>% filter(parameter == "delta", threshold == "relative")
 
-delta <- cpt_roundwise %>%
+delta_roundwise <- cpt_roundwise %>%
   filter(parameter == "delta", threshold == "absolute") %>%
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -604,9 +561,9 @@ delta <- cpt_roundwise %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Elevation  ", delta)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_roundwise_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_roundwise_relative, color = "gray") +
-  geom_line(data = cpt_roundwise_relative, color = "gray") +
+  geom_errorbar(data = delta_relative_roundwise, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = delta_relative_roundwise, color = "gray") +
+  geom_line(data = delta_relative_roundwise, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -623,9 +580,9 @@ weights <- cpt %>%
   mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2))
 
 weights_roundwise <- weights %>% filter(model == "roundwise")
-weights_roundwise_relative <- weights_roundwise %>% filter(threshold == "relative")
+weights_relative_roundwise <- weights_roundwise %>% filter(threshold == "relative")
 
-wf <- weights_roundwise %>% 
+wf_roundwise <- weights_roundwise %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
@@ -634,17 +591,16 @@ wf <- weights_roundwise %>%
        color = expression(psi)) +
   scale_x_continuous(breaks = seq(0, 1, .5)) +
   scale_y_continuous(breaks = seq(0, 1, .5)) +
-  geom_line(data = weights_roundwise_relative, color = "gray") + 
+  geom_line(data = weights_relative_roundwise, color = "gray") + 
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) +
   theme_apa()
 
-ggarrange(wf, gamma, delta, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_roundwise.png", width = 14, height = 12)
+ggarrange(wf_roundwise, gamma_roundwise, delta_roundwise, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
 ```
 
-```{r eval=TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_roundwise.png")
+```{r save weighting function roundwise, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/weighting_function_roundwise.png", width = 14, height = 12)
 ```
 
 * For the parameter combination ($\theta = 1$, $\psi = 1$) of the generative model, the 95%-intervals of the posterior distributions of $\gamma$ and $\delta$ are large.
@@ -679,9 +635,9 @@ The plot below displays the means and 95%-intervals of the posterior distributio
 
 # alpha estimates 
 
-cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "alpha", threshold == "relative")
+alpha_relative_roundwise <- cpt_roundwise %>% filter(parameter == "alpha", threshold == "relative")
 
-alpha <- cpt_roundwise %>%
+alpha_roundwise <- cpt_roundwise %>%
   filter(parameter == "alpha", threshold == "absolute") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -690,9 +646,9 @@ alpha <- cpt_roundwise %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Concavity  ", alpha)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_roundwise_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_roundwise_relative, color = "gray") +
-  geom_line(data = cpt_roundwise_relative, color = "gray") +
+  geom_errorbar(data = alpha_relative_roundwise, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = alpha_relative_roundwise, color = "gray") +
+  geom_line(data = alpha_relative_roundwise, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -709,9 +665,9 @@ values <- cpt %>%
   mutate(v = round(x^alpha, 2)) 
 
 values_roundwise <- values %>% filter(model == "roundwise")
-values_roundwise_relative <- values_roundwise %>% filter(threshold == "relative")
+values_relative_roundwise <- values_roundwise %>% filter(threshold == "relative")
 
-vf <- values_roundwise %>% 
+vf_roundwise <- values_roundwise %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
@@ -720,16 +676,16 @@ vf <- values_roundwise %>%
        color = expression(psi)) +
   scale_x_continuous(breaks = seq(0, 20, 10)) +
   scale_y_continuous(breaks = seq(0, 20, 10)) +
-  geom_line(data = values_roundwise_relative, color = "gray") + 
+  geom_line(data = values_relative_roundwise, color = "gray") + 
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) +
   theme_apa()
 
 # rho estimates 
 
-cpt_roundwise_relative <- cpt_roundwise %>% filter(parameter == "rho", threshold == "relative")
+rho_relative_roundwise <- cpt_roundwise %>% filter(parameter == "rho", threshold == "relative")
 
-rho <- cpt_roundwise %>%
+rho_roundwise <- cpt_roundwise %>%
   filter(parameter == "rho", threshold == "absolute") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -738,21 +694,20 @@ rho <- cpt_roundwise %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Choice Consistency  ", rho)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_roundwise_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_roundwise_relative, color = "gray") +
-  geom_line(data = cpt_roundwise_relative, color = "gray") +
+  geom_errorbar(data = rho_relative_roundwise, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = rho_relative_roundwise, color = "gray") +
+  geom_line(data = rho_relative_roundwise, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) + 
   theme_apa()
 
-ggarrange(vf, alpha, rho, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_roundwise.png", width = 14, height = 12)
+ggarrange(vf_roundwise, alpha_roundwise, rho_roundwise, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_roundwise.png")
+```{r save value function roundwise, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/value_function_roundwise.png", width = 14, height = 12)
 ```
 
 * As for the parameters of the weighting function, the 95%-interval of the posterior distribution of $\alpha$ is large, given the parameter combination ($\theta = 1$, $\psi = 1$) of the generative model.
@@ -780,7 +735,7 @@ In the current case, the decrease of the $\rho$-estimates with increasing switch
 
 ## Summary Integration Model
 
-```{r}
+```{r cpt summary}
 cpt_summary <- cpt %>% filter(model == "summary")
 ```
 
@@ -808,9 +763,9 @@ In this case, difference in the cumulative sums are more strongly shaped by the 
 
 # gamma estimates
 
-cpt_summary_relative <- cpt_summary %>% filter(parameter == "gamma", threshold == "relative")
+gamma_relative_summary <- cpt_summary %>% filter(parameter == "gamma", threshold == "relative")
 
-gamma <- cpt_summary %>%
+gamma_summary <- cpt_summary %>%
   filter(parameter == "gamma", threshold == "absolute") %>%
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -818,9 +773,9 @@ gamma <- cpt_summary %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Curvature  ", gamma)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_summary_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_summary_relative, color = "gray") +
-  geom_line(data = cpt_summary_relative, color = "gray") +
+  geom_errorbar(data = gamma_relative_summary, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = gamma_relative_summary, color = "gray") +
+  geom_line(data = gamma_relative_summary, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -829,9 +784,9 @@ gamma <- cpt_summary %>%
 
 # delta estimates
 
-cpt_summary_relative <- cpt_summary %>% filter(parameter == "delta", threshold == "relative")
+delta_relative_summary <- cpt_summary %>% filter(parameter == "delta", threshold == "relative")
 
-delta <- cpt_summary %>%
+delta_summary <- cpt_summary %>%
   filter(parameter == "delta", threshold == "absolute") %>%
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -839,9 +794,9 @@ delta <- cpt_summary %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Elevation  ", delta)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_summary_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_summary_relative, color = "gray") +
-  geom_line(data = cpt_summary_relative, color = "gray") +
+  geom_errorbar(data = delta_relative_summary, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = delta_relative_summary, color = "gray") +
+  geom_line(data = delta_relative_summary, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -858,9 +813,9 @@ weights <- cpt %>%
   mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2))
 
 weights_summary <- weights %>% filter(model == "summary")
-weights_summary_relative <- weights_summary %>% filter(threshold == "relative")
+weights_relative_summary <- weights_summary %>% filter(threshold == "relative")
 
-wf <- weights_summary %>% 
+wf_summary <- weights_summary %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
@@ -869,17 +824,16 @@ wf <- weights_summary %>%
        color = expression(psi)) +
   scale_x_continuous(breaks = seq(0, 1, .5)) +
   scale_y_continuous(breaks = seq(0, 1, .5)) +
-  geom_line(data = weights_summary_relative, color = "gray") + 
+  geom_line(data = weights_relative_summary, color = "gray") + 
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) +
   theme_apa()
 
-ggarrange(wf, gamma, delta, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_summary.png", width = 14, height = 12)
+ggarrange(wf_summary, gamma_summary, delta_summary, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
 ```
 
-```{r eval=TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/weighting_function_summary.png")
+```{r save weighting function summary, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/weighting_function_summary.png", width = 14, height = 12)
 ```
 
 * **For high switching probabilities, most estimates of $\gamma$ and $\delta$ are approximately 1, implying a linear weighting of sampled relative frequencies**.
@@ -895,9 +849,9 @@ This reflects the choice behavior of the generative model for high switching pro
 
 # alpha estimates 
 
-cpt_summary_relative <- cpt_summary %>% filter(parameter == "alpha", threshold == "relative")
+alpha_relative_summary <- cpt_summary %>% filter(parameter == "alpha", threshold == "relative")
 
-alpha <- cpt_summary %>%
+alpha_summary <- cpt_summary %>%
   filter(parameter == "alpha", threshold == "absolute") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -906,9 +860,9 @@ alpha <- cpt_summary %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Concavity  ", alpha)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_summary_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_summary_relative, color = "gray") +
-  geom_line(data = cpt_summary_relative, color = "gray") +
+  geom_errorbar(data = alpha_relative_summary, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = alpha_relative_summary, color = "gray") +
+  geom_line(data = alpha_relative_summary, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -925,9 +879,9 @@ values <- cpt %>%
   mutate(v = round(x^alpha, 2)) 
 
 values_summary <- values %>% filter(model == "summary")
-values_summary_relative <- values_summary %>% filter(threshold == "relative")
+values_relative_summary <- values_summary %>% filter(threshold == "relative")
 
-vf <- values_summary %>% 
+vf_summary <- values_summary %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
@@ -936,16 +890,16 @@ vf <- values_summary %>%
        color = expression(psi)) +
   scale_x_continuous(breaks = seq(0, 20, 10)) +
   scale_y_continuous(breaks = seq(0, 20, 10)) +
-  geom_line(data = values_summary_relative, color = "gray") + 
+  geom_line(data = values_relative_summary, color = "gray") + 
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) +
   theme_apa()
 
 # rho estimates 
 
-cpt_summary_relative <- cpt_summary %>% filter(parameter == "rho", threshold == "relative")
+rho_relative_summary <- cpt_summary %>% filter(parameter == "rho", threshold == "relative")
 
-rho <- cpt_summary %>%
+rho_summary <- cpt_summary %>%
   filter(parameter == "rho", threshold == "absolute") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -954,21 +908,20 @@ rho <- cpt_summary %>%
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Choice Consistency  ", rho)),
        color = expression(psi)) +
-  geom_errorbar(data = cpt_summary_relative, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
-  geom_point(data = cpt_summary_relative, color = "gray") +
-  geom_line(data = cpt_summary_relative, color = "gray") +
+  geom_errorbar(data = rho_relative_summary, aes(ymin=`2.5%`, ymax=`97.5%`), color = "gray") + 
+  geom_point(data = rho_relative_summary, color = "gray") +
+  geom_line(data = rho_relative_summary, color = "gray") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
   geom_point(size = 3) +
   geom_line(size = 1) +
   scale_color_scico(palette = "tokyo", end = .8) + 
   theme_apa()
 
-ggarrange(vf, alpha, rho, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
-ggsave(file = "C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_summary.png", width = 14, height = 12)
+ggarrange(vf_summary, alpha_summary, rho_summary, nrow = 3, ncol = 1, common.legend = TRUE, labels = "AUTO", legend = "right")
 ```
 
-```{r eval = TRUE}
-knitr::include_graphics("C:/Users/ge84jux/Projects/sampling-strategies/supplements/data-analysis-report_files/figures/value_function_summary.png")
+```{r save value function summary, eval=FALSE, include=FALSE}
+ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/value_function_summary.png", width = 14, height = 12)
 ```
 
 * **For high switching probabilities, most estimates es of $\alpha$ are little under 1**.

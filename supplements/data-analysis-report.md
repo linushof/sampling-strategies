@@ -238,6 +238,8 @@ round_n_median %>%
   theme_apa
 ```
 
+![](data-analysis-report_files/figure-gfm/round-level%20n-1.png)<!-- -->
+
 -   The **round-level sample sizes decrease with increasing switching
     probabilities**.
 
@@ -286,6 +288,8 @@ round_ep_median %>%
 
 ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_ep_roundwise.png", width = 14, height = 12)
 ```
+
+![](data-analysis-report_files/figure-gfm/round-level%20frequencies-1.png)<!-- -->
 
 -   For $\theta = 1$—i.e., when only one mean comparison is carried
     out—the relative frequencies sampled on the round level are
@@ -587,8 +591,8 @@ fr_rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
   geom_line(aes(linetype = type, color = norm), size = 1) + 
   geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = fr_rates_summary_r, aes(linetype = type), size = 1) + 
-  geom_point(data = fr_rates_summary_r, aes(shape = threshold), size = 4) +
+  geom_line(data = fr_rates_summary_r, aes(linetype = type, color = norm), size = 1) + 
+  geom_point(data = fr_rates_summary_r, aes(shape = threshold, color = norm), size = 4) +
   scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
   theme_apa()
 ```

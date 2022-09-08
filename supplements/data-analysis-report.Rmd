@@ -200,8 +200,8 @@ round_n_median %>%
 ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_n_roundwise.png", width = 14, height = 5)
 ```
 
-```{r insert figure round-level n, include=FALSE}
-knitr::include_graphics(here("supplements", "data-analysis-report_files", "figure-high-resolution", "round_n_roundwise.png"))
+```{r insert figure round-level n, echo=FALSE}
+knitr::include_graphics(path = here("supplements", "data-analysis-report_files", "figure-gfm", "round-level n-1.png"))
 ```
 
 * The **round-level sample sizes decrease with increasing switching probabilities**.
@@ -253,8 +253,8 @@ ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/rou
 ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/round_n_roundwise.png", width = 14, height = 5)
 ```
 
-```{r insert figure round-level frequencies, include=FALSE}
-knitr::include_graphics(here("supplements", "data-analysis-report_files", "figure-high-resolution", "round_ep_roundwise.png"))
+```{r insert figure round-level frequencies, echo=FALSE}
+knitr::include_graphics(path = here("supplements", "data-analysis-report_files", "figure-gfm", "round-level frequencies-1.png"))
 ```
 
 * For $\theta = 1$---i.e., when only one mean comparison is carried out---the relative frequencies sampled on the round level are necessarily identical to those sampled on the trial level.
@@ -475,8 +475,8 @@ fr_rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
   geom_line(aes(linetype = type, color = norm), size = 1) + 
   geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = fr_rates_summary_r, aes(linetype = type), size = 1) + 
-  geom_point(data = fr_rates_summary_r, aes(shape = threshold), size = 4) +
+  geom_line(data = fr_rates_summary_r, aes(linetype = type, color = norm), size = 1) + 
+  geom_point(data = fr_rates_summary_r, aes(shape = threshold, color = norm), size = 4) +
   scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
   theme_apa()
 ```

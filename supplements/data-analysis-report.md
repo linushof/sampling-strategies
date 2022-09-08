@@ -18,22 +18,25 @@ Linus Hof
 
 For conceptual and methodological details, e.g., on sampling and
 integration strategies and there computational implementation, please
-refer to the <!--submitted -->manuscript<!--link document-->. This
-report covers the comprehensive data analyses underlying the core
-results reported in the manuscript. The analyses comprise of the
-description and explanation of the sampling and choice behavior
-exercised by the roundwise and summary integration model and their
-parameters, as well as their translations into the psychoeconomic
-functions of cumulative prospect theory (CPT).
+refer to the <!--submitted -->manuscript<!--link document--> or the
+[source
+code](https://github.com/linushof/sampling-strategies/tree/main/code).
+This report covers the comprehensive data analyses underlying the core
+results reported in the manuscript.
 
-The results of the analyses, particularly the reported choice rates and
-CPT estimates, can be understood as theory-implied data, or predictions,
+The analyses comprise of the description and explanation of the sampling
+and choice behavior exercised by the roundwise and summary integration
+model and their parameters, as well as their translations into the
+psychoeconomic functions of cumulative prospect theory (CPT). The
+results of the analyses, particularly the reported choice rates and CPT
+estimates, can be understood as theory-implied data, or predictions,
 that remain to be tested against empirical data.
 
-If you feel you spotted an error/bug/etc. in the analyses—or any other
-part of this project—or in the case of questions and remarks, please add
-an [issue](https://github.com/linushof/sampling-strategies/issues) to
-this repository or contact the author.
+If you feel you have spotted an error/bug/etc. in the analyses—or any
+other part of this project—or in the case of any questions and remarks,
+please add an
+[issue](https://github.com/linushof/sampling-strategies/issues) to this
+repository or contact the author.
 
 # 2 Summary of Core Results
 

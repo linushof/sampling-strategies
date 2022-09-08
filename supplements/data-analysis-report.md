@@ -3,52 +3,18 @@ Data Analysis Report
 Linus Hof
 2022-09-08
 
--   <a href="#description-and-remarks"
-    id="toc-description-and-remarks">Description and Remarks</a>
--   <a href="#summary-of-core-results"
-    id="toc-summary-of-core-results">Summary of Core Results</a>
--   <a href="#sampling-behavior" id="toc-sampling-behavior">Sampling
+-   <a href="#1-description-and-remarks"
+    id="toc-1-description-and-remarks">1 Description and Remarks</a>
+-   <a href="#2-summary-of-core-results"
+    id="toc-2-summary-of-core-results">2 Summary of Core Results</a>
+-   <a href="#3-sampling-behavior" id="toc-3-sampling-behavior">3 Sampling
     Behavior</a>
--   <a href="#choice-behavior" id="toc-choice-behavior">Choice Behavior</a>
--   <a href="#cpt-and-logit-choice-rule"
-    id="toc-cpt-and-logit-choice-rule">CPT and Logit Choice Rule</a>
+-   <a href="#4-choice-behavior" id="toc-4-choice-behavior">4 Choice
+    Behavior</a>
+-   <a href="#5-cpt-and-logit-choice-rule"
+    id="toc-5-cpt-and-logit-choice-rule">5 CPT and Logit Choice Rule</a>
 
-``` r
-# load packages
-pacman::p_load(here,
-               tidyverse,
-               scico, # for scientific color palettes developed by Fabio Crameri
-               latex2exp, # for LaTeX expressions in plots
-               ggpubr,
-               papaja)
-```
-
-``` r
-# define labeling functions for facet_wrap() and facet_grid()
-
-## threshold level theta
-label_theta <- function(string) {
-  TeX(paste("$\\theta=$", string, sep = ""))
-  }
-
-# switching probability psi
-label_psi <- function(string) {
-  TeX(paste("$\\psi=$", string, sep = ""))
-}
-
-# propbability of high risky outcome
-label_rare <- function(string) {
-  TeX(paste("$\\p_{High}$", string, sep = "")) 
-}
-```
-
-``` r
-# load data
-choices <- read_rds(here("data", "choice_data.rds.bz2"))
-cpt <- read_rds(here("data", "cpt_estimates.rds"))
-```
-
-# Description and Remarks
+# 1 Description and Remarks
 
 For conceptual and methodological details, e.g., on sampling and
 integration strategies and there computational implementation, please
@@ -69,7 +35,7 @@ part of this project—or in the case of questions and remarks, please add
 an [issue](https://github.com/linushof/sampling-strategies/issues) to
 this repository or contact the author.
 
-# Summary of Core Results
+# 2 Summary of Core Results
 
 -   The interplay of sampling and integration strategies can produce
     distinct choice patterns in decisions from experience.
@@ -88,7 +54,42 @@ this repository or contact the author.
     as-if underweighting of rare outcomes pattern in decisions from
     experience, challenging the common frugal-sampling explanation.
 
-# Sampling Behavior
+# 3 Sampling Behavior
+
+``` r
+# load packages
+pacman::p_load(here,
+               tidyverse,
+               scico, # for scientific color palettes
+               latex2exp, # for LaTeX expressions in plots
+               ggpubr,
+               papaja)
+```
+
+``` r
+# define labeling functions for LaTeX expressions in facet_wrap() and facet_grid()
+
+## threshold level theta
+label_theta <- function(string) {
+  TeX(paste("$\\theta=$", string, sep = ""))
+  }
+
+# switching probability psi
+label_psi <- function(string) {
+  TeX(paste("$\\psi=$", string, sep = ""))
+}
+
+# propbability of high risky outcome
+label_rare <- function(string) {
+  TeX(paste("$\\p_{High}$", string, sep = "")) 
+}
+```
+
+``` r
+# read data
+choices <- read_rds(here("data", "choice_data.rds.bz2")) 
+cpt <- read_rds(here("data", "cpt_estimates.rds")) 
+```
 
 In experience-based choices, the sampled information tends to deviate
 from the latent information because the samples are not infinitely
@@ -111,7 +112,7 @@ irrespective of the existence or absence of sampling error. Thus,
 further below, in the sections on choice behavior and the CPT estimates,
 sampling error is controlled for.
 
-## Roundwise Integration Model
+## 3.1 Roundwise Integration Model
 
 The following figure displays the number of outcomes sampled within
 choice trials (trial-level sample sizes), the scale on which sampling
@@ -216,14 +217,14 @@ comparison round. Each point represents the median round-level sample
 sizes across all rounds for the given parameter combination.
 
 ``` r
-simulation_roundwise <- read_rds(here("data", "simulation_roundwise.rds")) 
-simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5)
+simulation_roundwise <- read_rds(here("data", "simulation_roundwise.rds"))
+simulation_roundwise <- simulation_roundwise %>% mutate(psi = 1-(psi+.5) # transform psi to switching probability 
 
 round_n_median <- simulation_roundwise %>% 
-  group_by(psi, threshold, theta, problem, agent, round) %>% 
-  summarise(n_round = n()) %>% 
+  group_by(psi, threshold, theta, problem, agent, round) %>% # group by comparison rounds
+  summarise(n_round = n()) %>% # compute round-level
   group_by(psi, threshold, theta) %>% 
-  summarise(median_n_round = median(n_round))
+  summarise(median_n_round = median(n_round)) # compute median round-level n for each parameter combination
 
 round_n_median %>% 
   ggplot(aes(psi, median_n_round, color = threshold)) +
@@ -255,21 +256,21 @@ displays their relation.
 ``` r
 round_ep  <- simulation_roundwise %>% 
   group_by(psi, threshold, theta, problem, agent) %>%
-  mutate(n_sample = n(), # total number of single samples
-         n_s = sum(is.na(r)), # number of single samples drawn from safe option
-         n_r = n_sample - n_s, # number of single samples drawn from risky option
-         ep_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% 
+  mutate(n_sample = n(), # compute trial-level n 
+         n_s = sum(is.na(r)), 
+         n_r = n_sample - n_s, 
+         ep_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
   ungroup() %>%
   group_by(psi, threshold, theta, problem, agent, round) %>% 
   mutate(n_round = n(), 
          n_round_s = sum(is.na(r)),
          n_round_r = n_round - n_round_s,
-         ep_round_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% 
-  distinct(psi, threshold, theta, problem, agent, round, ep_r_high, ep_round_r_high) 
+         ep_round_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
+  distinct(psi, threshold, theta, problem, agent, round, ep_r_high, ep_round_r_high) # drop redundant rows
 
 round_ep_median <- round_ep %>% 
   group_by(psi, threshold, theta, ep_r_high) %>% 
-  summarise(median_ep_round_r_high = median(ep_round_r_high, na.rm = TRUE))
+  summarise(median_ep_round_r_high = median(ep_round_r_high, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
 
 round_ep_median %>% 
   ggplot(aes(x = ep_r_high, y = median_ep_round_r_high, color = threshold)) +  
@@ -320,7 +321,7 @@ ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/rou
     pattern is due to the small number of outcomes sampled prior the
     final choice.
 
-## Summary Integration Model
+## 3.2 Summary Integration Model
 
 The following figure displays the trial-level sample sizes for the
 summary integration model. Each point represents the median across all
@@ -417,7 +418,7 @@ trial_ep_median %>%
 -   For absolute thresholds, switching probabilities have no effect on
     the relative sampled frequencies.
 
-# Choice Behavior
+# 4 Choice Behavior
 
 In this section, the choice patterns produced by the models and
 parameter combinations are reported in terms of deviations from EV
@@ -443,34 +444,36 @@ and deflation in the opposite direction should produce inconsistent
 choice patterns and thus higher false response rates.
 
 ``` r
-# expected value
+# compute rates of responses that did not maximize the EV or samples mean
+
+## EV
 fr_rates_ev <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # drop trials where only one option was attended
   mutate(norm = case_when(ev_ratio > 1 ~ "r", 
-                          ev_ratio < 1 ~ "s")) %>% # determine normative choice (ev maximization)
-  filter(!is.na(norm)) %>% # drop choice problems without a normative choice
+                          ev_ratio < 1 ~ "s")) %>% # determine higher-EV prospect (normative choice)
+  filter(!is.na(norm)) %>% # drop problems without normative choice
   group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
+  summarise(n = n()) %>% # number of correct/false risky and correct/false safe choices
+  mutate(rate = round(n/sum(n), 2)) %>% # rates of correct/false risky and correct/false safe choices
   ungroup() %>%
-  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>%
-  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% 
+  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>% # include choices where n = 0
+  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% # drop rows with invalid parameter combinations
   mutate(type = case_when(norm == "r" & choice == "s" ~ "Safe",
                    norm == "s" & choice == "r" ~ "Risky")) %>%
-  filter(!is.na(type)) %>% 
+  filter(!is.na(type)) %>% # drop correct choices
   select(-c(norm, choice, n)) %>% 
-  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", #change facet labels for rare events
+  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", # prepare facet labels for high rank outcome of risky prospect
                           rare == "attractive" ~ "\\in (0,.2)",
                           rare == "unattractive" ~ "\\in (.8,1)"),
          norm = "EV")
 
 
-# sampled mean
+##  sampled mean
 fr_rates_mean <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% 
   mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s")) %>% 
-  filter(!is.na(norm)) %>% # drop choice problems without a normative choice
+                          mean_r/safe < 1 ~ "s")) %>% # determine prospect with higher sampled mean 
+  filter(!is.na(norm)) %>%
   group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
@@ -481,7 +484,7 @@ fr_rates_mean <- choices %>%
                           norm == "s" & choice == "r" ~ "Risky")) %>%
   filter(!is.na(type)) %>% 
   select(-c(norm, choice, n)) %>% 
-  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", #change facet labels for rare events
+  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", 
                           rare == "attractive" ~ "\\in (0,.2)",
                           rare == "unattractive" ~ "\\in (.8,1)"),
          norm = "Mean")
@@ -489,11 +492,11 @@ fr_rates_mean <- choices %>%
 fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 ```
 
-## Roundwise Integration Model
+## 4.1 Roundwise Integration Model
 
 ``` r
 fr_rates_round_r <- fr_rates %>%  filter(model == "roundwise" & threshold == "relative") %>% 
-    filter(psi > .9 | psi == .5 | psi == (1-.9)) 
+    filter(psi > .9 | psi == .5 | psi == (1-.9)) # only show rates for psi = c(.1, .5, 1) 
 
 fr_rates %>%
   filter(model == "roundwise" & threshold == "absolute") %>% 
@@ -569,7 +572,7 @@ fr_rates %>%
 How robust are the analyses to changes in the choice problems, e.g., multiple outcomes, mixed prospects, etc.?
 -->
 
-## Summary Integration Model
+## 4.2 Summary Integration Model
 
 ``` r
 fr_rates_summary_r <- fr_rates %>%  
@@ -631,10 +634,10 @@ fr_rates %>%
     as no systematic choices are made, deviations from the sampled mean
     and the latent expected value should be equally random.
 
-# CPT and Logit Choice Rule
+# 5 CPT and Logit Choice Rule
 
 ``` r
-rhat <- cpt %>% select(Rhat) %>% max %>% round(3)
+rhat <- cpt %>% select(Rhat) %>% max %>% round(3) # maximum scale reduction factor across all models and parameters 
 ```
 
 In this section, the estimates for the parameters of CPT and the logit
@@ -657,13 +660,13 @@ acceptable convergence of all models.
 
 For further details on the method, please refer to the manuscript.
 
-## Roundwise Integration Model
+## 5.1 Roundwise Integration Model
 
 ``` r
 cpt_roundwise <- cpt %>% filter(model == "roundwise")
 ```
 
-### Weighting Function
+### 5.1.1 Weighting Function
 
 The plot below displays the means and 95%-intervals of the posterior
 distributions of the curvature parameter $\gamma$ and the elevation
@@ -715,16 +718,18 @@ delta_roundwise <- cpt_roundwise %>%
 
 # weighting function
 
+## compute decision weights
 weights <- cpt %>%
   select(model, psi, threshold, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
   select(-c(alpha, rho)) %>%
-  expand_grid(p = seq(0, 1, .05)) %>%
-  mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2))
+  expand_grid(p = seq(0, 1, .05)) %>% # create vector of sampled relative frequencies
+  mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2)) # compute decision weights (see Goldstein & Einhorn, 1987) using the parameter estimates  
 
 weights_roundwise <- weights %>% filter(model == "roundwise")
 weights_relative_roundwise <- weights_roundwise %>% filter(threshold == "relative")
 
+# plot graphs
 wf_roundwise <- weights_roundwise %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
@@ -799,7 +804,7 @@ ggarrange(wf_roundwise, gamma_roundwise, delta_roundwise, nrow = 3, ncol = 1, co
     outcomes with a probability only a little larger than .5. Such a
     pattern is implied for $\delta > 1$.
 
-### Value Function and Logit Choice Rule
+### 5.1.2 Value Function and Logit Choice Rule
 
 The plot below displays the means and 95%-intervals of the posterior
 distributions of the outcome sensitivity parameter $\alpha$ and the
@@ -832,16 +837,18 @@ alpha_roundwise <- cpt_roundwise %>%
 
 # value function
 
+# compute subjective values
 values <- cpt %>%
   select(model, psi, threshold, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
   select(-c(gamma, delta, rho)) %>%
-  expand_grid(x = seq(0, 20, .5)) %>%  
-  mutate(v = round(x^alpha, 2)) 
+  expand_grid(x = seq(0, 20, .5)) %>%  # create vector of possible outcomes
+  mutate(v = round(x^alpha, 2)) # compute subjective values on the basis of estimated parameters
 
 values_roundwise <- values %>% filter(model == "roundwise")
 values_relative_roundwise <- values_roundwise %>% filter(threshold == "relative")
 
+# plot graphs
 vf_roundwise <- values_roundwise %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
@@ -929,7 +936,7 @@ ggarrange(vf_roundwise, alpha_roundwise, rho_roundwise, nrow = 3, ncol = 1, comm
 
 <!--What is the cause for the high rho-estimates for theta = 1?-->
 
-## Summary Integration Model
+## 5.2 Summary Integration Model
 
 ``` r
 cpt_summary <- cpt %>% filter(model == "summary")
@@ -970,7 +977,7 @@ to the sampled mean. For small samples, however, proportionality is not
 given. In this case, difference in the cumulative sums are more strongly
 shaped by the (small) random temporal imbalances.
 
-### Weighting Function
+### 5.2.1 Weighting Function
 
 ``` r
 # gamma estimates
@@ -1017,6 +1024,7 @@ delta_summary <- cpt_summary %>%
 
 # weighting function
 
+## compute decision weights
 weights <- cpt %>%
   select(model, psi, threshold, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
@@ -1027,6 +1035,7 @@ weights <- cpt %>%
 weights_summary <- weights %>% filter(model == "summary")
 weights_relative_summary <- weights_summary %>% filter(threshold == "relative")
 
+# plot graphs
 wf_summary <- weights_summary %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
@@ -1057,7 +1066,7 @@ ggarrange(wf_summary, gamma_summary, delta_summary, nrow = 3, ncol = 1, common.l
 
 <!-- Add description -->
 
-### Value Function and Logit Choice Rule
+### 5.2.2 Value Function and Logit Choice Rule
 
 ``` r
 # alpha estimates 
@@ -1084,6 +1093,7 @@ alpha_summary <- cpt_summary %>%
 
 # value function
 
+## compute subjective values
 values <- cpt %>%
   select(model, psi, threshold, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
@@ -1094,6 +1104,7 @@ values <- cpt %>%
 values_summary <- values %>% filter(model == "summary")
 values_relative_summary <- values_summary %>% filter(threshold == "relative")
 
+## plot graphs
 vf_summary <- values_summary %>% 
   filter(threshold == "absolute") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +

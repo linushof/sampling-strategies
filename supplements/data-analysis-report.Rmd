@@ -404,57 +404,6 @@ fr_rates_mean <- choices %>%
 fr_rates <- bind_rows(fr_rates_ev, fr_rates_mean)
 ```
 
-```{r maximization rates}
-
-# compute maximization rates for EV and sampled mean
-
-## EV
-rates_ev <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # drop trials where only one option was attended
-  mutate(norm = case_when(ev_ratio > 1 ~ "r", 
-                          ev_ratio < 1 ~ "s")) %>% # determine higher-EV prospect (normative choice)
-  filter(!is.na(norm)) %>% # drop problems without normative choice
-  group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
-  summarise(n = n()) %>% # number of correct/false risky and correct/false safe choices
-  mutate(rate = round(n/sum(n), 2)) %>% # rates of correct/false risky and correct/false safe choices
-  ungroup() %>%
-  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>% # include choices where n = 0
-  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% # drop rows with invalid parameter combinations
-  mutate(type = case_when(norm == "r" & choice == "r" ~ "Risky",
-                   norm == "s" & choice == "s" ~ "Safe")) %>%
-  filter(!is.na(type)) %>% # drop false choices
-  select(-c(norm, choice, n)) %>% 
-  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", # prepare facet labels for high rank outcome of risky prospect
-                          rare == "attractive" ~ "\\in (0,.2)",
-                          rare == "unattractive" ~ "\\in (.8,1)"),
-         norm = "EV")
-
-
-##  sampled mean
-rates_mean <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% 
-  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s")) %>% # determine prospect with higher sampled mean 
-  filter(!is.na(norm)) %>%
-  group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>%
-  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>%
-  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% 
-  mutate(type = case_when(norm == "r" & choice == "r" ~ "Risky",
-                          norm == "s" & choice == "s" ~ "Safe")) %>%
-  filter(!is.na(type)) %>% 
-  select(-c(norm, choice, n)) %>% 
-  mutate(rare = case_when(rare == "none" ~ "\\in \\[.2,.8\\]", 
-                          rare == "attractive" ~ "\\in (0,.2)",
-                          rare == "unattractive" ~ "\\in (.8,1)"),
-         norm = "Mean")
-
-rates <- bind_rows(rates_ev, rates_mean)
-```
-
-
 ## Roundwise Integration Model
 
 ```{r choice rates roundwise}
@@ -465,8 +414,7 @@ fr_rates %>%
   filter(model == "roundwise" & threshold == "absolute") %>% 
     filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
-                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  facet_grid(rare~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   labs(x = expression(paste("Switching Probability ", psi)),
        y = "False Response Rate",
        linetype = "False Response",
@@ -486,30 +434,6 @@ fr_rates %>%
 ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/choice_rates_roundwise.png", width = 14, height = 12)
 ```
 
-```{r maximization rates roundwise}
-rates_round_r <- rates %>%  filter(model == "roundwise" & threshold == "relative") %>% 
-    filter(psi > .9 | psi == .5 | psi == (1-.9)) # only show rates for psi = c(.1, .5, 1) 
-
-rates %>%
-  filter(model == "roundwise" & threshold == "absolute") %>% 
-    filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
-                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  labs(x = expression(paste("Switching Probability ", psi)),
-       y = "Maximization Rate",
-       linetype = "Higher EV",
-       color = "Norm",
-       shape = "Threshold") +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  geom_line(aes(linetype = type, color = norm), size = 1) + 
-  geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = rates_round_r, aes(linetype = type, color = norm), size = 1) + 
-  geom_point(data = rates_round_r, aes(shape = threshold, color = norm), size = 4) +
-  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
-  theme_apa()
-```
 
 * For **small-probability outcomes of low rank, the rates of false risky choices increase with the switching probability**, whereas the rates of false safe choices remain low (top row).
 Vice versa, for **small-probability outcomes of high rank, the rates of false safe choices increase with the switching probability**, whereas the rates of false risky choices remain low (middle row). 
@@ -563,33 +487,6 @@ fr_rates %>%
 ```{r save choice rates summary, eval=FALSE, include=FALSE}
 ggsave(file = "supplements/data-analysis-report_files/figure-high-resolution/choice_rates_roundwise.png", width = 14, height = 12)
 ```
-
-```{r maximization rates summary}
-rates_summary_r <- rates %>%  
-  filter(model == "summary" & threshold == "relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) 
-
-rates %>%
-  filter(model == "summary" & threshold == "absolute") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(rare = as_labeller(label_rare, default = label_parsed),
-                                             theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  labs(x = expression(paste("Switching Probability ", psi)),
-       y = "Maximization Rate",
-       linetype = "Higher EV", 
-       color = "Norm",
-       shape = "Threshold") +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  geom_line(aes(linetype = type, color = norm), size = 1) + 
-  geom_point(aes(shape = threshold, color = norm), size = 4) +
-  geom_line(data = rates_summary_r, aes(linetype = type, color = norm), size = 1) + 
-  geom_point(data = rates_summary_r, aes(shape = threshold, color = norm), size = 4) +
-  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
-  theme_apa()
-```
-
 
 * **False response rates are transitioning from random choice behavior at rates around .5 for low switching probabilities to a systematic maximization of the sampled mean and the latent EV for high switching probabilities**.
 This decrease in the false response rates can be explained by diminishing random temporal imbalances and the ability of the summary integration model to approximate the solutions of mean and EV maximization, given that roughly the same large number of outcomes is sampled from *both* prospects.
@@ -1045,8 +942,5 @@ This again reflects the choice behavior of the generative model.
 
 * As for the weighting function, this pattern does not hold for all cases of absolute thresholds.
 
-<!-- Add description --> 
-
 * In sum, then, as for the roundwise integration model, the estimates of the fitted stochastic CPT models reflect the distinct choice behaviors of the summary integration model and parameter combinations. 
 Specifically, the random choice behavior produced for low switching probabilities is captured by the choice consistency parameter $\rho$ of the logit choice rule, whereas systematic choice behavior is captured by the estimate triplets ($\gamma$, $\delta$, $\alpha)$ of the core CPT model.
-

@@ -14,6 +14,11 @@ Each model assumes an evidence accumulation process representing a distinct inte
 The simulations show that the potential interplay between both types of strategies can lead to systematically different choice patterns and can contribute to the as-if underweighting of rare outcomes pattern in decisions from experience, irrespective of the existence or absence of sampling error. 
 The model-implied differences in the choice patterns translate to distinct signatures in the psychoeconomic functions of cumulative prospect theory.
 
+## References 
+
+Hills, T. T., & Hertwig, R. (2010). Information search in decisions from experience: Do our patterns of sampling foreshadow our decisions? Psychological Science, 21(12), 1787–1792. https://doi.org/10.1177/0956797610387443
+
+
 ## License
 
 [![licensebuttons by](https://licensebuttons.net/l/by/3.0/88x31.png)](https://creativecommons.org/licenses/by/4.0)

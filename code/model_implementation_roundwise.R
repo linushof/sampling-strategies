@@ -58,7 +58,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
                      attended = attend,
                      r = NA,
                      s = safe)
-            psi <- -1*theta[[set, "psi"]] # to update the probability of of sampling from s again
+            psi <- -1*param[[set, "psi"]] # to update the probability of of sampling from s again
           }
           smpl_round <- bind_rows(smpl_round, single_smpl)
           attend <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi))
@@ -74,14 +74,14 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
                      attended = attend,
                      r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)),
                      s = NA)
-            psi <- theta[[set, "psi"]]
+            psi <- param[[set, "psi"]]
           } else {
             single_smpl <- choice_problems[problem, ] %>%
               mutate(round = round,
                      attended = attend,
                      r = NA,
                      s = safe)
-            psi <- -1*theta[[set, "psi"]]
+            psi <- -1*param[[set, "psi"]]
           }
           smpl_round <- bind_rows(smpl_round, single_smpl)
           attend <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi))

@@ -547,4 +547,4 @@ summary_trajectories_median <- summary %>%
 ### both
 
 ggarrange(round_trajectories_median, summary_trajectories_median, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right", labels = "AUTO")
-ggsave(file = "manuscript/figures/trajectories.png", width = 10, height = 10)
+ggsave(file = "manuscript/figures/trajectories_6.png", width = 10, height = 10)

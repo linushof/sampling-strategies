@@ -493,15 +493,14 @@ round_trajectories_median <- round %>%
   scale_color_scico_d(palette = "lajolla", begin = .3, end = .7) + 
   # scale_x_continuous(limits = c(0,50), breaks = seq(0, 50, 25)) +
   scale_y_continuous(limits = c(-round_boundary, round_boundary), breaks = seq(-round_boundary,round_boundary, round_boundary)) +
-  labs(x = "Sampled Outcomes",
+  labs(x = "Number of Sampled Outcomes",
        y = expression(paste(Delta, " Wins")),
-       color = expression(psi),
        alpha = "Agent\nCount") +
+  guides(color = "none") +
+  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") +
   geom_line(position = position_dodge(width = .3), size = .1, color = "gray", alpha = .3) + 
   geom_line(data = round_median, aes(y = median, alpha = count), size = 1) + 
-  geom_hline(yintercept = c(-round_boundary, round_boundary), linetype = "dashed") + 
   theme_apa() 
-
 
 ### summary model
 
@@ -518,8 +517,8 @@ summary_median <- summary %>%
                             median >= -summary_boundary & median <= summary_boundary ~ median),
          agent = "Median") 
 
-ann_risky <- data.frame(psi=(1-.9), smp_no = 50, agent = "Label", diff=40, label="Risky")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 50, agent = "Label", diff=-40, label="Safe")
+ann_risky <- data.frame(psi=(1-.9), smp_no = 45, agent = "Label", diff=40, label="Risky Threshold")
+ann_safe <- data.frame(psi=(1-.9), smp_no = 45, agent = "Label", diff=-40, label="Safe Threshold")
 
 summary_trajectories_median <- summary %>% 
   filter(psi %in% c((1-.9), .5, 1),
@@ -533,18 +532,19 @@ summary_trajectories_median <- summary %>%
   scale_color_scico_d(palette = "lajolla", begin = .3, end = .7) + 
   # scale_x_continuous(limits = c(0,50), breaks = seq(0, 50, 25)) +
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(x = "Sampled Outcomes",
+  labs(x = "Number of Sampled Outcomes",
        y = expression(paste(Delta, " Sum")),
        color = expression(psi),
        alpha = "Agent\nCount") +
+  guides(color = "none") +
+  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
   geom_line(position = position_dodge(width = .3), size = .1, color = "gray", alpha = .3) + 
   geom_line(data = summary_median, aes(y = median, alpha = count), size = 1) + 
-  geom_hline(yintercept = c(-summary_boundary, summary_boundary), linetype = "dashed") + 
   theme_apa() + 
   geom_text(data = ann_risky, label=ann_risky$label, color = "black") + 
   geom_text(data = ann_safe, label=ann_safe$label, color = "black")
 
 ### both
 
-ggarrange(round_trajectories_median, summary_trajectories_median, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right", labels = "AUTO")
+ggarrange(round_trajectories_median, summary_trajectories_median, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right", labels = c("Round-wise", "Summary"))
 ggsave(file = "manuscript/figures/trajectories_6.png", width = 10, height = 10)

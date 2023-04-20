@@ -1,8 +1,6 @@
-# Functions for generating cumulative sums and and means
-## cumsum2() and cummean2() are extensions of the base functions including a na.rm-argument.
-## If na.rm = TRUE, the lagging cumulative value is used for the position of the missing element.
 
-# cumsum2()
+# Function for computing cumulative sums with missings
+
 cumsum2 <- function(x, na.rm = FALSE) {
   output <- vector("double", length(x))
   for (i in seq_along(x)) {
@@ -14,7 +12,9 @@ cumsum2 <- function(x, na.rm = FALSE) {
   }
   output
 }
-# cummean2()
+
+# Function for generating cumulative means with missings
+
 cummean2 <- function(x, na.rm = FALSE) {
   output <- vector("double", length(x))
   for (i in seq_along(x)) {
@@ -26,3 +26,5 @@ cummean2 <- function(x, na.rm = FALSE) {
   }
   output
 }
+
+# If na.rm = TRUE, the lagging cumulative value is used for the position of the missing element.

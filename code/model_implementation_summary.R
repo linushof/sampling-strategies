@@ -1,9 +1,11 @@
+# load package
 pacman::p_load(tidyverse, digest, crayon)
-source("R/helper_functions/fun_cumulative_stats.R") # call functions for computing cumulative stats
+source("code/helper_functions/fun_compute_cumulative_stats.R") # call functions for computing cumulative stats
 
 # test set
 choice_problems <- read_rds("data/choice_problems.rds")
-n_agents <- 100 # number of synthetic agents
+names(choice_problems)
+n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
 param <- expand_grid(psi = seq(-.5, .4, .1), # probability increment added to unbiased sampling probability of p = .5

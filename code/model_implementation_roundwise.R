@@ -3,7 +3,7 @@ source("R/helper_functions/fun_compute_cumulative_stats.R") # call functions for
 
 # test set
 choice_problems <- read_rds("data/choice_problems.rds")
-n_agents <- 100 # number of synthetic agents
+n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
 param <- expand_grid(psi = seq(-.5, .4, .1), # probability increment added to unbiased sampling probability of p = .5

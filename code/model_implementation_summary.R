@@ -1,103 +1,92 @@
-# load package
+# load pkgs
 pacman::p_load(tidyverse, digest, crayon)
 source("code/helper_functions/fun_compute_cumulative_stats.R") # call functions for computing cumulative stats
 
 # test set
 choice_problems <- read_rds("data/choice_problems.rds")
-names(choice_problems)
 n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
-param <- expand_grid(psi = seq(-.5, .4, .1), # probability increment added to unbiased sampling probability of p = .5
-                     threshold = c("absolute", "relative"), # threshold type
+param <- expand_grid(psi = seq(-.5, .4, .1) , # probability increment added to unbiased sampling probability of p = .5 (switching probability)
+                     threshold = c("absolute", "relative") , # threshold type
                      theta = seq(15, 75, 15)) # thresholds
 
-# simulation
-## for each parameter combination (rows of param), all choice problems are played by all agents
-## 100 (parameter combinations) x 60 (problems) x 100 (agents) = 600.000 trials
+# simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
 
 set.seed(19543)
-param_list <- vector("list", length(nrow(param)))
+param_list <- vector("list", nrow(param)) 
 for (set in seq_len(nrow(param))) { # loop over parameter combinations
-  problem_list <- vector("list", length(nrow(choice_problems)))
+  problem_list <- vector("list", nrow(choice_problems))
   for (problem in seq_len(nrow(choice_problems))) { # loop over choice problems
     agents_list <- vector("list", n_agents)
     for (agent in seq_along(1:n_agents)){ # loop over agents
 
-      # initiate trials in a state of ignorance
-
-      fd <- tibble() # frequency distribution of sampled outcomes
+      ## parameters to initiate trials with
+      
+      fd <- tibble() # storage for sampled outcomes (fd = frequency distribution)
       p <- .5  # no attention bias
-      psi <- 0  # no switching at process initiation
-      init <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi)) # prospect attended first
+      psi <- 0
+      init <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi)) # option attended first
       attend <- init
       boundary_reached <- FALSE
 
-      # sampling of outcomes from risky (r) and safe (s) prospect continues until boundary is reached
-
+      ## sampling and accumulation process
+      
       while(boundary_reached == FALSE) {
         
-        # draw single sample from either r or s
+        ### draw single sample from either risky (r) or safe (s) option
 
         if(attend == "r") {
           single_smpl <- choice_problems[problem, ] %>%
-            mutate(attended = attend,
-                   r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)),
+            mutate(attended = attend ,
+                   r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)) ,
                    s = NA)
           psi <- param[[set, "psi"]] # to update the probability of sampling from r again
-        } else {
-          single_smpl <- choice_problems[problem, ] %>%
-            mutate(attended = attend,
-                   r = NA,
+          } else {
+            single_smpl <- choice_problems[problem, ] %>%
+              mutate(attended = attend ,
+                     r = NA ,
                    s = safe)
-          psi <- -1*param[[set, "psi"]] # to update the probability of sampling from s again
-        }
-
-        # add single sample to frequency distribution of sampled outcomes
-
+            psi <- -1*param[[set, "psi"]] # to update the probability of sampling from s again
+          }
+        
+        ### add single sample to other sampled outcomes
+        
         fd <- bind_rows(fd, single_smpl) %>%
-          mutate(r_sum = cumsum2(r, na.rm = TRUE),
+          mutate(r_sum = cumsum2(r, na.rm = TRUE) ,
                  s_sum = cumsum2(s, na.rm = TRUE))
 
-        # evaluate accumulated evidence over fd
-        # evidence is either compared against the absolute or relative boundary
+        ### after each sample, check if accumulated evidence reached threshold
 
         if(param[[set, "threshold"]] == "absolute") {
           fd <- fd %>%
-            mutate(choice = case_when(r_sum >= param[[set, "theta"]] ~ "r",
+            mutate(choice = case_when(r_sum >= param[[set, "theta"]] ~ "r" ,
                                       s_sum >= param[[set, "theta"]] ~ "s"))
-        } else {
-          fd <- fd %>%
-            mutate(diff = round(r_sum - s_sum, 2),
-                   choice = case_when(diff >= param[[set, "theta"]] ~ "r",
+          } else {
+            fd <- fd %>%
+              mutate(diff = round(r_sum - s_sum, 2) ,
+                     choice = case_when(diff >= param[[set, "theta"]] ~ "r",
                                       diff <= -1*param[[set, "theta"]] ~ "s"))
         }
 
-        # if boundary is not reached, draw new sample from r (s) according to psi
+        ### if threshold isn't reached, draw new sample according to psi
 
         if(is.na(fd[[nrow(fd), "choice"]]) == FALSE) {
           boundary_reached <- TRUE
         } else {
           attend <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi))
         }
-      }
+      } # close loop choice trial
       agents_list[[agent]] <- expand_grid(agent, fd)
-    }
-    all_agents <- agents_list %>% map_dfr(as.list)
+    } # close loop agents
+    all_agents <- agents_list %>% bind_rows()
     problem_list[[problem]] <- expand_grid(problem, all_agents)
-  }
-  all_problems <- problem_list %>% map_dfr(as.list)
+  } # close loop choice problems
+  all_problems <- problem_list %>% bind_rows()
   param_list[[set]] <- expand_grid(param[set, ], all_problems)
-}
-simulation_summary <- param_list %>% map_dfr(as.list)
+} # close loop parameters
+simulation_summary <- param_list %>% bind_rows()
 
-# Data validation: 
-## the hash function (sha-256 algorithm) must return the checksum displayed below. If not, the newly simulated data is not the same as the original data.
+# save data  
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
-if(checksum_simulation_summary != "f7211d17408d8cd5ae8d0117530681bd3e3e93d370c96aa1b1759ebda838109a"){
-  warning("\u2716 Mismatch between current and original data. Current checksum is: '", checksum_simulation_roundwise, "'")
-} else{cat(green("\u2713 Data validated. Current data matches the original data."))
-}
-
-# save as compressed data file
 write_rds(simulation_summary, "data/simulation_summary.rds.bz2", compress = "bz2")

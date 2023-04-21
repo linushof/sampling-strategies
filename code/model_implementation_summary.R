@@ -50,7 +50,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
             psi <- -1*param[[set, "psi"]] # to update the probability of sampling from s again
           }
         
-        ### add single sample to other sampled outcomes
+        ### add sample to other sampled outcomes and update evidence
         
         fd <- bind_rows(fd, single_smpl) %>%
           mutate(r_sum = cumsum2(r, na.rm = TRUE) ,

@@ -20,7 +20,7 @@ initial_set <- initial_set %>%
 set.seed(735)
 for(i in unique(initial_set$rare)) {
   type <- initial_set %>% filter(rare == i) # type of rare rare outcome
-  smpl <- sample(seq_len(nrow(type)), size = 20) # random sample of 20 choice problems
+  smpl <- sample(seq_len(nrow(type)), size = 30) # random sample of 30 choice problems
   test_set <- bind_rows(test_set, type[smpl, ])
 }
 

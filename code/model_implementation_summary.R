@@ -81,6 +81,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
     } # close loop agents
     all_agents <- agents_list %>% bind_rows()
     problem_list[[problem]] <- expand_grid(problem, all_agents)
+    print(paste("\u2713 Parameter Set No. ", set, ", Problem No. ", problem, " finished!"))
   } # close loop choice problems
   all_problems <- problem_list %>% bind_rows()
   param_list[[set]] <- expand_grid(param[set, ], all_problems)

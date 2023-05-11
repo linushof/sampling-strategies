@@ -4,7 +4,6 @@
 .Ruserdata
 *.html
 thesis/
-manuscript/figures/
-manuscript/references.bib
-notes/
+manuscript/
+housekeeping/
 talks/

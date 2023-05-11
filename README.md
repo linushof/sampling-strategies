@@ -1,4 +1,4 @@
-# Sampling Strategies in Decisions from Experiences 
+# Sampling Strategies in Experience-based Risky Chocie 
 
 Repository for a work in progress paper by Linus Hof [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-2257-2136), Veronika Zilker [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-9551-800X), and Thorsten Pachur [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0001-6391-4107).
 

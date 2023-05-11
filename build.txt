@@ -23,3 +23,9 @@
 	#4.1 code/helper_functions/JAGS_model.txt
 	#4.2 code_helper_functions/fun_initialize_MCMC.R
 	#4.3 estimate_cpt.R (calls #4.1 and #4.2, requires #3 output)
+	
+	Output: data/cpt_estimates.ds
+	
+#5 analysis
+
+  5.1 code/analysis.R (requires #2, #3, #4 output)

@@ -180,29 +180,9 @@ ggsave(file = "manuscript/figures/frequencies.png", width = 10, height = 4)
 
 # maximization rates
   
-## compute maximization rates for EV and sampled mean
+## Option 1: Original with one threshold type and without EV 
 
-### expected value
-rates_ev <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # drop trials where only one option was attended
-  mutate(norm = case_when(ev_ratio > 1 ~ "r", 
-                          ev_ratio < 1 ~ "s")) %>% # determine higher-EV prospect (normative choice)
-  filter(!is.na(norm)) %>% # drop problems without normative choice
-  group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
-  summarise(n = n()) %>% # number of correct/false risky and correct/false safe choices
-  mutate(rate = round(n/sum(n), 2)) %>% # rates of correct/false risky and correct/false safe choices
-  ungroup() %>%
-  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>% # include choices where n = 0
-  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% # drop rows with invalid parameter combinations
-  mutate(type = case_when(norm == "r" & choice == "r" ~ "Risky",
-                          norm == "s" & choice == "s" ~ "Safe")) %>%
-  filter(!is.na(type)) %>% # drop false choices
-  select(-c(norm, choice, n)) %>% 
-  mutate(norm = "EV")
-
-
-###  sampled mean
-rates_mean <- choices %>%
+rates <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% 
   mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
                           mean_r/safe < 1 ~ "s")) %>% # determine prospect with higher sampled mean 
@@ -219,69 +199,179 @@ rates_mean <- choices %>%
   select(-c(norm, choice, n)) %>% 
   mutate(norm = "Mean")
 
-rates <- bind_rows(rates_ev, rates_mean) 
-rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No",
-                                            rare == "attractive" ~ "High",
-                                            rare == "unattractive" ~ "Low"),
-                           threshold = case_when(threshold == "absolute" ~ "Absolute",
-                                                 threshold == "relative" ~ "Relative"))
-
-
-## plots
-
-### round-wise
-
-rates_round_r <- rates %>%  filter(model == "roundwise" & threshold == "Relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) # only show rates for psi = c(.1, .5, 1) 
+rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No rare event",
+                                            rare == "attractive" ~ "Desirable",
+                                            rare == "unattractive" ~ "Undesirable"))
 
 rates %>%
-  filter(model == "roundwise" & threshold == "Absolute") %>% 
+  filter(model == "roundwise" & threshold == "absolute") %>% 
   filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  ggplot(aes(psi, rate, color = type)) +
+  facet_grid(factor(rare, levels = c("Desirable", "Undesirable", "No rare event"))~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   labs(x = expression(paste("Switching Probability ", psi)),
        y = "Maximization Rate",
-       linetype = "Option",
-       color = "Norm",
-       shape = "Threshold") +
+       color = "Option") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  geom_line(aes(linetype = type, color = norm), size = 1, alpha = .7) + 
-  geom_point(aes(shape = threshold, color = norm), size = 4, alpha = .7) +
-  geom_line(data = rates_round_r, aes(linetype = type, color = norm), size = 1, alpha = .7) + 
-  geom_point(data = rates_round_r, aes(shape = threshold, color = norm), size = 4, alpha = .7) +
-  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
-  theme_apa(base_size = 20) + 
-  theme(legend.position = "top")
-ggsave(file = "manuscript/figures/maximization_roundwise.png", width = 14, height = 12)
-
-
-### summary
-
-rates_summary_r <- rates %>%  
-  filter(model == "summary" & threshold == "Relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) 
+  geom_line(aes(color = type), size = 1, alpha = .7) + 
+  geom_point(aes(color = type), size = 4, alpha = .7) +
+  theme_apa(base_size = 20)
 
 rates %>%
-  filter(model == "summary" & threshold == "Absolute") %>% 
+  filter(model == "summary" & threshold == "absolute") %>% 
   filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate)) +
-  facet_grid(rare~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  ggplot(aes(psi, rate, color = type)) +
+  facet_grid(factor(rare, levels = c("Desirable", "Undesirable", "No rare event"))~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   labs(x = expression(paste("Switching Probability ", psi)),
        y = "Maximization Rate",
-       linetype = "Option", 
-       color = "Norm",
-       shape = "Threshold") +
+       color = "Option") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  geom_line(aes(linetype = type, color = norm), size = 1, alpha = .7) + 
-  geom_point(aes(shape = threshold, color = norm), size = 4, alpha = .7) +
-  geom_line(data = rates_summary_r, aes(linetype = type, color = norm), size = 1, alpha = .7) + 
-  geom_point(data = rates_summary_r, aes(shape = threshold, color = norm), size = 4, alpha = .7) +
-  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
-  theme_apa(base_size = 20) + 
-  theme(legend.position = "top")
-ggsave(file = "manuscript/figures/maximization_summary.png", width = 14, height = 12)
+  geom_line(aes(color = type), size = 1, alpha = .7) + 
+  geom_point(aes(color = type), size = 4, alpha = .7) +
+  theme_apa(base_size = 20) 
+
+## Option 2.1: Original with one threshold type and without EV and safe/risky distinction (TP proposal)
+
+rates <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, rare, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No rare event",
+                                            rare == "attractive" ~ "Desirable",
+                                            rare == "unattractive" ~ "Undesirable"))
+
+rates %>%
+  filter(model == "roundwise" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate)) +
+  facet_grid(factor(rare, levels = c("Desirable", "Undesirable", "No rare event"))~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Option") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(size = 1, alpha = .7) + 
+  geom_point(size = 4, alpha = .7) +
+  theme_apa(base_size = 20)
+
+rates %>%
+  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate)) +
+  facet_grid(factor(rare, levels = c("Desirable", "Undesirable", "No rare event"))~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Option") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(size = 1, alpha = .7) + 
+  geom_point(size = 4, alpha = .7) +
+  theme_apa(base_size = 20)
+
+## Option 2.2: Adopted with one threshold type and without EV and safe/risky distinction (TP proposal)
+
+rates %>%
+  filter(model == "roundwise" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = rare, color = factor(rare, levels = c("Desirable", "Undesirable", "No rare event")))) +
+  facet_wrap(~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), nrow = 1) + 
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Rare event") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1, alpha = .3) + 
+  geom_point(size = 4, alpha = .3) +
+  theme_apa(base_size = 20)
+
+rates %>%
+  filter(model == "roundwise" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  facet_wrap(~ factor(rare, levels = c("Desirable", "Undesirable", "No rare event")), nrow = 1) + 
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1, alpha = .3) + 
+  geom_point(size = 4, alpha = .3) +
+  theme_apa(base_size = 20)
+
+
+rates %>%
+  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = rare, color = factor(rare, levels = c("Desirable", "Undesirable", "No rare event")))) +
+  facet_wrap(~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), nrow = 1) + 
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Rare event") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1, alpha = .3) + 
+  geom_point(size = 4, alpha = .3) +
+  theme_apa(base_size = 20)
+
+rates %>%
+  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  facet_wrap(~ factor(rare, levels = c("Desirable", "Undesirable", "No rare event")), nrow = 1) + 
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1, alpha = .3) + 
+  geom_point(size = 4, alpha = .3) +
+  theme_apa(base_size = 20)
+
+
+## Option 3: Adopted with one threshold type and without EV and safe/risky distinction and rare distinction  (my proposal)
+
+rates <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+global_roundwise <- rates %>%
+  filter(model == "roundwise" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 4) +
+  theme_apa(base_size = 20)
+
+global_summary <- rates %>%
+  filter(model == "summary" & threshold == "absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 4) +
+  theme_apa(base_size = 20)
+
+ggarrange(global_roundwise, global_summary, nrow = 1, common.legend = TRUE, legend = "right")
 
 
 # cumulative prospect theory
@@ -593,3 +683,111 @@ ggsave(file = "manuscript/figures/outcome-sensitivity_summary.png", width = 14, 
 
 
 
+
+
+
+
+# maximization rates with expected value (Appendix)
+
+## compute maximization rates for EV and sampled mean
+
+### expected value
+rates_ev <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # drop trials where only one option was attended
+  mutate(norm = case_when(ev_ratio > 1 ~ "r", 
+                          ev_ratio < 1 ~ "s")) %>% # determine higher-EV prospect (normative choice)
+  filter(!is.na(norm)) %>% # drop problems without normative choice
+  group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
+  summarise(n = n()) %>% # number of correct/false risky and correct/false safe choices
+  mutate(rate = round(n/sum(n), 2)) %>% # rates of correct/false risky and correct/false safe choices
+  ungroup() %>%
+  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>% # include choices where n = 0
+  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% # drop rows with invalid parameter combinations
+  mutate(type = case_when(norm == "r" & choice == "r" ~ "Risky",
+                          norm == "s" & choice == "s" ~ "Safe")) %>%
+  filter(!is.na(type)) %>% # drop false choices
+  select(-c(norm, choice, n)) %>% 
+  mutate(norm = "EV")
+
+
+###  sampled mean
+rates_mean <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>% # determine prospect with higher sampled mean 
+  filter(!is.na(norm)) %>%
+  group_by(model, psi, threshold, theta, rare, norm, choice) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  complete(model, psi, threshold, theta, rare, norm, choice, fill = list(n = 0, rate = 0)) %>%
+  filter(!(model == "roundwise" & theta > 5), !(model == "summary" & theta < 15)) %>% 
+  mutate(type = case_when(norm == "r" & choice == "r" ~ "Risky",
+                          norm == "s" & choice == "s" ~ "Safe")) %>%
+  filter(!is.na(type)) %>% 
+  select(-c(norm, choice, n)) %>% 
+  mutate(norm = "Mean")
+
+rates <- bind_rows(rates_ev, rates_mean) 
+rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No",
+                                            rare == "attractive" ~ "High",
+                                            rare == "unattractive" ~ "Low"),
+                           threshold = case_when(threshold == "absolute" ~ "Absolute",
+                                                 threshold == "relative" ~ "Relative"))
+
+
+## plots
+
+### round-wise
+
+rates_round_r <- rates %>%  filter(model == "roundwise" & threshold == "Relative") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) # only show rates for psi = c(.1, .5, 1) 
+
+rates %>%
+  filter(model == "roundwise" & threshold == "Absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate)) +
+  facet_grid(rare~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       linetype = "Option",
+       color = "Norm",
+       shape = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(aes(linetype = type, color = norm), size = 1, alpha = .7) + 
+  geom_point(aes(shape = threshold, color = norm), size = 4, alpha = .7) +
+  geom_line(data = rates_round_r, aes(linetype = type, color = norm), size = 1, alpha = .7) + 
+  geom_point(data = rates_round_r, aes(shape = threshold, color = norm), size = 4, alpha = .7) +
+  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
+  theme_apa(base_size = 20) + 
+  theme(legend.position = "top")
+ggsave(file = "manuscript/figures/maximization_roundwise.png", width = 14, height = 12)
+
+
+### summary
+
+rates_summary_r <- rates %>%  
+  filter(model == "summary" & threshold == "Relative") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) 
+
+rates %>%
+  filter(model == "summary" & threshold == "Absolute") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate)) +
+  facet_grid(rare~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  labs(x = expression(paste("Switching Probability ", psi)),
+       y = "Maximization Rate",
+       linetype = "Option", 
+       color = "Norm",
+       shape = "Threshold") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  geom_line(aes(linetype = type, color = norm), size = 1, alpha = .7) + 
+  geom_point(aes(shape = threshold, color = norm), size = 4, alpha = .7) +
+  geom_line(data = rates_summary_r, aes(linetype = type, color = norm), size = 1, alpha = .7) + 
+  geom_point(data = rates_summary_r, aes(shape = threshold, color = norm), size = 4, alpha = .7) +
+  scale_color_scico_d(palette = "bam", begin = .2, end = .8) + 
+  theme_apa(base_size = 20) + 
+  theme(legend.position = "top")
+ggsave(file = "manuscript/figures/maximization_summary.png", width = 14, height = 12)

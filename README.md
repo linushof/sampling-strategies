@@ -5,15 +5,6 @@ Repository for a work in progress paper by Linus Hof [![ORCID iD](https://orcid.
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip) [![Repo will be updated in future.](https://img.shields.io/badge/check-for%20updates-blue.svg)](https://img.shields.io/badge/check-for%20updates-blue)
 
 
-## Description 
-
-In the sampling paradigm, people can—as much as they want, in the way they want, and without costs—sample the possible outcomes of prospects before making a final choice. 
-Do the sequential pattern in which the outcomes are sampled (sampling strategy) and the way the sampled outcomes are integrated and processed to evaluate the prospects (integration strategy) act together to shape the choice? 
-Here, we present two models that incorporate the idea of a potential interplay between both types of strategies into the computational framework of sequential sampling models. 
-Each model assumes an evidence accumulation process representing a distinct integration strategy and is used to simulate choices between a safe and a risky prospect, while systematically varying sampling strategies. 
-The simulations show that the potential interplay between both types of strategies can lead to systematically different choice patterns and can contribute to the as-if underweighting of rare outcomes pattern in decisions from experience, irrespective of the existence or absence of sampling error. 
-The model-implied differences in the choice patterns translate to distinct signatures in the psychoeconomic functions of cumulative prospect theory.
-
 ## References 
 
 Hills, T. T., & Hertwig, R. (2010). Information search in decisions from experience: Do our patterns of sampling foreshadow our decisions? Psychological Science, 21(12), 1787–1792. https://doi.org/10.1177/0956797610387443

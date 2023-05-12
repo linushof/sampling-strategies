@@ -768,3 +768,4 @@ rates %>%
   theme_apa(base_size = 20) + 
   theme(legend.position = "top")
 ggsave(file = "manuscript/figures/maximization_summary.png", width = 14, height = 12)
+

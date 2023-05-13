@@ -3,13 +3,14 @@ model
 
   # we use uninformative priors for CPT parameters to facilitate comparison of different generative mechanisms
 
-	alpha ~ dbeta(1,1)
+	alpha.pre ~ dbeta(1,1)
 	gamma.pre ~ dbeta(1,1)
 	delta.pre ~ dbeta(1,1)
 	rho.pre ~ dbeta(1,1)
 
 	## extend scales to a reasonable range (cf. Scheibehenne & Pachur, 2015)
 
+	alpha <- 2 * (alpha.pre)
 	gamma <- 2 * (gamma.pre)
 	delta <- 10 * (delta.pre)
 	rho   <- 5 * (rho.pre)

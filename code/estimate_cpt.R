@@ -70,4 +70,4 @@ estimates_cpt <- estimates_cpt %>% bind_rows()
 posterior_cpt <- posterior_cpt %>% bind_rows()
 
 write_rds(estimates_cpt, "data/cpt_estimates.rds")
-write_rds(posterior_cpt, "data/cpt_posteriors.rds")
+write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2")

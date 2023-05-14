@@ -20,7 +20,7 @@ model
   for (i in start:stop)
 	{
 
-  	# value function
+  # value function
 
 	v.r.low[i] <- pow(r_low[i], alpha)
 	v.r.high[i] <- pow(r_high[i], alpha)

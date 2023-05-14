@@ -9,7 +9,7 @@ choice_data <- choice_data %>%
   filter(!c(n_s == 0 | n_r == 0)) %>%  # omit trials where only one option was attended 
   mutate(choice_r = if_else(choice == "r", 1, 0)) # to apply logit choice rule
 
-# group trials of distinct parameter combinations of the generating model
+# group trials of distinct sampling strategies (unique combinations of model + parameters)
 params_sim <- choice_data %>% distinct(model, psi, threshold, theta) # to get distinct parameter combinations
 choices_grouped <- vector("list", nrow(params_sim))
 for(set in seq_len(nrow(params_sim))){
@@ -19,13 +19,13 @@ for(set in seq_len(nrow(params_sim))){
 }
 
 # allocate space for JAGS output
-estimates_cpt <- vector("list", nrow(params_sim)) # posterior statistics and MCMC diagnostics
+estimates_cpt <- vector("list", nrow(params_sim)) # posterior summary and MCMC diagnostics
+posterior_cpt <- vector("list", nrow(params_sim)) # full posterior
 
 # MCMC simulation 
 
-### continue here ###
 params_cpt <- c("alpha", "gamma", "delta", "rho")
-n_chains <- 4
+n_chains <- 20
 
 for(set in seq_len(nrow(params_sim))){
 
@@ -44,21 +44,30 @@ for(set in seq_len(nrow(params_sim))){
   current_sample <- jags.parallel(data = current_trials,
                                   inits = inits_MCMC,
                                   parameters.to.save = params_cpt,
-                                  model.file = "code/helper_functions/JAGS_model.txt",
-                                  n.chains = n_chains,
-                                  n.iter = 21000,
-                                  n.burnin = 1000,
+                                  model.file = "code/CPT_model.txt",
+                                  n.chains = 20,
+                                  n.iter = 60000,
+                                  n.burnin = 10000,
                                   n.thin = 20,
-                                  n.cluster = n_chains, # run chains on different cores
-                                  DIC = FALSE,
-                                  jags.seed = 8362)
+                                  n.cluster = 20, # run chains on different cores
+                                  DIC = TRUE,
+                                  jags.seed = 836243)
 
-  ## get posteriors, credibility intervals, and MCMC diagnostics
+  ## posterior summary and MCMC diagnostics
   current_summary <- current_sample$BUGSoutput$summary %>% as_tibble(rownames = "parameter")
   estimates_cpt[[set]] <- expand_grid(params_sim[set, ], current_summary)
+  
+  ## full posterior
+  current_posterior <- current_sample$BUGSoutput$sims.matrix %>% as_tibble()
+  posterior_cpt[[set]] <- expand_grid(params_sim[set, ], current_posterior)
+  
+  ## status
   print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
 }
 
 # save data
-estimates_cpt <- estimates_cpt %>% map_dfr(as.list)
+estimates_cpt <- estimates_cpt %>% bind_rows()
+posterior_cpt <- posterior_cpt %>% bind_rows()
+
 write_rds(estimates_cpt, "data/cpt_estimates.rds")
+write_rds(posterior_cpt, "data/cpt_posteriors.rds")

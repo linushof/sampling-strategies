@@ -38,43 +38,22 @@ label_rare <- function(string) {
 
 # accumulation trajectories -----------------------------------------------
 
-# select trials
-
-problem_number <- 43
-round_boundary <- 3
-summary_boundary <- 45
-
 # prepare data
 
 ## summary
 
 ### evidence for each number of sampled outcomes
+
+#### summary
 summary <- summary %>% 
   mutate(psi = 1-(psi+.5)) %>% # recode psi
   filter(threshold == "relative") %>% 
   group_by(psi, threshold, theta, problem, agent) %>% # group by trial
   mutate(smp_no = row_number(), # assign sample numbers
-         diff = if_else(smp_no == 1, 0, diff)) %>% # fill missing values
-  fill(diff)
+         diff = if_else(smp_no == 1, 0, diff)) %>% 
+  fill(diff) # fill missing values
 
-### median evidence
-summary_median <- summary %>% 
-  group_by(psi, threshold, theta, problem, smp_no) %>% 
-  summarise(count = n(), 
-            median = median(diff)) %>% 
-  slice(seq_len(min(which(median <= -summary_boundary | median >= summary_boundary), n()))) %>% 
-  filter(psi %in% c((1-.9), .5, 1),
-         theta == summary_boundary, 
-         problem == problem_number) %>%
-  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
-                            median > summary_boundary ~ summary_boundary, 
-                            median >= -summary_boundary & median <= summary_boundary ~ median),
-         agent = "Median")
-
-
-## round-wise model
-
-### evidence
+#### round
 round <- round %>% 
   mutate(psi = 1-(psi+.5)) %>% # recode psi
   filter(threshold == "relative") %>% 
@@ -84,72 +63,103 @@ round <- round %>%
   fill(diff)
 
 ### median evidence
+
+#### summary
+summary_median <- summary %>% 
+  group_by(psi, threshold, theta, problem, smp_no) %>% 
+  summarise(count = n(), 
+            median = median(diff)) %>% 
+  slice(seq_len(min(which(median <= -theta | median >= theta), n())))
+
+#### round
 round_median <- round %>% 
   group_by(psi, threshold, theta, problem, smp_no) %>% 
   summarise(count = n(), 
             median = median(diff)) %>% 
-  slice(seq_len(min(which(median %in% c(-round_boundary, round_boundary)), n()))) %>% 
+  slice(seq_len(min(which(median %in% c(-theta, theta)), n())))
+
+### subset of selected trials (relative)
+problem_number <- 43
+round_boundary <- 3
+summary_boundary <- 45  
+
+#### summary
+summary_sub <- summary %>% 
+  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>% 
+  mutate(diff = case_when(diff < -summary_boundary ~ -summary_boundary, 
+                          diff > summary_boundary ~ summary_boundary, 
+                          diff >= -summary_boundary & diff <= summary_boundary ~ diff))
+
+summary_median_sub <- summary_median %>%  
+  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>%
+  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
+                            median > summary_boundary ~ summary_boundary, 
+                            median >= -summary_boundary & median <= summary_boundary ~ median))
+
+#### round
+round_sub <- round %>%
   filter(psi %in% c((1-.9), .5, 1),
          theta == round_boundary, 
-         problem == problem_number) %>% 
-  mutate(agent = "Median")
+         problem == problem_number)
+
+round_median_sub <- round_median %>% 
+  filter(psi %in% c((1-.9), .5, 1),
+         theta == round_boundary, 
+         problem == problem_number)
 
 # plot data
 
 ## summary
-
-summary_trajectories_median <- summary %>% 
-  filter(psi %in% c((1-.9), .5, 1),
-         theta == summary_boundary, 
-         problem == problem_number) %>% 
-  mutate(diff = case_when(diff < -summary_boundary ~ -summary_boundary, 
-                          diff > summary_boundary ~ summary_boundary, 
-                          diff >= -summary_boundary & diff <= summary_boundary ~ diff)) %>% 
-  ggplot(aes(x = smp_no, y = diff, group_by = agent, color = as.factor(psi))) + 
+summary_trajectories <- summary_sub %>% 
+  ggplot(aes(x = smp_no, y = diff)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_color_scico_d(palette = "lajolla", begin = .3, end = .7) + 
-  # scale_x_continuous(limits = c(0,50), breaks = seq(0, 50, 25)) +
-  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(x = "Number of Sampled Outcomes",
+  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
+                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
+  labs(title = "Summary", 
+       x = "Number of Sampled Outcomes",
        y = expression(paste(Delta, " Sum")),
        color = expression(psi),
        alpha = "Agent\nCount") +
-  guides(color = "none") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_line(position = position_dodge(width = .3), size = .1, color = "gray", alpha = .3) + 
-  geom_line(data = summary_median, aes(y = median, alpha = count), size = 1) + 
+  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .01, alpha = .1, color = "gray") + 
+  geom_line(data = summary_median_sub, aes(y = median, alpha = count), size = .8, color = "#9c179e") +
+  # scale_color_scico(palette = "tokyo", begin = .3, end = .7) + 
+  scale_color_viridis(option = "plasma", begin = .4, end = .9) +
   theme_apa()
 
 ## round-wise
 
 ### labels for evidence thresholds
-ann_risky <- data.frame(psi=(1-.9), smp_no = 380, agent = "Label", diff=2.6, label="Risky Threshold")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 380, agent = "Label", diff=-2.6, label="Safe Threshold")
+ann_risky <- data.frame(psi=(1-.9), smp_no = 380, diff=2.6, label="Risky Threshold")
+ann_safe <- data.frame(psi=(1-.9), smp_no = 380, diff=-2.6, label="Safe Threshold")
 
-round_trajectories_median <- round %>% 
-  filter(psi %in% c((1-.9), .5, 1),
-         theta == round_boundary, 
-         problem == problem_number) %>% 
-  ggplot(aes(x = smp_no, y = diff, group_by = agent, color = as.factor(psi))) + 
+round_trajectories <- round_sub %>%
+  ggplot(aes(x = smp_no, y = diff)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_color_scico_d(palette = "lajolla", begin = .3, end = .7) + 
-  # scale_x_continuous(limits = c(0,50), breaks = seq(0, 50, 25)) +
-  scale_y_continuous(limits = c(-round_boundary, round_boundary), breaks = seq(-round_boundary,round_boundary, round_boundary)) +
-  labs(x = "Number of Sampled Outcomes",
+  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
+                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
+  labs(title = "Round-wise", 
+       x = "Number of Sampled Outcomes",
        y = expression(paste(Delta, " Wins")),
+       color = expression(psi),
        alpha = "Agent\nCount") +
-  guides(color = "none") +
-  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") +
-  geom_line(position = position_dodge(width = .3), size = .1, color = "gray", alpha = .3) + 
-  geom_line(data = round_median, aes(y = median, alpha = count), size = 1) + 
-  theme_apa() + 
-  geom_text(data = ann_risky, label=ann_risky$label, color = "black") + 
-  geom_text(data = ann_safe, label=ann_safe$label, color = "black")
-  
+  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
+  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .01, alpha = .1, color = "gray") + 
+  geom_line(data = round_median_sub, aes(y = median, alpha = count), size = .8, color = "#9c179e") +
+  # scale_color_scico(palette = "tokyo", begin = .3, end = .7) + 
+  scale_color_viridis(option = "plasma", begin = .4, end = .9) +
+  theme_apa() +
+  geom_text(data = ann_risky, label=ann_risky$label) + 
+  geom_text(data = ann_safe, label=ann_safe$label)
 
+  
 ## merge and save plots
-ggarrange(summary_trajectories_median, round_trajectories_median, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right", labels = c("Summary", "Round-wise"))
-ggsave(file = "manuscript/figures/trajectories_6.png", width = 10, height = 10)
+summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
+
+
+
+ggsave(file = "manuscript/figures/trajectories_35.png", width = 10, height = 10)
+ggsave(file = "manuscript/figures/trajectories_43.png", width = 10, height = 10)
 
 # sampled frequencies -----------------------------------------------------
 

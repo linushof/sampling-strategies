@@ -1,6 +1,3 @@
-here::i_am("code/analysis.R")
-
-
 # preparation -------------------------------------------------------------
 
 # load pkgs 
@@ -15,8 +12,8 @@ pacman::p_load(here,
 
 
 # load data
-choices <- read_rds(here("data", "choice_data.rds.bz2")) 
-cpt <- read_rds(here("data", "cpt_estimates.rds")) 
+choices <- read_rds("data/choice_data.rds.bz2") 
+cpt <- read_rds("data/cpt_estimates.rds") 
 round <- read_rds("data/simulation_roundwise.rds.bz2") 
 summary <- read_rds("data/simulation_summary.rds.bz2")
 
@@ -258,63 +255,6 @@ max_summary + max_roundwise + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/max_rates.png", width = 12, height = 5)
 
 
-# Option 2: with rare event distinction 
-
-## prepare data (compute maximization rates)
-rates <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
-  filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, rare, max) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>%
-  filter(!(max == 0))
-
-rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No rare event",
-                                            rare == "attractive" ~ "Desirable",
-                                            rare == "unattractive" ~ "Undesirable"))
-
-## plot data 
-
-### summary
-max_summary_rare <- rates %>%
-  filter(model == "summary" & threshold == "relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare) +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 4) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  labs(title = "Type of rare event", 
-       x = "Switching Probability",
-       y = "Maximization Rate",
-       color = "Threshold") +
-  scale_color_viridis(option ="D", alpha = .7) + 
-  theme_apa(base_size = 16)
-max_roundwise_rare
-
-### round-wise
-max_roundwise_rare <- rates %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
-  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  facet_wrap(~rare) + 
-  geom_line(linewidth = 1) + 
-  geom_point(size = 4) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
-  labs(title = "Type of rare event", 
-       x = "Switching Probability",
-       y = "Maximization Rate",
-       color = "Threshold") +
-  scale_color_viridis_d(option = "D", alpha = .7) + 
-  theme_apa(base_size = 16)
-max_summary_rare 
-
 # risk aversion -----------------------------------------------------------
 
 # Option 1: With rare event distinction 
@@ -417,11 +357,17 @@ r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A")
 
 # weighting function ---------------------------------------------------------
 
-# prepare data
 
+# check MCMC statistics / convergence 
+
+# scale reduction factor 
+max(cpt$Rhat) # 1.0014 ----> <= 1.001 
+min(cpt$n.eff) # 17,000
+
+# prepare data
 weights <- cpt %>%
   select(model, psi, threshold, theta, parameter, mean) %>%
-  pivot_wider(names_from = parameter, values_from = mean) %>%
+  pivot_wider(names_from = parameter, values_from = mean) %>% 
   select(-c(alpha, rho)) %>%
   expand_grid(p = seq(0, 1, .05)) %>% # create vector of sampled relative frequencies
   mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2)) # compute decision weights (see Goldstein & Einhorn, 1987) using the parameter estimates  
@@ -435,98 +381,110 @@ weights_summary <- weights %>% filter(model == "summary")
 
 #### gamma
 gamma_summary <- cpt_summary %>%
-  filter(parameter == "gamma", threshold == "absolute") %>%
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  filter(parameter == "gamma", threshold == "relative") %>%
+  ggplot(aes(psi, mean, color = psi)) + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
+  scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
   labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Curvature  ", gamma))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
+       y = expression(paste("Curvature  ", gamma)),
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 #### delta
 delta_summary <- cpt_summary %>%
-  filter(parameter == "delta", threshold == "absolute") %>%
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  filter(parameter == "delta", threshold == "relative") %>%
+  ggplot(aes(psi, mean, color = psi)) +
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
+  scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0, 10, length.out = 3)) +
   labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Elevation  ", delta))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
+       y = expression(paste("Elevation  ", delta)), 
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 ####  probability weighting
 wf_summary <- weights_summary %>% 
-  filter(threshold == "absolute") %>% 
+  filter(threshold == "relative") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
   labs(x = "Sampled Relative Frequency",
        y = expression(paste("Decision Weight  ", pi)),
        color = expression(psi)) +
-  scale_x_continuous(breaks = seq(0, 1, .5)) +
-  scale_y_continuous(breaks = seq(0, 1, .5)) +
-  geom_line(size = 1, alpha = .7) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 # merge and save plots
 
 wf_summary + gamma_summary + delta_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/probability-weighting_roundwise.png", width = 14, height = 12)
+ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
 
 ## round-wise
 
 cpt_roundwise <- cpt %>% filter(model == "roundwise")
 weights_roundwise <- weights %>% filter(model == "roundwise")
 
-### gamma
+#### gamma
 gamma_roundwise <- cpt_roundwise %>%
-  filter(parameter == "gamma", threshold == "absolute") %>%
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  filter(parameter == "gamma", threshold == "relative") %>%
+  ggplot(aes(psi, mean, color = psi)) + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
+  scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
   labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Curvature  ", gamma))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
+       y = expression(paste("Curvature  ", gamma)),
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
-### delta
+#### delta
 delta_roundwise <- cpt_roundwise %>%
-  filter(parameter == "delta", threshold == "absolute") %>%
-  ggplot(aes(psi, mean)) +
+  filter(parameter == "delta", threshold == "relative") %>%
+  ggplot(aes(psi, mean, color = psi)) +
+  scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
+  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
+  scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0,10, length.out = 3)) +
   labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Elevation  ", delta))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
+       y = expression(paste("Elevation  ", delta)), 
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
-###  probability weighting
+####  probability weighting
 wf_roundwise <- weights_roundwise %>% 
-  filter(threshold == "absolute") %>% 
+  filter(threshold == "relative") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
   labs(x = "Sampled Relative Frequency",
        y = expression(paste("Decision Weight  ", pi)),
        color = expression(psi)) +
-  scale_x_continuous(breaks = seq(0, 1, .5)) +
-  scale_y_continuous(breaks = seq(0, 1, .5)) +
-  geom_line(size = 1, alpha = .7) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 # merge and save plots
 
 wf_roundwise + gamma_roundwise + delta_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/probability-weighting_roundwise.png", width = 14, height = 12)
+ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
 
 
 # value function ---------------------------------------------------------
@@ -548,36 +506,39 @@ values_summary <- values %>% filter(model == "summary")
 
 ### alpha
 alpha_summary <- cpt_summary %>%
-  filter(parameter == "alpha", threshold == "absolute") %>% 
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.5)) + 
-  labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Concavity  ", alpha))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
-  geom_point(size = 3) +
-  geom_line(size = 1) +
+  filter(parameter == "alpha", threshold == "relative") %>% 
+  ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_apa(base_size = 20)
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
+  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
+  labs(x = expression(paste("Switching Probability  ", psi)), 
+       y = expression(paste("Concavity  ", alpha)),
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
+alpha_summary
+
 
 ### value function 
 vf_summary <- values_summary %>% 
-  filter(threshold == "absolute") %>% 
+  filter(threshold == "relative") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
        color = expression(psi)) +
-  scale_x_continuous(breaks = seq(0, 20, 10)) +
-  scale_y_continuous(breaks = seq(0, 20, 10)) +
-  geom_line(size = 1, alpha = .7) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 # merge and save plots
 vf_summary + alpha_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/outcome-sensitivity_roundwise.png", width = 14, height = 12)
+ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
 
 
 ## round-wise
@@ -586,74 +547,74 @@ values_roundwise <- values %>% filter(model == "roundwise")
 
 ### alpha
 alpha_roundwise <- cpt_roundwise %>%
-  filter(parameter == "alpha", threshold == "absolute") %>% 
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.5)) + 
-  labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Concavity  ", alpha))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
-  geom_point(size = 3) +
-  geom_line(size = 1) +
+  filter(parameter == "alpha", threshold == "relative") %>% 
+  ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_apa(base_size = 20)
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
+  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
+  labs(x = expression(paste("Switching Probability  ", psi)), 
+       y = expression(paste("Concavity  ", alpha)),
+       color = expression(psi)) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 ### value function 
 vf_roundwise <- values_roundwise %>% 
-  filter(threshold == "absolute") %>% 
+  filter(threshold == "relative") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") + 
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
        color = expression(psi)) +
-  scale_x_continuous(breaks = seq(0, 20, 10)) +
-  scale_y_continuous(breaks = seq(0, 20, 10)) +
-  geom_line(size = 1, alpha = .7) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/outcome-sensitivity_roundwise.png", width = 14, height = 12)
+ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
 
 
 # appendix ----------------------------------------------------------------
 
 # choice rule  
 
-rho_roundwise <- cpt_roundwise %>%
-  filter(parameter == "rho", threshold == "absolute") %>% 
-  ggplot(aes(psi, mean)) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
-  scale_y_continuous(limits = c(0, 5), breaks = seq(0,5,1)) + 
-  labs(x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Choice Consistency  ", rho))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
-  geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
-
 rho_summary <- cpt_summary %>%
-  filter(parameter == "rho", threshold == "absolute") %>% 
+  filter(parameter == "rho", threshold == "relative") %>% 
   ggplot(aes(psi, mean)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(0,1.1), breaks = seq(0,1,.5)) + 
-  scale_y_continuous(limits = c(0, 5), breaks = seq(0,5,1)) + 
+  scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,length.out = 3)) + 
+  scale_y_continuous(limits = c(-.5, 5.5), breaks = seq(0,5, length.out = 3)) + 
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = expression(paste("Choice Consistency  ", rho))) +
-  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), size = 1) + 
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
-  geom_line(size = 1) +
-  theme_apa(base_size = 20)
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
+
+rho_roundwise <- cpt_roundwise %>%
+  filter(parameter == "rho", threshold == "relative") %>% 
+  ggplot(aes(psi, mean)) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
+  scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0, 1, length.out = 3)) + 
+  scale_y_continuous(limits = c(-.5, 5.5), breaks = seq(0,5, length.out = 3)) + 
+  labs(x = expression(paste("Switching Probability  ", psi)), 
+       y = expression(paste("Choice Consistency  ", rho))) +
+  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  theme_apa(base_size = 16)
 
 ### combine plots
 rho_summary + rho_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/outcome-sensitivity_summary.png", width = 14, height = 12)
+ggsave(file = "manuscript/figures/choice_rule.png", width = 14, height = 7)
 
-
-# relative thresholds
+# absolute thresholds
 
 ## HERE: Add analyses
 
@@ -758,4 +719,67 @@ rates %>%
   theme_apa(base_size = 20) + 
   theme(legend.position = "top")
 ggsave(file = "manuscript/figures/maximization_summary.png", width = 14, height = 12)
+
+
+
+
+# notes -------------------------------------------------------------------
+
+
+# maximization rates with rare event diistinction 
+
+## prepare data (compute maximization rates)
+rates <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, rare, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+rates <- rates %>%  mutate(rare = case_when(rare == "none" ~ "No rare event",
+                                            rare == "attractive" ~ "Desirable",
+                                            rare == "unattractive" ~ "Undesirable"))
+
+## plot data 
+
+### summary
+max_summary_rare <- rates %>%
+  filter(model == "summary" & threshold == "relative") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~rare) +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 4) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  labs(title = "Type of rare event", 
+       x = "Switching Probability",
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_color_viridis(option ="D", alpha = .7) + 
+  theme_apa(base_size = 16)
+max_summary_rare
+
+### round-wise
+max_roundwise_rare <- rates %>%
+  filter(model == "roundwise" & threshold == "relative") %>% 
+  filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  facet_wrap(~rare) + 
+  geom_line(linewidth = 1) + 
+  geom_point(size = 4) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) +
+  labs(title = "Type of rare event", 
+       x = "Switching Probability",
+       y = "Maximization Rate",
+       color = "Threshold") +
+  scale_color_viridis_d(option = "D", alpha = .7) + 
+  theme_apa(base_size = 16)
+max_roundwise_rare 
 

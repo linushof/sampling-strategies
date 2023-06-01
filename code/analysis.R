@@ -661,3 +661,7 @@ ggsave(file = "manuscript/figures/choice_rule.png", width = 14, height = 7)
 
 ## HERE: Add analyses
 
+# ecological analysis
+
+## HERE: Add analyses
+

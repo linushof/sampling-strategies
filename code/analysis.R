@@ -313,7 +313,6 @@ rates <- choices %>%
 
 ## plot data 
 
-
 ### summary
 max_summary <- rates %>%
   filter(model == "summary" & threshold == "relative") %>% 
@@ -335,7 +334,7 @@ max_roundwise <- rates %>%
   filter(model == "roundwise" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", alpha = .7, direction = -1) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Round-wise", 
@@ -382,7 +381,7 @@ r_averse_roundwise <- rates %>%
   filter(model == "roundwise" & threshold == "relative") %>% 
   #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", alpha = .7, direction = - 1) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Round-wise", 

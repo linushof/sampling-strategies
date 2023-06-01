@@ -234,43 +234,66 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 # sampled frequencies -----------------------------------------------------
 
 # prepare data 
-round_freq  <- round %>% 
+round_freq_high  <- round %>% 
+  mutate(psi = 1-(psi+.5)) %>% # recode psi
   filter(psi %in% c((1-.9), .5, 1),
-         theta == round_boundary) %>% 
-  group_by(psi, threshold, theta, problem, agent) %>%
+         threshold == "relative",
+         theta == 5) %>% 
+  group_by(psi, problem, agent) %>%
   mutate(n_sample = n(), # compute trial-level n 
          n_s = sum(is.na(r)), 
          n_r = n_sample - n_s, 
-         freq_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
+         trial_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
   ungroup() %>%
-  group_by(psi, threshold, theta, problem, agent, round) %>% 
+  group_by(psi, problem, agent, round) %>% 
   mutate(n_round = n(), 
          n_round_s = sum(is.na(r)),
          n_round_r = n_round - n_round_s,
-         freq_round_r_high = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
-  distinct(psi, threshold, theta, problem, agent, round, freq_r_high, freq_round_r_high) # drop redundant rows
+         round_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
+  distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
+
+round_freq_low  <- round %>% 
+  mutate(psi = 1-(psi+.5)) %>% # recode psi
+  filter(psi %in% c((1-.9), .5, 1),
+         threshold == "relative",
+         theta == 5) %>% 
+  group_by(psi, problem, agent) %>%
+  mutate(n_sample = n(), # compute trial-level n 
+         n_s = sum(is.na(r)), 
+         n_r = n_sample - n_s, 
+         trial_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
+  ungroup() %>%
+  group_by(psi, problem, agent, round) %>% 
+  mutate(n_round = n(), 
+         n_round_s = sum(is.na(r)),
+         n_round_r = n_round - n_round_s,
+         round_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
+  distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
+
+round_freq <- bind_rows(round_freq_low, round_freq_high)
 
 round_freq_median <- round_freq %>% 
-  group_by(psi, threshold, theta, freq_r_high) %>% 
-  summarise(median_freq_round_r_high = median(freq_round_r_high, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
+  group_by(psi, trial_freq) %>%
+  summarise(median_round_freq = median(round_freq, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
+
 
 # plot data
 round_freq %>% 
-  ggplot(aes(x = freq_r_high, y = freq_round_r_high)) +
+  ggplot(aes(x = trial_freq, y = round_freq)) +
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   labs(x = "Trial-Level Frequency",
        y = "Round-Level Frequency") +
   geom_density_2d_filled() +
-  scale_fill_scico_d(palette = "acton") +
-  geom_point(data = round_freq_median, aes(y = median_freq_round_r_high), size = .7, color = "white") + 
+  scale_fill_scico_d(palette = "devon") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "white") + 
-  theme_apa() + 
+  geom_point(data = round_freq_median, aes(y = median_round_freq), size = 1, color = "white") + 
+  theme_apa(base_size = 16) + 
   theme(legend.position = "none")
 
 # save plot
-ggsave(file = "manuscript/figures/frequencies.png", width = 10, height = 4)
+ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 6)
 
 # maximization rates ------------------------------------------------------
 

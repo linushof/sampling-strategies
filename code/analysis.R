@@ -323,7 +323,7 @@ max_summary <- rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary", 
        x = expression(paste("Switching Probability  ", psi)),
-       y = "Maximization Rate",
+       y = "% Maximizing Average Return",
        color = "Threshold") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -339,7 +339,7 @@ max_roundwise <- rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Round-wise", 
        x = expression(paste("Switching Probability  ", psi)),
-       y = "Maximization Rate",
+       y = "% Maximizing Average Return",
        color = "Threshold") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -347,7 +347,7 @@ max_roundwise <- rates %>%
 
 ### merge and save plots
 max_summary + max_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/rates_maximization.png", width = 14, height = 6)
+ggsave(file = "manuscript/figures/rates_maximization_average_return.png", width = 14, height = 6)
 
 
 # risk aversion -----------------------------------------------------------
@@ -371,7 +371,7 @@ r_averse_summary <- rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary", 
        x = expression(paste("Switching Probability  ", psi)),
-       y = "Proportion of Safe Choices",
+       y = "% Safe Choices",
        color = "Threshold") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -386,7 +386,7 @@ r_averse_roundwise <- rates %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Round-wise", 
        x = expression(paste("Switching Probability  ", psi)),
-       y = "Proportion of Safe Choices",
+       y = "% Safe Choices",
        color = "Threshold") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -394,6 +394,62 @@ r_averse_roundwise <- rates %>%
 
 r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height = 6)
+
+
+# 1 shot maximization -----------------------------------------------------
+
+## prepare data (compute maximization rates)
+
+rates <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  mutate(norm = case_when(ep_r_high > .5 ~ "r", 
+                          ep_r_high < .5 ~ "s")) %>% # determine option with more frequent higher return
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+
+## plot data 
+
+### summary
+max_summary <- rates %>%
+  filter(model == "summary" & threshold == "relative") %>% 
+  # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary", 
+       x = expression(paste("Switching Probability  ", psi)),
+       y = "% Maximizing Frequent Return",
+       color = "Threshold") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_apa(base_size = 16)
+
+### round-wise
+max_roundwise <- rates %>%
+  filter(model == "roundwise" & threshold == "relative") %>% 
+  # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Round-wise", 
+       x = expression(paste("Switching Probability  ", psi)),
+       y = "% Maximizing Frequent Return",
+       color = "Threshold") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_apa(base_size = 16)
+
+### merge and save plots
+max_summary + max_roundwise + plot_annotation(tag_levels = "A")
+ggsave(file = "manuscript/figures/rates_maximization_frequent_return.png", width = 14, height = 6)
 
 
 

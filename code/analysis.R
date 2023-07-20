@@ -761,7 +761,7 @@ rho_summary <- cpt_summary %>%
   scale_y_continuous(limits = c(-.5, 5.5), breaks = seq(0,5, length.out = 3)) + 
   labs(title = "Summary", 
        x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Choice Consistency  ", rho))) +
+       y = expression(paste("Choice Consistency  ", phi))) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
@@ -776,7 +776,7 @@ rho_roundwise <- cpt_roundwise %>%
   scale_y_continuous(limits = c(-.5, 5.5), breaks = seq(0,5, length.out = 3)) + 
   labs(title = "Round-wise", 
        x = expression(paste("Switching Probability  ", psi)), 
-       y = expression(paste("Choice Consistency  ", rho))) +
+       y = expression(paste("Choice Consistency  ", phi))) +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +

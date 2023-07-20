@@ -825,7 +825,7 @@ max_summary <- rates_ev %>%
   filter(model == "summary" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, color = type)) +
-  facet_wrap(~theta, nrow = 1) +
+  facet_wrap(~theta, nrow = 1,  labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_color_scico_d(palette = "berlin") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
@@ -841,11 +841,11 @@ max_summary <- rates_ev %>%
 
 ### round-wise
 rates_av_r <- rates_av %>% filter(model == "roundwise" & threshold == "relative")
-max_roundwise <- rates_ev %>%
+max_roundwise <- rates_ev %>% 
   filter(model == "roundwise" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, color = type)) +
-  facet_wrap(~theta, nrow = 1) +
+  facet_wrap(~theta, nrow = 1,  labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_color_scico_d(palette = "berlin") + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +

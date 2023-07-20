@@ -791,7 +791,7 @@ ggsave(file = "manuscript/figures/choice_rule.png", width = 14, height = 7)
 
 ## maximization rates for expected values
 
-rates <- choices %>%
+rates_ev <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
   mutate(norm = case_when(ev_ratio > 1 ~ "r", 
                           ev_ratio < 1 ~ "s")) %>% # determine option with higher ev 
@@ -801,44 +801,67 @@ rates <- choices %>%
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>%
-  filter(!(max == 0))
+  filter(!(max == 0)) %>% 
+  mutate(type = "EV")
 
-## plot data 
+## prepare data (compute maximization rates)
+rates_av <- choices %>%
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0)) %>% 
+  mutate(type = "Average")
+
 
 ### summary
-max_summary <- rates %>%
+rates_av_s <- rates_av %>% filter(model == "summary" & threshold == "relative")
+max_summary <- rates_ev %>%
   filter(model == "summary" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) + 
+  ggplot(aes(psi, rate, color = type)) +
+  facet_wrap(~theta, nrow = 1) +
+  scale_color_scico_d(palette = "berlin") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary", 
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
-       color = "Threshold") +
-  geom_line(linewidth = 1) + 
+       color = "Maximized\nProperty") +
+  geom_line(data = rates_av_s, linewidth = 1) + 
+  geom_point(data = rates_av_s, size = 3) +
+  geom_line(linewidth = 1) +
   geom_point(size = 3) +
   theme_apa(base_size = 20)
 
 ### round-wise
-max_roundwise <- rates %>%
+rates_av_r <- rates_av %>% filter(model == "roundwise" & threshold == "relative")
+max_roundwise <- rates_ev %>%
   filter(model == "roundwise" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", alpha = .7) + 
+  ggplot(aes(psi, rate, color = type)) +
+  facet_wrap(~theta, nrow = 1) +
+  scale_color_scico_d(palette = "berlin") + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Round-wise", 
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
-       color = "Threshold") +
+       color = "Maximized\nProperty") +
+  geom_line(data = rates_av_r, linewidth = 1) + 
+  geom_point(data = rates_av_r, size = 3) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_apa(base_size = 20)
 
+
 ### merge and save plots
-max_summary + max_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/rates_maximization_ev.png", width = 14, height = 6)
+max_summary + max_roundwise + plot_annotation(tag_levels = "A") + plot_layout(ncol = 1, guides = "collect")
+ggsave(file = "manuscript/figures/rates_maximization_ev.png", width = 14, height = 10)
 
 

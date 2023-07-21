@@ -366,8 +366,8 @@ r_averse_summary <- rates %>%
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
        color = "Threshold") +
-  geom_line(data = rates_obj_sr, color = "gray") +
-  geom_point(data = rates_obj_sr, color = "gray") +
+  geom_line(data = rates_obj_sr, color = "gray", linewidth = 1, alpha = .3) +
+  geom_point(data = rates_obj_sr, color = "gray", size = 3, alpha = .3) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_apa(base_size = 20)
@@ -383,8 +383,8 @@ r_averse_roundwise <- rates %>%
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
        color = "Threshold") +
-  geom_line(data = rates_obj_rr, color = "gray") +
-  geom_point(data = rates_obj_rr, color = "gray") +
+  geom_line(data = rates_obj_rr, color = "gray", linewidth = 1, alpha = .3) +
+  geom_point(data = rates_obj_rr, color = "gray", size = 3, alpha = .3) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_apa(base_size = 20)
@@ -637,11 +637,15 @@ rates <- choices %>%
 rates_obj <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>%
   mutate(sampled_ev_ratio = ifelse(safe > mean_r, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, sampled_ev_ratio) %>% 
+  group_by(model, psi, threshold, theta, rare, sampled_ev_ratio) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>% 
-  filter(!(sampled_ev_ratio == 0))
+  filter(!(sampled_ev_ratio == 0)) %>% 
+  mutate(rare = case_when(rare == "attractive" ~ "(0, .2)", 
+                          rare == "unattractive" ~ "(.8, 1)", 
+                          rare == "none" ~ "\\[.2, .8\\]"))
+
 rates_obj_sr <- rates_obj %>% filter(model == "summary", threshold == "relative" ) 
 rates_obj_rr <- rates_obj %>% filter(model == "roundwise", threshold == "relative" ) 
 
@@ -658,8 +662,8 @@ r_averse_summary <- rates %>%
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
        color = "Threshold") +
-  # geom_line(data = rates_obj_sr, color = "gray") +
-  # geom_point(data = rates_obj_sr, color = "gray") +
+  geom_line(data = rates_obj_sr, color = "gray", linewidth = 1, alpha = .3) +
+  geom_point(data = rates_obj_sr, color = "gray", size = 3, alpha = .3) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_apa(base_size = 20)
@@ -676,8 +680,8 @@ r_averse_roundwise <- rates %>%
        x = expression(paste("Switching Probability  ", psi)),
        y = "Proportion",
        color = "Threshold") +
-  #geom_line(data = rates_obj_rr, color = "gray") +
-  #geom_point(data = rates_obj_rr, color = "gray") +
+  geom_line(data = rates_obj_rr, color = "gray", linewidth = 1, alpha = .3) +
+  geom_point(data = rates_obj_rr, color = "gray", size = 3, alpha = .3) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_apa(base_size = 20)
@@ -688,12 +692,15 @@ ggsave(file = "manuscript/figures/rates_risk_aversion_rare.png", width = 14, hei
 
 # Maximization for trials where predictions for summary and round-wise comparison diverge 
 
-# Frequency of identical / diverging prediction 
-r_type <- choices %>% 
-  mutate(HAR = if_else(mean_r > safe, 1, 0), # option with higher average return
-         HFR = if_else(ep_r_high > .5, 1, 0)) %>% # option with higher frequent return
-  select(HAR, HFR) 
-table(r_type)
+# Frequency of diverging predictions
+choices %>% 
+  filter(threshold == "relative") %>% 
+  mutate(same_op = case_when( (ep_r_high > .5) & (mean_r < safe)  ~ 1 ,
+                              (ep_r_high < .5) & (mean_r > safe)  ~ 1) ,
+         same_op = ifelse(is.na(same_op), 0, same_op)) %>%
+  group_by(same_op) %>% 
+  summarise(count = n(), 
+            prop = round( count/1.2e6, 3)) # n = 103630 (p = 0.09)
 
 # Prepare data: compute maximization rates for trials with diverging predictions
 rates <- choices %>%
@@ -709,6 +716,7 @@ rates <- choices %>%
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>%
   filter(!(max == 0))
+
 
 # Plot data
 
@@ -788,6 +796,7 @@ ggsave(file = "manuscript/figures/choice_rule.png", width = 14, height = 7)
 
 
 # appendix ground truth --------------------------------------------
+
 
 ## maximization rates for expected values
 

@@ -8,3 +8,6 @@ manuscript/
 housekeeping/
 talks/
 data/merged/
+data/absolute_thresholds/
+data/relative_thresholds/
+data/README.Rmd

@@ -139,4 +139,12 @@ simulation_roundwise <- param_list %>% bind_rows()
 
 # save data
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
-write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")
+write_rds(simulation_roundwise, "data/merged/simulation_roundwise.rds.bz2", compress = "bz2")
+
+round_rt <- simulation_roundwise %>% filter(threshold == "relative")
+checksum_simulation_roundwise <- digest(round_rt, "sha256")
+write_rds(round_rt, "data/simulation_roundwise.rds.bz2", compress = "bz2")
+
+round_at <- simulation_roundwise %>% filter(threshold == "absolute")
+checksum_simulation_roundwise <- digest(round_at, "sha256")
+write_rds(round_at, "data/absolute_thresholds/simulation_roundwise_absolute.rds.bz2", compress = "bz2")

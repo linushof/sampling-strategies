@@ -27,7 +27,7 @@ choices for round-wise comparison</td>
 <tr class="even">
 <td><code>simulation_summary.rds.bz2</code></td>
 <td>Exhaustive simulation data, containing all sampled outcomes and
-choices for round-wise comparison</td>
+choices for summary comparison</td>
 <td></td>
 </tr>
 <tr class="odd">

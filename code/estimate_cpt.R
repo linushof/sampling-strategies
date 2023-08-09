@@ -1,4 +1,4 @@
-pacman::p_load(tidyverse, R2jags)
+pacman::p_load(tidyverse, R2jags, digest)
 source("code/helper_functions/fun_initialize_MCMC.R") # call function creating initial values for MCMC
 
 # read data
@@ -65,9 +65,32 @@ for(set in seq_len(nrow(params_sim))){
   print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
 }
 
-# save data
 estimates_cpt <- estimates_cpt %>% bind_rows()
 posterior_cpt <- posterior_cpt %>% bind_rows()
 
+# save data
+
+##  full data sets
+checksum_estimates_cpt <- digest(estimates_cpt, "sha256")
 write_rds(estimates_cpt, "data/cpt_estimates.rds")
+
+checksum_posterior_cpt <- digest(posterior_cpt, "sha256")
 write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2")
+
+## relative thresholds (default)
+#estimates_cpt_rt <- estimates_cpt %>% filter(threshold == "relative")
+#checksum_estimates_cpt_rt <- digest(estimates_cpt_rt, "sha256")
+#write_rds(estimates_cpt_rt, "data/relative_thresholds/cpt_estimates_rt.rds")
+
+#posterior_cpt_rt <- posterior_cpt %>% filter(threshold == "relative")
+#checksum_posterior_cpt_rt <- digest(posterior_cpt_rt, "sha256")
+#write_rds(posterior_cpt_rt, "data/relative_thresholds/cpt_posteriors_rt.rds.bz2", compress = "bz2")
+
+# absolute thresholds
+#estimates_cpt_at <- estimates_cpt %>% filter(threshold == "absolute")
+#checksum_estimates_cpt_at <- digest(estimates_cpt_at, "sha256")
+#write_rds(estimates_cpt_at, "data/absolute_thresholds/cpt_estimates_at.rds")
+
+#posterior_cpt_at <- posterior_cpt %>% filter(threshold == "absolute")
+#checksum_posterior_cpt_at <- digest(posterior_cpt_at, "sha256")
+#write_rds(posterior_cpt_at, "data/absolute_thresholds/cpt_posteriors_at.rds.bz2", compress = "bz2")

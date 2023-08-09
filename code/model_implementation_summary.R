@@ -89,17 +89,18 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 simulation_summary <- param_list %>% bind_rows()
 
 # save data  
+simulation_summary <- read_rds("data/merged/simulation_summary_merged.rds.bz2")
 
 ## full data set
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
-write_rds(simulation_summary, "data/merged/simulation_summary.rds.bz2", compress = "bz2")
+write_rds(simulation_summary, "data/simulation_summary.rds.bz2", compress = "bz2")
 
 ## relative thresholds (default)
-summary_rt <- simulation_summary %>% filter(threshold == "relative")
-checksum_simulation_summary_rt <- digest(summary_rt, "sha256")
-write_rds(summary_rt, "data/simulation_summary.rds.bz2", compress = "bz2")
+#simulation_summary_rt <- simulation_summary %>% filter(threshold == "relative")
+#checksum_simulation_summary_rt <- digest(simulation_summary_rt, "sha256")
+#write_rds(simulation_summary_rt, "data/relative_thresholds/simulation_summary_rt.rds.bz2", compress = "bz2")
 
 ## absolute thresholds
-summary_at <- simulation_summary %>% filter(threshold == "absolute")
-checksum_simulation_summary_at <- digest(summary_at, "sha256")
-write_rds(summary_at, "data/absolute_thresholds/simulation_summary_absolute.rds.bz2", compress = "bz2")
+#simulation_summary_at <- simulation_summary %>% filter(threshold == "absolute")
+#checksum_simulation_summary_at <- digest(simulation_summary_at, "sha256")
+#write_rds(simulation_summary_at, "data/absolute_thresholds/simulation_summary_absolute.rds.bz2", compress = "bz2")

@@ -141,14 +141,14 @@ simulation_roundwise <- param_list %>% bind_rows()
 
 ## full data set
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
-write_rds(simulation_roundwise, "data/merged/simulation_roundwise.rds.bz2", compress = "bz2")
+write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")
 
-## relative thresholds (default)
-round_rt <- simulation_roundwise %>% filter(threshold == "relative")
-checksum_simulation_roundwise_rt <- digest(round_rt, "sha256")
-write_rds(round_rt, "data/simulation_roundwise.rds.bz2", compress = "bz2")
+## relative thresholds
+#simulation_roundwise_rt <- simulation_roundwise %>% filter(threshold == "relative")
+#checksum_simulation_roundwise_rt <- digest(simulation_roundwise_rt, "sha256")
+#write_rds(simulation_roundwise_rt, "data/relative_thresholds/simulation_roundwise_rt.rds.bz2", compress = "bz2")
 
 ## absolute thresholds
-round_at <- simulation_roundwise %>% filter(threshold == "absolute")
-checksum_simulation_roundwise_at <- digest(round_at, "sha256")
-write_rds(round_at, "data/absolute_thresholds/simulation_roundwise_absolute.rds.bz2", compress = "bz2")
+#simulation_roundwise_at <- simulation_roundwise %>% filter(threshold == "absolute")
+#checksum_simulation_roundwise_at <- digest(simulation_roundwise_at, "sha256")
+#write_rds(round_at, "data/absolute_thresholds/simulation_roundwise_absolute_rt.rds.bz2", compress = "bz2")

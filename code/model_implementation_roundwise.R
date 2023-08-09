@@ -138,13 +138,17 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
 simulation_roundwise <- param_list %>% bind_rows()
 
 # save data
+
+## full data set
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
 write_rds(simulation_roundwise, "data/merged/simulation_roundwise.rds.bz2", compress = "bz2")
 
+## relative thresholds (default)
 round_rt <- simulation_roundwise %>% filter(threshold == "relative")
-checksum_simulation_roundwise <- digest(round_rt, "sha256")
+checksum_simulation_roundwise_rt <- digest(round_rt, "sha256")
 write_rds(round_rt, "data/simulation_roundwise.rds.bz2", compress = "bz2")
 
+## absolute thresholds
 round_at <- simulation_roundwise %>% filter(threshold == "absolute")
-checksum_simulation_roundwise <- digest(round_at, "sha256")
+checksum_simulation_roundwise_at <- digest(round_at, "sha256")
 write_rds(round_at, "data/absolute_thresholds/simulation_roundwise_absolute.rds.bz2", compress = "bz2")

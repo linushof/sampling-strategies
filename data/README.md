@@ -1,6 +1,13 @@
 
 # Data sets
 
+All data sets can also be downloaded in one `.zip` file from the
+accompanying [OSF repository](https://osf.io/wcr5a/):
+
+`.rds` files: <https://osf.io/cebhy>
+
+`.csv` files: <https://osf.io/7wh89>
+
 <table style="width:100%;">
 <colgroup>
 <col style="width: 15%" />
@@ -16,7 +23,7 @@
 <tr class="even">
 <td><code>choice_problems.rds</code></td>
 <td>Choice problems used for simulation</td>
-<td>-</td>
+<td><code>bb2aff492c66e89e72eaf20a1dd9f03b77803ffec676c5d81ca1672509881d77</code></td>
 </tr>
 <tr class="odd">
 <td><code>simulation_roundwise.rds.bz2</code></td>
@@ -40,6 +47,11 @@ switching frequency) and choice data</td>
 <td><code>cpt_estimates.rds</code></td>
 <td>Précis of CPT posterior distributions</td>
 <td><code>75a2dcd742fd11e713a5873a06ba2877c3bf34d6b67b4f0cde112db1ad28ccba</code></td>
+</tr>
+<tr class="odd">
+<td><code>cpt_posteriors.rds</code></td>
+<td>MCMC samples of CPT posterior distributions</td>
+<td><code>faa2a52535728e7e1f87f47691b8b305c847b9f3d6c082737042c56923f60eb4</code></td>
 </tr>
 </tbody>
 </table>

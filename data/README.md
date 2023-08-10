@@ -4,9 +4,9 @@
 All data sets can also be downloaded in one `.zip` file from the
 accompanying [OSF repository](https://osf.io/wcr5a/):
 
-`.rds` files: <https://osf.io/cebhy>
+`.rds` files: <https://osf.io/7wh89>
 
-`.csv` files: <https://osf.io/7wh89>
+`.csv` files: <https://osf.io/cebhy>
 
 <table style="width:100%;">
 <colgroup>
@@ -55,3 +55,27 @@ switching frequency) and choice data</td>
 </tr>
 </tbody>
 </table>
+
+# Checksums
+
+Use the checksums, provided on this page and in the .zip files, to check
+whether the downloaded data sets are up-to-date and uncorrupted. In `R`,
+the `digest` package/function can be used to generate the checksum of
+\`\`your’’ data using the SHA-256 hash function.
+
+``` r
+pacman::p_load(digest, crayon)
+
+# create checksum
+your_checksum <- digest(your_data, algo="sha256")
+
+# check data set
+if(your_checksum != original_checksum){
+  warning("\u2716 Mismatch between your data and original data. Current checksum is: '", your_checksum, "'")
+} else{cat(green("\u2713 Data validated. Your data matches the original data."))
+```
+
+If the checksums are not the same, you are not operating on the exact
+same data set. Be aware that the checksums of data sets stored in
+different file format (e.g., `.csv` and `.rds`) while otherwise being
+identical, differ.

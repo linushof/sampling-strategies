@@ -3,11 +3,12 @@
 .RData
 .Ruserdata
 *.html
+*.zip
 thesis/
 manuscript/
 housekeeping/
 talks/
-data/merged/
-data/absolute_thresholds/
-data/relative_thresholds/
 data/README.Rmd
+data/cpt_posteriors.rds.bz2
+data/csv/
+data/rds/

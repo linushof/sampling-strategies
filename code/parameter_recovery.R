@@ -17,17 +17,11 @@ params <- expand_grid(rho = unique(round(rho_estimates, 2)) ,
                      )
 params <- params %>% mutate(set_no = row_number()) %>% select(set_no, everything()) 
 problems <- problems %>% mutate(problem_no = row_number()) %>% select(problem_no, everything())
-
 sim_cases <- expand_grid(params, problems) 
-sim_cases <- sim_cases %>% mutate(safe_total = NA)
 
-N <- 10 # synthetic agents 
-
-# simulation 
-
-
-# vectorized
-sim_cases %>% mutate( 
+# simulate data 
+set.seed(210923)
+predictions <- sim_cases %>% mutate(
   w_high = round( (delta * p_r_high^gamma) / ( (delta*p_r_high^gamma)+(1-p_r_high)^gamma ), 2) , 
   w_low = 1 - w_high , 
   v_high = r_high^alpha , 
@@ -35,40 +29,28 @@ sim_cases %>% mutate(
   v_safe = safe^alpha , 
   V_safe = v_safe , 
   V_risky = (w_high * v_high) + (w_low * v_low) ,
-  p_safe = 1 / ( 1 + exp(-rho*(V_safe - V_risky)) ) ,
-  safe_total = rbinom(n=1, size=N, prob=p_safe) , 
+  V_safe_scaled = V_safe^(1/alpha) , 
+  V_risky_scaled = V_risky^(1/alpha) ,
+  V_diff = V_safe_scaled-V_risky_scaled , 
+  p_safe_risky = round(1 / ( 1 + exp(-rho*V_diff) ),2) ,
+  N = 100 , 
+  safe_total = rbinom(n=nrow(sim_cases), size=N, prob=p_safe_risky) , 
   safe_perc = safe_total/N
 )
 
+# check CPT behavior 
+
+## sensibility of (aggregated choices) to difference in Valuation depending on choice sensitivity parameter
+predictions %>% 
+  ggplot(aes(x = V_diff, y = safe_perc)) + 
+  geom_jitter(alpha = .05) +
+  scale_x_continuous(limits = c(-3, 3)) +
+  facet_wrap(~rho) + 
+  theme_minimal()
+
+## parameter recovery 
 
 
-## as for loop
-set.seed(51712)
-for(i in seq_len(nrow(sim_cases))){
-    
-    # CPT core model 
-    
-    ## weighting function
-    w_high <- round(  (sim_cases[[i, "delta"]] * sim_cases[[i, "p_r_high"]]^sim_cases[[i, "gamma"]]) / 
-                        ((sim_cases[[i, "delta"]] * sim_cases[[i, "p_r_high"]]^sim_cases[[i, "gamma"]])+(1-sim_cases[[i, "p_r_high"]])^sim_cases[[i, "gamma"]]), 2)
-    w_low <- 1 - w_high
-      
-    ## value function
-    v_high <- sim_cases[[i, "r_high"]]^sim_cases[[i, "alpha"]]
-    v_low <- sim_cases[[i, "r_low"]]^sim_cases[[i, "alpha"]] 
-    v_safe <- sim_cases[[i, "safe"]]^sim_cases[[i, "alpha"]]
-      
-    ## valuations
-    V_safe <- v_safe
-    V_risky <- (w_high * v_high) + (w_low * v_low)
-      
-    ## choice rule
-    p_safe_risky <- 1 / ( 1 + exp(-sim_cases[[i, "rho"]]*(V_safe - V_risky)) )
-      
-    ## predict choices
-    sim_cases[[i, safe_total]] <- rbinom(n=1, size=N, prob=p_safe_risky) # safe option is 1 
-    
-}
 
 
 ## posterior predictive check ---------------------------------------------------------------------

@@ -23,8 +23,26 @@ sim_cases <- sim_cases %>% mutate(safe_total = NA)
 
 N <- 10 # synthetic agents 
 
-
 # simulation 
+
+
+# vectorized
+sim_cases %>% mutate( 
+  w_high = round( (delta * p_r_high^gamma) / ( (delta*p_r_high^gamma)+(1-p_r_high)^gamma ), 2) , 
+  w_low = 1 - w_high , 
+  v_high = r_high^alpha , 
+  v_low = r_low^alpha , 
+  v_safe = safe^alpha , 
+  V_safe = v_safe , 
+  V_risky = (w_high * v_high) + (w_low * v_low) ,
+  p_safe = 1 / ( 1 + exp(-rho*(V_safe - V_risky)) ) ,
+  safe_total = rbinom(n=1, size=N, prob=p_safe) , 
+  safe_perc = safe_total/N
+)
+
+
+
+## as for loop
 set.seed(51712)
 for(i in seq_len(nrow(sim_cases))){
     
@@ -52,6 +70,8 @@ for(i in seq_len(nrow(sim_cases))){
     
 }
 
-# posterior predictive check ----------------------------------------------
+
+## posterior predictive check ---------------------------------------------------------------------
+
 
 

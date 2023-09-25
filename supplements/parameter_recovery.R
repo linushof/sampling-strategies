@@ -9,6 +9,7 @@ pacman::p_load(tidyverse ,
 # read data and source scripts
 problems <- read_rds("data/choice_problems.rds")
 cpt <- read_rds("data/cpt_estimates.rds")
+choices <- read_rds("data/choice_data.rds.bz2")
 source("code/helper_functions/fun_initialize_MCMC.R") # call function creating initial values for MCMC
 
 # CPT parameter recovery simulation ------------------------------------------
@@ -329,5 +330,64 @@ ggsave("supplements/figures/CPT_pred_4.png", width = 12, height = 8)
 
 # posterior predictive check ---------------------------------------------------------------------
 
+cpt_clean <- cpt %>%  
+  select(model:mean) %>%
+  filter(parameter != "deviance") %>% 
+  pivot_wider(names_from = parameter, values_from = mean) %>% 
+  mutate(across(alpha:rho, ~round(., 2)))
+
+ppset <- choices %>%
+  left_join(cpt_clean, by = c("model", "psi", "threshold", "theta")) %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>% 
+  mutate(choice_obs = if_else(choice == "s", 1,0))
+
+## generate posterior predictions 
+
+set.seed(114981)
+postpred <- ppset %>% mutate(
+  w_high = round( (delta * ep_r_high^gamma) / ( (delta*ep_r_high^gamma)+(1-ep_r_high)^gamma ), 2) , 
+  w_low = 1 - w_high , 
+  v_high = r_high^alpha , 
+  v_low = r_low^alpha , 
+  v_safe = safe^alpha , 
+  V_safe = v_safe , 
+  V_risky = (w_high * v_high) + (w_low * v_low) ,
+  V_safe_scaled = V_safe^(1/alpha) , 
+  V_risky_scaled = V_risky^(1/alpha) ,
+  V_diff = V_safe_scaled-V_risky_scaled , 
+  p_safe_risky = round(1 / ( 1 + exp(-rho*V_diff) ),2) ,
+  choice_pp = rbinom(n=nrow(ppset), size=1, prob=p_safe_risky))
+write_rds(postpred, "supplements/posterior_predictives.rds.bz2", compress = "bz2")
+
+## results
+
+postpred <- read_rds("supplements/posterior_predictives.rds.bz2")
+postpred <- postpred %>% 
+  select(model, psi, threshold, theta, alpha, gamma, delta, rho, problem, agent, choice_obs, choice_pp )
+postpred_results <- postpred %>% 
+  mutate(match = if_else(choice_obs == choice_pp, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, alpha, gamma, delta, rho, match) %>% 
+  summarise(count = n()) %>% 
+  mutate(perc = round(count/sum(count), 3)) %>% 
+  filter(match != 0) %>% 
+  ungroup()
+
+
+### predictive accuracy
+
+postpred_results %>%  ggplot(aes(x = rho, y = perc, color = psi)) + 
+  facet_grid(threshold~model) + 
+  geom_hline(yintercept = c(.5, .55, .9), linetype = "dashed") + 
+  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1,.1)) + 
+  geom_point(size = 3) + 
+  labs(title = "Posterior Predictive Accuracy of CPT", 
+       x = "Choice Consistency" , 
+       y = "Proportion of Correct Predictions", 
+       color = "Switching\nProbability") + 
+  scale_color_viridis(option = "D") + 
+  theme_minimal()
+ggsave("supplements/figures/post_pred_1.png", width = 10, height = 8)
+
+### qualitative patterns 
 
 

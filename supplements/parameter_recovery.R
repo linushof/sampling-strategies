@@ -4,7 +4,8 @@ pacman::p_load(tidyverse ,
                digest , 
                viridis , 
                ggbeeswarm, 
-               scico)
+               scico, 
+               patchwork)
 
 # read data and source scripts
 problems <- read_rds("data/choice_problems.rds")
@@ -388,6 +389,72 @@ postpred_results %>%  ggplot(aes(x = rho, y = perc, color = psi)) +
   theme_minimal()
 ggsave("supplements/figures/post_pred_1.png", width = 10, height = 8)
 
-### qualitative patterns 
+### qualitative patterns (maximization rates)
 
+#### prepare data (compute maximization rates)
+rates_pp <- postpred %>%
+  mutate(norm = case_when(mean_r/safe > 1 ~ 0, 
+                          mean_r/safe < 1 ~ 1)) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice_pp, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+rates_obs <- postpred %>%
+  mutate(norm = case_when(mean_r/safe > 1 ~ 0, 
+                          mean_r/safe < 1 ~ 1)) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice_obs, 1, 0)) %>% 
+  group_by(model, psi, threshold, theta, max) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(max == 0))
+
+
+## plot data 
+
+### summary
+rates_obs_sr <- rates_obs %>%
+  filter(model == "summary" & threshold == "relative")
+max_summary <- rates_pp %>%
+  filter(model == "summary" & threshold == "relative") %>% 
+  # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(x = "Switching Probability\n(Search Rule)",
+       y = "Proportion of Choices\nMaximizing the Sampled Average",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  geom_point(data = rates_obs_sr, shape = 17, size = 3) + 
+  geom_line(data = rates_obs_sr, linewidth = 1) + 
+  theme_minimal()
+
+### round-wise
+rates_obs_rr <- rates_obs %>%
+  filter(model == "roundwise" & threshold == "relative")
+max_roundwise <- rates_pp %>%
+  filter(model == "roundwise" & threshold == "relative") %>% 
+  # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(x = "Switching Probability\n(Search Rule)",
+       y = "Proportion of Choices\nMaximizing the Sampled Average",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  geom_point(data = rates_obs_rr, shape = 17, size = 3) + 
+  geom_line(data = rates_obs_rr, linewidth = 1) + 
+  theme_minimal()
+
+max_summary + max_roundwise + plot_annotation(tag_levels = "A")
+ggsave("supplements/figures/post_pred_2.png", width = 14, height = 6)
 

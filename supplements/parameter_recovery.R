@@ -363,9 +363,11 @@ write_rds(postpred, "supplements/posterior_predictives.rds.bz2", compress = "bz2
 ## results
 
 postpred <- read_rds("supplements/posterior_predictives.rds.bz2")
-postpred <- postpred %>% 
-  select(model, psi, threshold, theta, alpha, gamma, delta, rho, problem, agent, choice_obs, choice_pp )
-postpred_results <- postpred %>% 
+
+### predictive accuracy
+
+postpred_acc <- postpred %>% 
+  select(model, psi, threshold, theta, alpha, gamma, delta, rho, problem, agent, choice_obs, choice_pp ) %>% 
   mutate(match = if_else(choice_obs == choice_pp, 1, 0)) %>% 
   group_by(model, psi, threshold, theta, alpha, gamma, delta, rho, match) %>% 
   summarise(count = n()) %>% 
@@ -373,10 +375,7 @@ postpred_results <- postpred %>%
   filter(match != 0) %>% 
   ungroup()
 
-
-### predictive accuracy
-
-postpred_results %>%  ggplot(aes(x = rho, y = perc, color = psi)) + 
+postpred_acc %>%  ggplot(aes(x = rho, y = perc, color = psi)) + 
   facet_grid(threshold~model) + 
   geom_hline(yintercept = c(.5, .55, .9), linetype = "dashed") + 
   scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1,.1)) + 
@@ -392,7 +391,7 @@ ggsave("supplements/figures/post_pred_1.png", width = 10, height = 8)
 ### qualitative patterns (maximization rates)
 
 #### prepare data (compute maximization rates)
-rates_pp <- postpred %>%
+pp_ev_max <- postpred %>%
   mutate(norm = case_when(mean_r/safe > 1 ~ 0, 
                           mean_r/safe < 1 ~ 1)) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
@@ -403,7 +402,7 @@ rates_pp <- postpred %>%
   ungroup() %>%
   filter(!(max == 0))
 
-rates_obs <- postpred %>%
+obs_ev_max <- postpred %>%
   mutate(norm = case_when(mean_r/safe > 1 ~ 0, 
                           mean_r/safe < 1 ~ 1)) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
@@ -415,12 +414,12 @@ rates_obs <- postpred %>%
   filter(!(max == 0))
 
 
-## plot data 
+#### plot data 
 
-### summary
-rates_obs_sr <- rates_obs %>%
+##### summary
+obs_ev_max_sr <- obs_ev_max %>%
   filter(model == "summary" & threshold == "relative")
-max_summary <- rates_pp %>%
+postpred_max_summary <- pp_ev_max %>%
   filter(model == "summary" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
@@ -432,14 +431,14 @@ max_summary <- rates_pp %>%
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  geom_point(data = rates_obs_sr, shape = 17, size = 3) + 
-  geom_line(data = rates_obs_sr, linewidth = 1) + 
+  geom_point(data = obs_ev_max_sr, shape = 17, size = 3) + 
+  geom_line(data = obs_ev_max_sr, linewidth = 1) + 
   theme_minimal()
 
 ### round-wise
-rates_obs_rr <- rates_obs %>%
+obs_ev_max_rr <- obs_ev_max %>%
   filter(model == "roundwise" & threshold == "relative")
-max_roundwise <- rates_pp %>%
+postpred_max_roundwise <- pp_ev_max %>%
   filter(model == "roundwise" & threshold == "relative") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
@@ -451,10 +450,10 @@ max_roundwise <- rates_pp %>%
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  geom_point(data = rates_obs_rr, shape = 17, size = 3) + 
-  geom_line(data = rates_obs_rr, linewidth = 1) + 
+  geom_point(data = obs_ev_max_rr, shape = 17, size = 3) + 
+  geom_line(data = obs_ev_max_rr, linewidth = 1) + 
   theme_minimal()
 
-max_summary + max_roundwise + plot_annotation(tag_levels = "A")
+postpred_max_summary + postpred_max_roundwise + plot_annotation(tag_levels = "A")
 ggsave("supplements/figures/post_pred_2.png", width = 14, height = 6)
 

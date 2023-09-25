@@ -12,3 +12,6 @@ data/README.Rmd
 data/cpt_posteriors.rds.bz2
 data/csv/
 data/rds/
+code/README.Rmd
+supplements/recovery_posteriors.rds
+supplements/figures/

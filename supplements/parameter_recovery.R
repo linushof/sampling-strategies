@@ -334,6 +334,9 @@ ggsave("supplements/figures/CPT_pred_4.png", width = 12, height = 8)
 
 # posterior predictive check ---------------------------------------------------------------------
 
+cpt %>% filter(parameter == "deviance")
+# largest deviances for summary model with low switching probabilities 
+
 cpt_clean <- cpt %>%  
   select(model:mean) %>%
   filter(parameter != "deviance") %>% 
@@ -745,99 +748,4 @@ p2 <- test2 %>%
   geom_line() + 
   scale_y_continuous(limits = c(.5,1))
 
-
 p1 + p2 + plot_layout(nrow = 2)
-
-
-
-
-# test2 -------------------------------------------------------------------
-
-cpt %>% filter(parameter == "deviance") %>% View()
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  ggplot(aes(x=ep_r_high, y = prop, color = choice)) +
-  geom_point(alpha = .5) + 
-  geom_smooth() + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_low, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  ggplot(aes(x=ep_r_low, y = prop, color = choice)) +
-  geom_point(alpha = .5) + 
-  geom_smooth() + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
-
-
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  View()
-ggplot(aes(x=ep_r_high, y = prop, color = choice)) +
-  geom_point(alpha = .5) + 
-  geom_smooth() + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
-
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative", choice == "s") %>% 
-  ggplot(aes(x=ep_r_high, y = prop)) +
-  geom_density_2d_filled() + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
-
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  ggplot(aes(x=ep_r_high, y = prop, color = choice)) +
-  geom_jitter(alpha = .5) + 
-  facet_grid(psi~theta)
-
-
-choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative", choice == "r") %>% 
-  ggplot(aes(x=ep_r_high, y = prop)) +
-  geom_jitter(alpha = .5) + 
-  facet_grid(psi~theta)
-
-
-choices %>% group_by(model, psi, threshold, theta, choice) %>% 
-  summarize(n = n()) %>% 
-  mutate(prop = round(n/sum(n),2)) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  View()
-ggplot(aes(x=choice, y = prop)) +
-  geom_bar(stat = "identity") + 
-  facet_grid(psi~theta)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

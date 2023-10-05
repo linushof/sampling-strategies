@@ -775,7 +775,7 @@ wf_summary <- weights_summary %>%
 wf_summary + gamma_summary + delta_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
 
-## round-wise
+## roundwise
 
 cpt_roundwise <- cpt %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
 weights_roundwise <- weights %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
@@ -886,7 +886,7 @@ ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7
 
 ## round-wise
 
-values_roundwise <- values %>% filter(model == "roundwise")
+values_roundwise <- values %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
 
 ### alpha
 alpha_roundwise <- cpt_roundwise %>%

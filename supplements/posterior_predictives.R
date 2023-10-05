@@ -180,7 +180,8 @@ max_1_summary <- max_1_sr %>%
        color = "Better Average",
        shape = "") + 
   theme_apa(base_size = 20) + 
-  theme(strip.text.y = element_blank())
+  theme(strip.text.y = element_blank()) + 
+  guides(shape = "none")
 
 pp_max_2_sr <- pp_max_2 %>% filter(model == "summary", threshold == "relative") 
 max_2_summary <- obs_max_2 %>%
@@ -212,7 +213,11 @@ pp_acc_summary <- pp_acc %>%
   scale_color_viridis(option = "C") + 
   theme_apa(base_size = 20)
 
-ggarrange(max_1_summary, max_2_summary, pp_acc_summary, nrow = 3, common.legend = T, labels = "AUTO")
+# ggarrange(max_1_summary, max_2_summary, pp_acc_summary, nrow = 3, common.legend = T, labels = "AUTO")
+max_1_summary + max_2_summary + pp_acc_summary + 
+  plot_layout(nrow = 3, guides = "collect") + 
+  plot_annotation(tag_levels = "A") & 
+  theme(legend.position='top')
 ggsave(file = "manuscript/figures/posterior_predictive_summary.png", width = 14, height = 14)
 
 
@@ -231,7 +236,8 @@ max_1_roundwise <- max_1_rr %>%
        color = "Better Average",
        shape = "") + 
   theme_apa(base_size = 20) + 
-  theme(strip.text.y = element_blank())
+  theme(strip.text.y = element_blank()) + 
+  guides(shape = "none")
 
 pp_max_2_rr <- pp_max_2 %>% filter(model == "roundwise", threshold == "relative") 
 max_2_roundwise <- obs_max_2 %>%
@@ -263,7 +269,11 @@ pp_acc_roundwise <- pp_acc %>%
   scale_color_viridis(option = "C") + 
   theme_apa(base_size = 20)
 
-ggarrange(max_1_roundwise, max_2_roundwise, pp_acc_roundwise, nrow = 3, common.legend = T, labels = "AUTO")
+# ggarrange(max_1_roundwise, max_2_roundwise, pp_acc_roundwise, nrow = 3, common.legend = T, labels = "AUTO")
+max_1_roundwise + max_2_roundwise + pp_acc_roundwise + 
+  plot_layout(nrow = 3, guides = "collect") + 
+  plot_annotation(tag_levels = "A") & 
+  theme(legend.position='top')
 ggsave(file = "manuscript/figures/posterior_predictive_roundwise.png", width = 14, height = 14)
 
 # generated vs. predicted choice proportions ------------------------------

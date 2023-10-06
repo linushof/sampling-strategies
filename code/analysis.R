@@ -720,7 +720,8 @@ choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>%
        alpha = "") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
-  theme_apa(base_size = 20)
+  theme_apa(base_size = 20) + 
+  theme(legend.position = "top")
 ggsave("manuscript/figures/risky_choice_rates_summary.png", width = 14, height = 14)
 
 
@@ -732,13 +733,13 @@ gamma_summary <- cpt_summary %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Curvature  ", gamma)),
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 #### delta
 delta_summary <- cpt_summary %>%
@@ -748,13 +749,13 @@ delta_summary <- cpt_summary %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
   scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0, 10, length.out = 3)) +
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Elevation  ", delta)), 
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ####  probability weighting
 wf_summary <- weights_summary %>% 
@@ -764,11 +765,11 @@ wf_summary <- weights_summary %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Sampled Relative Frequency",
-       y = expression(paste("Decision Weight  ", pi)),
-       color = expression(psi)) +
+  labs(x = TeX("$\\p_{high}$"),
+       y = TeX("$w(\\p_{high})$"),
+       color = "Switching\nProbability") +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 # merge and save plots
 
@@ -788,13 +789,13 @@ gamma_roundwise <- cpt_roundwise %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Curvature  ", gamma)),
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 #### delta
 delta_roundwise <- cpt_roundwise %>%
@@ -804,13 +805,13 @@ delta_roundwise <- cpt_roundwise %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
   scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0,10, length.out = 3)) +
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Elevation  ", delta)), 
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ####  probability weighting
 wf_roundwise <- weights_roundwise %>% 
@@ -820,11 +821,11 @@ wf_roundwise <- weights_roundwise %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Sampled Relative Frequency",
-       y = expression(paste("Decision Weight  ", pi)),
-       color = expression(psi)) +
+  labs(x = TeX("$\\p_{high}$"),
+       y = TeX("$w(\\p_{high})$"), 
+       color = "Switching\nProbability") +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 # merge and save plots
 
@@ -857,13 +858,13 @@ alpha_summary <- cpt_summary %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Outcome Sensitivity  ", alpha)),
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ### value function 
 vf_summary <- values_summary %>% 
@@ -875,14 +876,13 @@ vf_summary <- values_summary %>%
   scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 # merge and save plots
 vf_summary + alpha_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
-
 
 ## round-wise
 
@@ -896,13 +896,13 @@ alpha_roundwise <- cpt_roundwise %>%
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = expression(paste("Switching Probability  ", psi)), 
+  labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Outcome Sensitivity  ", alpha)),
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ### value function 
 vf_roundwise <- values_roundwise %>% 
@@ -914,9 +914,9 @@ vf_roundwise <- values_roundwise %>%
   scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
-       color = expression(psi)) +
+       color = "Switching\nProbability") +
   geom_line(linewidth = 1) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")

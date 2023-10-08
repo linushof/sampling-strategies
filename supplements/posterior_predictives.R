@@ -51,8 +51,13 @@ write_rds(postpred, "supplements/posterior_predictives.rds.bz2", compress = "bz2
 ### prepare data 
 
 #### DIC 
-
-cpt %>% filter(parameter == "deviance")
+dic <- cpt %>% 
+  filter(parameter == "deviance") %>% 
+  select(model:sd) %>% 
+  mutate(var = sd^2 ,
+         pD = var/2 , 
+         DIC = round(pD + mean, 1)
+         )
 
 #### risky choice proportions 
 
@@ -214,6 +219,9 @@ label_theta <- function(string) {
 #### risky choice proportions (posterior predictive check 1)
 
 ##### summary comparison
+
+dic_sr <- dic %>% filter(model == "summary", threshold == "relative")
+
 riskprop_sr %>% 
   ggplot(aes(x=ep_r_high, y = prop)) +
   geom_point(aes(shape = type, color = bias, alpha = bias), size = 3) +
@@ -232,10 +240,12 @@ riskprop_sr %>%
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   theme_minimal(base_size = 20) + 
-  theme(legend.position='top')
-ggsave("manuscript/figures/posterior_predictive_summary_1.png", width = 14, height = 14)
+  theme(legend.position='top') + 
+  geom_text(data = dic_sr, aes(label=paste("DIC=", as.character(DIC)), x = .7, y = -.1)) 
+ggsave("manuscript/figures/posterior_predictive_summary_1.png", width = 14, height = 16)
 
 ##### roundwise
+dic_rr <- dic %>% filter(model == "roundwise", threshold == "relative")
 riskprop_rr %>% 
   ggplot(aes(x=ep_r_high, y = prop)) +
   geom_point(aes(shape = type, color = bias, alpha = bias), size = 3) +
@@ -254,8 +264,9 @@ riskprop_rr %>%
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   theme_minimal(base_size = 20) + 
-  theme(legend.position='top')
-ggsave("manuscript/figures/posterior_predictive_roundwise_1.png", width = 14, height = 14)
+  theme(legend.position='top') + 
+  geom_text(data = dic_rr, aes(label=paste("DIC=", as.character(DIC)), x = .7, y = -.1)) 
+ggsave("manuscript/figures/posterior_predictive_roundwise_1.png", width = 14, height = 16)
 
 #### maximization rates and trial-level accuracy (posterior predictive check 2)
 

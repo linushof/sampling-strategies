@@ -706,21 +706,19 @@ choices %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>%
   # filter(ep_r_high != 0, ep_r_high != 1) %>% 
   mutate(bias = if_else(ep_r_high == 1, "p=0 or p=1", if_else(ep_r_high == 0, "p=0 or p=1", "0 < p < 1"))) %>% 
   ggplot(aes(x=ep_r_high, y = prop)) +
-  geom_point(aes(shape = bias, color = bias, alpha = bias), size = 3) +
-  scale_shape_manual(values = c(16, 3)) + 
+  geom_point(aes(color = bias, alpha = bias), size = 3) +
   scale_color_manual(values = c("gray", "black")) + 
-  scale_alpha_manual(values = c(.6, 1)) + 
-  geom_smooth(color = "black", se = FALSE) + 
+  scale_alpha_manual(values = c(.5, 1)) + 
+  # geom_smooth(color = "black", se = FALSE) + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
                                             psi = as_labeller(label_psi, default = label_parsed))) + 
   labs(x = TeX("$\\p_{high}$"), 
        y = "Proportion of Risky Choices", 
-       shape = "", 
        color = "", 
        alpha = "") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
-  theme_apa(base_size = 20) + 
+  theme_minimal(base_size = 20) + 
   theme(legend.position = "top")
 ggsave("manuscript/figures/risky_choice_rates_summary.png", width = 14, height = 14)
 

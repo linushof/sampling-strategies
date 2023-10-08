@@ -7,7 +7,6 @@ pacman::p_load(tidyverse ,
                papaja, 
                latex2exp)
 
-
 # load data
 cpt <- read_rds("data/cpt_estimates.rds")
 choices <- read_rds("data/choice_data.rds.bz2")
@@ -16,9 +15,6 @@ postpred <- read_rds("supplements/posterior_predictives.rds.bz2")
 label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
 }
-
-cpt %>% filter(parameter == "deviance")
-# largest deviances for summary model with low switching probabilities 
 
 cpt_clean <- cpt %>%  
   select(model:mean) %>%
@@ -53,6 +49,56 @@ write_rds(postpred, "supplements/posterior_predictives.rds.bz2", compress = "bz2
 ## results
 
 ### prepare data 
+
+#### DIC 
+
+cpt %>% filter(parameter == "deviance")
+
+#### risky choice proportions 
+
+##### summary comparison
+
+riskprop_smp_sr <- choices %>% 
+  mutate(choice_cmp = ifelse(choice == "r", 0, 1)) %>% 
+  group_by(model, psi, threshold, theta, ep_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n),2)) %>% 
+  filter(model == "summary", threshold == "relative", choice_cmp == 0) %>% 
+  mutate(bias = if_else(ep_r_high == 1, "p=0 or p=1", if_else(ep_r_high == 0, "p=0 or p=1", "0 < p < 1")), 
+         type = "Sampling Strategy") 
+
+riskprop_pp_sr <- postpred %>% 
+  mutate(choice_cmp = choice_pp) %>% 
+  group_by(model, psi, threshold, theta, ep_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n), 2)) %>% 
+  filter(model == "summary", threshold == "relative", choice_cmp == 0) %>% 
+  mutate(bias = if_else(ep_r_high == 1, "p=0 or p=1", if_else(ep_r_high == 0, "p=0 or p=1", "0 < p < 1")), 
+         type = "Posterior Predictive")
+
+riskprop_sr <- bind_rows(riskprop_smp_sr, riskprop_pp_sr)
+
+##### roundwise comparison
+
+riskprop_smp_rr <- choices %>% 
+  mutate(choice_cmp = ifelse(choice == "r", 0, 1)) %>% 
+  group_by(model, psi, threshold, theta, ep_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n),2)) %>% 
+  filter(model == "roundwise", threshold == "relative", choice_cmp == 0) %>% 
+  mutate(bias = if_else(ep_r_high == 1, "p=0 or p=1", if_else(ep_r_high == 0, "p=0 or p=1", "0 < p < 1")), 
+         type = "Sampling Strategy") 
+
+riskprop_pp_rr <- postpred %>% 
+  mutate(choice_cmp = choice_pp) %>% 
+  group_by(model, psi, threshold, theta, ep_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n), 2)) %>% 
+  filter(model == "roundwise", threshold == "relative", choice_cmp == 0) %>% 
+  mutate(bias = if_else(ep_r_high == 1, "p=0 or p=1", if_else(ep_r_high == 0, "p=0 or p=1", "0 < p < 1")), 
+         type = "Posterior Predictive")
+
+riskprop_rr <- bind_rows(riskprop_smp_rr, riskprop_pp_rr)
 
 #### maximization rates
 
@@ -165,7 +211,55 @@ label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
 }
 
-#### summary comparison
+#### risky choice proportions (posterior predictive check 1)
+
+##### summary comparison
+riskprop_sr %>% 
+  ggplot(aes(x=ep_r_high, y = prop)) +
+  geom_point(aes(shape = type, color = bias, alpha = bias), size = 3) +
+  scale_shape_manual(values = c(4, 16)) + 
+  scale_color_manual(values = c("gray", "black")) + 
+  scale_alpha_manual(values = c(.5, 1)) + 
+  # geom_smooth(color = "black", se = FALSE) + 
+  # geom_hline(yintercept = .5) +
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
+                                            psi = as_labeller(label_psi, default = label_parsed))) + 
+  labs(x = TeX("$\\p_{high}$"), 
+       y = "Proportion of Risky Choices", 
+       shape = "", 
+       color = "", 
+       alpha = "") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  theme_minimal(base_size = 20) + 
+  theme(legend.position='top')
+ggsave("manuscript/figures/posterior_predictive_summary_1.png", width = 14, height = 14)
+
+##### roundwise
+riskprop_rr %>% 
+  ggplot(aes(x=ep_r_high, y = prop)) +
+  geom_point(aes(shape = type, color = bias, alpha = bias), size = 3) +
+  scale_shape_manual(values = c(4, 16)) + 
+  scale_color_manual(values = c("gray", "black")) + 
+  scale_alpha_manual(values = c(.5, 1)) + 
+  # geom_smooth(color = "black", se = FALSE) + 
+  # geom_hline(yintercept = .5) +
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
+                                            psi = as_labeller(label_psi, default = label_parsed))) + 
+  labs(x = TeX("$\\p_{high}$"), 
+       y = "Proportion of Risky Choices", 
+       shape = "", 
+       color = "", 
+       alpha = "") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  theme_minimal(base_size = 20) + 
+  theme(legend.position='top')
+ggsave("manuscript/figures/posterior_predictive_roundwise_1.png", width = 14, height = 14)
+
+#### maximization rates and trial-level accuracy (posterior predictive check 2)
+
+##### summary comparison
 
 max_1_summary <- max_1_sr %>% 
   ggplot(aes(x=psi, y=prop, group = norm, color = norm)) + 
@@ -218,10 +312,10 @@ max_1_summary + max_2_summary + pp_acc_summary +
   plot_layout(nrow = 3, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(legend.position='top')
-ggsave(file = "manuscript/figures/posterior_predictive_summary.png", width = 14, height = 14)
+ggsave(file = "manuscript/figures/posterior_predictive_summary_2.png", width = 14, height = 14)
 
 
-#### roundwise comparison
+##### roundwise comparison
 
 max_1_roundwise <- max_1_rr %>% 
   ggplot(aes(x=psi, y=prop, group = norm, color = norm)) + 
@@ -274,71 +368,4 @@ max_1_roundwise + max_2_roundwise + pp_acc_roundwise +
   plot_layout(nrow = 3, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(legend.position='top')
-ggsave(file = "manuscript/figures/posterior_predictive_roundwise.png", width = 14, height = 14)
-
-# generated vs. predicted choice proportions ------------------------------
-
-# the lower psi and the higher the elevation, the more risky choices are predicted
-# i.e., with low switching probabilities, small but systematic CPT bias towards the risky option 
-
-## difference in CPT valuations
-
-postpred %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  group_by(psi, theta) %>% 
-  summarise(m_V_diff = mean(V_diff, na.rm = T)) %>% 
-  ggplot(aes(x=psi, y = m_V_diff, color = theta, group = theta)) +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) +
-  scale_color_viridis() + 
-  theme_minimal() + 
-  scale_y_continuous(limits = c(-2,2))
-
-## probability of choosing the safe option
-
-postpred %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  group_by(psi, theta) %>% 
-  summarise(m_p_safe = mean(p_safe_risky, na.rm = T)) %>% 
-  ggplot(aes(x=psi, y = m_p_safe, color = theta, group = theta)) +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) +
-  scale_color_viridis() + 
-  theme_minimal()
-
-## proportion of risky choices
-
-postpred %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  group_by(psi, theta, choice_pp) %>% 
-  summarise(n = n()) %>% 
-  mutate(prop = round(n/sum(n), 2)) %>% 
-  filter(choice_pp == 0) %>% 
-  ggplot(aes(x=psi, y = prop, color = theta, group = theta)) +
-  geom_point(size = 3, alpha = .5) + 
-  geom_line(linewidth = 1, alpha = .5) +
-  scale_color_viridis() + 
-  theme_minimal() + 
-  scale_y_continuous(limits = c(.3,.8))
-
-postpred %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  group_by(psi, theta, choice_obs) %>% 
-  summarise(n = n()) %>% 
-  mutate(prop = round(n/sum(n), 2)) %>% 
-  filter(choice_obs == 0) %>% 
-  ggplot(aes(x=psi, y = prop, color = theta, group = theta)) +
-  geom_point(size = 3, alpha = .5) + 
-  geom_line(linewidth = 1, alpha = .5) +
-  scale_color_viridis() + 
-  theme_minimal() + 
-  scale_y_continuous(limits = c(.3,.8))
-
-
-
-
-
-
-
-
-
+ggsave(file = "manuscript/figures/posterior_predictive_roundwise_2.png", width = 14, height = 14)

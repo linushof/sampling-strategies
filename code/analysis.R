@@ -802,7 +802,7 @@ delta_roundwise <- cpt_roundwise %>%
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
-  scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0,10, length.out = 3)) +
+  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) +
   labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Elevation  ", delta)), 
        color = "Switching\nProbability") +

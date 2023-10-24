@@ -45,14 +45,14 @@ for(set in seq_len(nrow(params_sim))){
   current_sample <- jags.parallel(data = current_trials,
                                   inits = inits_MCMC,
                                   parameters.to.save = params_cpt,
-                                  model.file = "code/CPT_model_2.txt",
+                                  model.file = "code/cpt_model_ext_gamma.txt",
                                   n.chains = 20,
-                                  n.iter = 2000,
-                                  n.burnin = 1000,
-                                  n.thin = 5,
+                                  n.iter = 60000,
+                                  n.burnin = 10000,
+                                  n.thin = 20,
                                   n.cluster = 20, # run chains on different cores
                                   DIC = TRUE,
-                                  jags.seed = 836243)
+                                  jags.seed = 617251)
 
   ## posterior summary and MCMC diagnostics
   current_summary <- current_sample$BUGSoutput$summary %>% as_tibble(rownames = "parameter")
@@ -70,5 +70,5 @@ for(set in seq_len(nrow(params_sim))){
 estimates_cpt <- estimates_cpt %>% bind_rows()
 posterior_cpt <- posterior_cpt %>% bind_rows()
 
-write_rds(estimates_cpt, "data/cpt_estimates.rds")
-write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2")
+write_rds(estimates_cpt, "data/cpt_estimates_ext_gamma.rds")
+write_rds(posterior_cpt, "data/cpt_posteriors_ext_gamma.rds.bz2", compress = "bz2")

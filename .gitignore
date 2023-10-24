@@ -1,17 +1,25 @@
+# auto-generated files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+# redundant derived files
 *.html
-*.zip
-thesis/
-manuscript/
-housekeeping/
-talks/
+*.pdf
+# redundant source files
 data/README.Rmd
-data/cpt_posteriors.rds.bz2
+code/README.Rmd
+# additional data formats
+*.zip
 data/csv/
 data/rds/
-code/README.Rmd
-supplements/recovery_posteriors.rds
+# posteriors
+data/cpt_posteriors.rds.bz2
+supplements/parameter recovery/recovery_posteriors.rds
+supplements/gamma/cpt_posteriors_ext_gamma.rds.bz2
 supplements/figures/
+# other files
+thesis/
+housekeeping/
+talks/
+manuscript/

@@ -54,7 +54,7 @@ choice_sr_ext %>%
        y =  expression(log[10](Frequency))) +
   theme_minimal(base_size = 20) + 
   theme(legend.position =  "none") 
-ggsave("supplements/starting option bias/bias_sample_sizes.png", width = 14, height = 14)
+ggsave("supplements/starting option bias/figures/bias_sample_sizes.png", width = 14, height = 14)
 
 
 # starting bias choice
@@ -74,9 +74,9 @@ choice_sr_ext %>%
   labs(x = "Switching Probability (Search Rule)",
        y = "Proportion of Starting Option Choices",
        color = "Threshold\n(Stopping Rule)") +
-  theme_minimal(base_size = 20)
+  theme_minimal(base_size = 14)
 
-ggsave("supplements/starting option bias/bias_choices.png", width = 8, height = 6)
+ggsave("supplements/starting option bias/figures/bias_choices.png", width = 8, height = 6)
 
 
 # starting bias sampled probabilities 
@@ -100,12 +100,10 @@ choice_sr_ext %>%
        y = "Proportion of Choices Without\nSampling Both Risky Outcomes",
        color = "Threshold\n(Stopping Rule)") +
   theme_minimal(base_size = 20)
-ggsave("supplements/starting option bias/bias_sampled_probabilities.png", width = 14, height = 6)
+ggsave("supplements/starting option bias/figures/bias_sampled_probabilities.png", width = 14, height = 6)
 
-
-# choices
   
-#### choice proportion as function of p_high
+# starting bias risky choice proportions
 
 choice_sr_ext %>% group_by(psi, threshold, theta, ep_r_high, choice) %>% 
   summarize(n = n()) %>% 
@@ -128,9 +126,5 @@ choice_sr_ext %>% group_by(psi, threshold, theta, ep_r_high, choice) %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   theme_minimal(base_size = 20) + 
   theme(legend.position = "top")
-
-
-
-
-
+ggsave("supplements/starting option bias/figures/bias_risky_choice_proportions.png", width = 14, height = 14)
 

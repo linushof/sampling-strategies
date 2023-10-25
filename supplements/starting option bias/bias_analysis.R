@@ -35,7 +35,7 @@ label_psi <- function(string) {
   TeX(paste("$\\psi=$", string, sep = ""))
 }
 
-# sample allocation 
+# starting bias sample size 
 
 choice_sr_ext <- choice_sr_ext %>% 
   mutate(n_starting = ifelse(start_o == "r", n_r, n_s), 
@@ -46,30 +46,42 @@ choice_sr_ext <- choice_sr_ext %>%
 choice_sr_ext %>%
   ggplot(aes(x=n_start_sec_diff, fill = n_start_sec_diff > 0)) + 
   geom_histogram(center = 0, binwidth = 1) + 
-  scale_fill_scico_d(palette = "berlin") + 
-  facet_grid(psi~theta, scales = "free", labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
-                                                             psi = as_labeller(label_psi, default = label_parsed))) +
-  scale_y_continuous(n.breaks = 3) +
+  scale_fill_scico_d(palette = "lisbon", begin = .2, end = .8) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
+                                            psi = as_labeller(label_psi, default = label_parsed))) +
+  scale_y_continuous(trans = "log10") + 
   labs(x = TeX("Difference in Sample Size ($\\N_{Start \\, Option} - \\N_{Second \\,  Option} $)"), 
-       y = "Frequency") +
+       y =  expression(log[10](Frequency))) +
   theme_minimal(base_size = 20) + 
   theme(legend.position =  "none") 
+ggsave("supplements/starting option bias/bias_sample_sizes.png", width = 14, height = 14)
 
-ggsave("supplements/starting option bias/sample_size_difference.png", width = 14, height = 14)
 
-# sampled probabilities 
-
-choice_sr_ext %>% 
-  ggplot(aes(ep_r_high, fill = start_o)) + 
-  geom_density(alpha = .5) + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
+# starting bias choice
 
 choice_sr_ext %>% 
-  ggplot(aes(start_o, y= ep_r_high, fill = start_o)) + 
-  geom_violin(alpha = .5) + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
+  mutate(bias_choice = if_else(start_o == choice, TRUE, FALSE)) %>% 
+  group_by(psi, theta, bias_choice) %>%  
+  summarize(count = n()) %>% 
+  mutate(prop = count/sum(count)) %>% 
+  filter(bias_choice == TRUE) %>% 
+  ggplot(aes(x=psi, y=prop, color = theta, group = theta)) + 
+  geom_point(alpha = .7, size = 3) +
+  geom_line(linewidth = 1) + 
+  scale_color_scico(palette = "imola") + 
+  scale_y_continuous(limits = c(.4,1.1), breaks = c(.5, .75, 1)) + 
+  scale_x_continuous(breaks = seq(0,1,.5)) + 
+  labs(x = "Switching Probability (Search Rule)",
+       y = "Proportion of Starting Option Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  theme_minimal(base_size = 20)
+
+ggsave("supplements/starting option bias/bias_choices.png", width = 8, height = 6)
+
+
+# starting bias sampled probabilities 
+
+custom_labels <- c("r" = "Starting Option: Risky", "s" = "Starting Option: Safe")
 
 choice_sr_ext %>% 
   mutate(extreme = if_else((ep_r_high == 1 | ep_r_high == 0), TRUE, FALSE)) %>% 
@@ -77,24 +89,25 @@ choice_sr_ext %>%
   summarize(count = n()) %>% 
   mutate(prop_extreme = count/sum(count)) %>% 
   filter(extreme == TRUE) %>% 
-  ggplot(aes(x=start_o, y=prop_extreme, fill = start_o)) + 
-  geom_bar(stat = "identity") + 
-  facet_grid(psi~theta) + 
-  theme_minimal()
+  ggplot(aes(x=psi, y=prop_extreme, color = theta, group = theta)) + 
+  facet_wrap(~start_o, labeller = as_labeller(custom_labels)) + 
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) + 
+  scale_color_scico(palette = "imola") + 
+  scale_y_continuous(limits = c(-.1,1.1), breaks = c(0, 1, .5)) + 
+  scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,.5)) + 
+  labs(x = "Switching Probability (Search Rule)",
+       y = "Proportion of Choices Without\nSampling Both Risky Outcomes",
+       color = "Threshold\n(Stopping Rule)") +
+  theme_minimal(base_size = 20)
+ggsave("supplements/starting option bias/bias_sampled_probabilities.png", width = 14, height = 6)
 
-# probability that the start option wins
 
 # choices
   
 #### choice proportion as function of p_high
 
-choices_sr %>% 
-  ggplot(aes(x=ep_r_high)) + 
-  geom_histogram(fill = "gray", color = "black", bins = 10) +
-  facet_grid(psi~theta) +
-  theme_minimal()
-
-choices_sr %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>% 
+choice_sr_ext %>% group_by(psi, threshold, theta, ep_r_high, choice) %>% 
   summarize(n = n()) %>% 
   mutate(prop = round(n/sum(n),2)) %>% 
   filter(choice == "r") %>% 
@@ -115,4 +128,9 @@ choices_sr %>% group_by(model, psi, threshold, theta, ep_r_high, choice) %>%
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   theme_minimal(base_size = 20) + 
   theme(legend.position = "top")
-ggsave("manuscript/figures/risky_choice_rates_summary.png", width = 14, height = 14)
+
+
+
+
+
+

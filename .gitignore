@@ -18,7 +18,7 @@ data/cpt_posteriors.rds.bz2
 supplements/parameter recovery/recovery_posteriors.rds
 supplements/gamma/cpt_posteriors_ext_gamma.rds.bz2
 supplements/figures/
-# other files
+# figure files and other
 thesis/
 housekeeping/
 talks/
@@ -27,6 +27,7 @@ supplements/starting option bias/figures/
 supplements/posterior predictives/figures/
 supplements/gamma/figures/
 supplements/parameter recovery/figures/
+supplements/logit choice rule/figures/
 
 
 

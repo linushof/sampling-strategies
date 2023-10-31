@@ -24,8 +24,8 @@ label_theta <- function(string) {
 # check MCMC statistics / convergence 
 
 # scale reduction factor 
-max(cpt_ext_gamma$Rhat) # 1.005  
-min(cpt_ext_gamma$n.eff) # 2300
+max(cpt_ext_gamma$Rhat) # ---> < 1.01  
+min(cpt_ext_gamma$n.eff) # 5600
 
 # prepare data
 weights <- cpt_ext_gamma %>%
@@ -48,11 +48,10 @@ gamma_roundwise <- cpt_ext_gamma %>%
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
   theme_minimal()
-
 gamma_roundwise
 
 #### delta
-delta_roundwise <- cpt_roundwise %>%
+delta_roundwise <- cpt_ext_gamma %>%
   filter(parameter == "delta", !(psi == 1 & theta ==1)) %>%
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
@@ -67,9 +66,10 @@ delta_roundwise <- cpt_roundwise %>%
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
   theme_minimal()
+delta_roundwise
 
 ####  probability weighting
-wf_roundwise <- weights_roundwise %>% 
+wf_roundwise <- weights %>% 
   filter(!(psi == 1 & theta ==1)) %>%
   ggplot(aes(p, w, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
@@ -77,13 +77,15 @@ wf_roundwise <- weights_roundwise %>%
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
   geom_line(linewidth = 1) + 
+  labs(x = TeX("$\\p_{high}$"),
+       y = TeX("$w(\\p_{high})$"),
+       color = "Switching\nProbability") +
   theme_minimal()
 
 # merge and save plots
 
 wf_roundwise + gamma_roundwise + delta_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
-
+ggsave(file = "supplements/gamma/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
 
 # value function ---------------------------------------------------------
 

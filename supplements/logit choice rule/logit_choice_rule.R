@@ -45,7 +45,6 @@ choice_prob_summary <- postpred %>%
 rho_summary + choice_prob_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A") & theme(legend.position = "top")
 ggsave(file = "supplements/logit choice rule/figures/logit_summary.png", width = 14, height = 7)
 
-
 ### combine plots
 rho_roundwise <- cpt %>%
   filter(model == "roundwise", threshold == "relative", parameter == "rho") %>% 
@@ -60,14 +59,13 @@ rho_roundwise <- cpt %>%
   geom_line(linewidth = 1) +
   theme_minimal(base_size = 20)
 
-choice_prob_summary <- postpred %>% 
+choice_prob_roundwise <- postpred %>% 
   filter(model == "roundwise", threshold == "relative") %>% 
   ggplot(aes(x = psi, y = p_safe_risky, group = psi)) +
   geom_violin() +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   labs(x = expression(paste("Switching Probability  ", psi)), 
        y = "p(safe, risky)") +
-  scale_fill_manual(values = c("white", "gray")) + 
   scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,length.out = 3)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
   theme_minimal(base_size = 20)

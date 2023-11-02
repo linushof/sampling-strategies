@@ -30,6 +30,18 @@ label_rare <- function(string) {
   TeX(paste("$\\p_{high}\\in$", string, sep = "")) 
 }
 
+
+# discarded trials --------------------------------------------------------
+
+total_discarded <- choices %>% filter(c(n_s == 0 | n_r == 0)) %>% nrow() # 119971
+total_discarded/nrow(choices) # 4.9% 
+roundwise_discarded <- choices %>% filter(model ==  "roundwise" & c(n_s == 0 | n_r == 0)) %>% nrow() # 0
+summary_discarded <- choices %>% filter(model ==  "summary" & c(n_s == 0 | n_r == 0)) %>% nrow() # 119971
+summary_discarded_relative <- choices %>% filter(model ==  "summary" & threshold == "relative" & c(n_s == 0 | n_r == 0)) %>% nrow() # 0
+summary_discarded_absolute <- choices %>% filter(model ==  "summary" & threshold == "absolute" & c(n_s == 0 | n_r == 0)) %>% nrow() # 119917
+summary_absolute <- choices %>% filter(model ==  "summary" & threshold == "absolute") %>% nrow() # 119971
+summary_discarded_absolute / summary_absolute # 20%
+
 # accumulation trajectories -----------------------------------------------
 
 # prepare data
@@ -213,7 +225,7 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 
 # compute maximization rates
 
-## sampled average
+# sampled average
 rates_EV_exp <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
   mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
@@ -239,7 +251,9 @@ rates_EV <- choices %>%
   ungroup() %>%
   filter(!(max == 0))
 
-## plot data 
+# plot data 
+
+## sampled average
 
 ### summary
 max_EV_exp_summary <- rates_EV_exp %>%
@@ -248,14 +262,14 @@ max_EV_exp_summary <- rates_EV_exp %>%
   ggplot(aes(psi, rate, group = theta, color = theta)) +
   scale_color_scico(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "Proportion of Choices\nMaximizing the Sampled Average",
+       y = "% Average Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ### round-wise
 max_EV_exp_roundwise <- rates_EV_exp %>%
@@ -264,20 +278,19 @@ max_EV_exp_roundwise <- rates_EV_exp %>%
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "Proportion of Choices\nMaximizing the Sampled Average",
+       y = "% Average Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
-### merge and save plots
-max_EV_exp_summary + max_EV_exp_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/maximization_average.png", width = 14, height = 6)
+### merge plots
+max_EV_exp <- ggarrange(max_EV_exp_summary, max_EV_exp_roundwise, nrow = 1)
 
-## plot data 
+## expected value
 
 ### summary
 max_EV_summary <- rates_EV %>%
@@ -286,14 +299,14 @@ max_EV_summary <- rates_EV %>%
   ggplot(aes(psi, rate, group = theta, color = theta)) +
   scale_color_scico(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "Proportion of Choices\nMaximizing the Expected Value",
+       y = "% EV Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ### round-wise
 max_EV_roundwise <- rates_EV %>%
@@ -302,24 +315,22 @@ max_EV_roundwise <- rates_EV %>%
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "Proportion of Choices\nMaximizing the Expected Value",
+       y = "% EV Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 ### merge and save plots
-max_EV_summary + max_EV_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/maximization_EV.png", width = 14, height = 6)
-
-###
-max_EV_exp <- ggarrange(max_EV_exp_summary, max_EV_exp_roundwise)
-max_EV <- ggarrange(max_EV_summary, max_EV_roundwise)
-max_EV_exp + max_EV + plot_layout(nrow = 2) + plot_annotation(tag_levels = "A")
-###
+max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
+max_EV_exp + max_EV + 
+  plot_layout(ncol = 1, guides = "collect") + 
+  plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 24, face = "plain"))
+ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
 
 # sampled frequencies -----------------------------------------------------
 

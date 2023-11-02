@@ -335,67 +335,108 @@ ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
 # sampled frequencies -----------------------------------------------------
 
 # prepare data 
-round_freq_high  <- round %>% 
+
+## compute trial-level and round-level frequencies
+
+### higher risky outcome
+freq_high  <- round %>% 
   mutate(psi = 1-(psi+.5)) %>% # recode psi
   filter(psi %in% c((1-.9), .5, 1),
-         threshold == "relative",
-         theta == 5) %>% 
-  group_by(psi, problem, agent) %>%
+         threshold == "relative") %>% 
+  group_by(psi, theta, problem, agent) %>%
   mutate(n_sample = n(), # compute trial-level n 
          n_s = sum(is.na(r)), 
          n_r = n_sample - n_s, 
          trial_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
   ungroup() %>%
-  group_by(psi, problem, agent, round) %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>%
+  group_by(psi, theta, problem, agent, round) %>% 
   mutate(n_round = n(), 
          n_round_s = sum(is.na(r)),
          n_round_r = n_round - n_round_s,
-         round_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
-  distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
+         round_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) 
 
-round_freq_low  <- round %>% 
+### lower risky outcome
+freq_low  <- round %>% 
   mutate(psi = 1-(psi+.5)) %>% # recode psi
   filter(psi %in% c((1-.9), .5, 1),
-         threshold == "relative",
-         theta == 5) %>% 
-  group_by(psi, problem, agent) %>%
+         threshold == "relative") %>% 
+  group_by(psi, theta, problem, agent) %>%
   mutate(n_sample = n(), # compute trial-level n 
          n_s = sum(is.na(r)), 
          n_r = n_sample - n_s, 
          trial_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
   ungroup() %>%
-  group_by(psi, problem, agent, round) %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>%
+  group_by(psi, theta, problem, agent, round) %>% 
   mutate(n_round = n(), 
          n_round_s = sum(is.na(r)),
          n_round_r = n_round - n_round_s,
-         round_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_round_r, 2)) %>% # compute round-level frequencies
-  distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
+         round_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_round_r, 2)) # compute round-level frequencies
 
-round_freq <- bind_rows(round_freq_low, round_freq_high)
 
-round_freq_median <- round_freq %>% 
-  group_by(psi, trial_freq) %>%
+## compute median round-level frequencies ...
+
+### ... for each sampled frequency on the trial level
+  
+freq_high_trial <- freq_high %>% distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
+freq_low_trial <- freq_low %>% distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) 
+freq_trial <- bind_rows(freq_high_trial, freq_low_trial)
+freq_trial_median <- freq_trial %>% 
+  group_by(psi, theta, trial_freq) %>%
   summarise(median_round_freq = median(round_freq, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
 
+### ... for each latent probability
+
+freq_high_latent <- freq_high %>% 
+  distinct(psi, threshold, theta, problem, agent, round, p_r_high, round_freq) %>% # drop redundant rows
+  mutate(p_r = p_r_high) %>% 
+  select(!p_r_high)
+freq_low_latent <- freq_low %>% 
+  distinct(psi, threshold, theta, problem, agent, round, p_r_low, round_freq) %>%  # drop redundant rows
+  mutate(p_r = p_r_low) %>% 
+  select(!p_r_low)
+freq_latent <- bind_rows(freq_high_latent, freq_low_latent)
+freq_latent_median <- freq_latent %>% 
+  group_by(psi, theta, p_r) %>%
+  summarise(median_round_freq = median(round_freq, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
 
 # plot data
-round_freq %>% 
-  ggplot(aes(x = trial_freq, y = round_freq)) +
+
+## median for trial level frequencies
+undersampling_trial <- freq_trial_median %>% 
+  ggplot(aes(x = trial_freq, y = median_round_freq, color = as.factor(theta))) +
+  geom_jitter(size = 2) + 
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
-  labs(x = "Trial-Level Frequency",
-       y = "Round-Level Frequency") +
-  geom_density_2d_filled() +
-  scale_fill_scico_d(palette = "devon") +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "white") + 
-  geom_point(data = round_freq_median, aes(y = median_round_freq), size = 1, color = "white") + 
-  theme_apa(base_size = 20) + 
-  theme(legend.position = "none")
+  labs(x = "Sampled Probability Across Choice Trial",
+       y = "Sampled Probability\nWithin Comparison Round", 
+       color = "Threshold\n(Stopping Rule)") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
+  scale_color_scico_d(palette = "imola") + 
+  theme_minimal(base_size = 20)
 
-# save plot
-ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 5)
+## median for latent probabilities
+undersampling_latent <- freq_latent_median %>% 
+  ggplot(aes(x = p_r, y = median_round_freq, color = as.factor(theta))) +
+  geom_jitter(size = 2) + 
+  facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
+  labs(x = "Latent Probability",
+       y = "Sampled Probability\nWithin Comparison Round", 
+       color = "Threshold\n(Stopping Rule)") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
+  scale_color_scico_d(palette = "imola") + 
+  theme_minimal(base_size = 20)
 
+# merge and save plot
+undersampling_trial + undersampling_latent + 
+  plot_layout(ncol = 1, guides = "collect") + 
+  plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 24, face = "plain"))
+ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 10)
 
 # effort and reward rate ---------------------------------------------
 

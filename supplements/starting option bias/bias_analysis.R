@@ -46,7 +46,7 @@ choice_sr_ext <- choice_sr_ext %>%
 choice_sr_ext %>%
   ggplot(aes(x=n_start_sec_diff, fill = n_start_sec_diff > 0)) + 
   geom_histogram(center = 0, binwidth = 1) + 
-  scale_fill_scico_d(palette = "lisbon", begin = .2, end = .8) + 
+  scale_fill_viridis_d() + 
   facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
                                             psi = as_labeller(label_psi, default = label_parsed))) +
   scale_y_continuous(trans = "log10") + 

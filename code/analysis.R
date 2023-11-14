@@ -223,6 +223,38 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 
 # maximization rates ------------------------------------------------------
 
+effort_summary <- choices %>% 
+  filter(model == "summary", threshold == "relative") %>% 
+  group_by(psi, theta) %>% 
+  summarise(mean_n = mean(n_sample), 
+            median_n = median(n_sample)) %>% 
+  ggplot(aes(x=psi, y=median_n, group=theta, color = theta)) + 
+  scale_color_scico(palette = "imola") + 
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "Average Sample Size",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  theme_minimal(base_size = 20)
+
+effort_roundwise <- choices %>% 
+  filter(model == "roundwise", threshold == "relative") %>% 
+  group_by(psi, theta) %>% 
+  summarise(mean_n = mean(n_sample), 
+            median_n = median(n_sample)) %>% 
+  ggplot(aes(x=psi, y=median_n, group=theta, color = as.factor(theta))) + 
+  scale_color_scico_d(palette = "imola") + 
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "Average Sample Size",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  theme_minimal(base_size = 20)
+
+effort <- ggarrange(effort_summary, effort_roundwise, nrow = 1)
+
 # compute maximization rates
 
 # sampled average
@@ -323,14 +355,14 @@ max_EV_roundwise <- rates_EV %>%
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
+max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
 
 ### merge and save plots
-max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
-max_EV + max_EV_exp + 
+effort + max_EV + max_EV_exp + 
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 14)
 
 # sampled frequencies -----------------------------------------------------
 
@@ -439,41 +471,6 @@ undersampling_latent + undersampling_trial +
 ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 10)
 
 # effort and reward rate ---------------------------------------------
-
-# sampling effort
-
-effort_summary <- choices %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = theta)) + 
-  scale_color_scico(palette = "imola") + 
-  labs(title = "Summary Comparison", 
-       x = expression(paste("Switching Probability  ", psi)),
-       y = "Average Sample Size",
-       color = "Threshold") +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) + 
-  theme_apa(base_size = 20)
-
-effort_roundwise <- choices %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
-  group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = as.factor(theta))) + 
-  scale_color_scico_d(palette = "imola") + 
-  labs(title = "Roundwise Comparison", 
-       x = expression(paste("Switching Probability  ", psi)),
-       y = "Average Sample Size",
-       color = "Threshold") +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) + 
-  theme_apa(base_size = 20)
-
-effort_summary + effort_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/sample_sizes.png", width = 14, height = 6)
 
 # reward rate 
 
@@ -646,7 +643,6 @@ reward_rates %>%
   geom_line(linewidth = 1, alpha = .5) + 
   facet_grid(~theta) + 
   theme_minimal()
-
 
 # risk aversion -----------------------------------------------------------
 
@@ -930,6 +926,3 @@ vf_roundwise <- values_roundwise %>%
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
-
-
-

@@ -102,7 +102,36 @@ choice_sr_ext %>%
   theme_minimal(base_size = 20)
 ggsave("supplements/starting option bias/figures/bias_sampled_probabilities.png", width = 14, height = 6)
 
-  
+# starting option bias risk aversion 
+
+# prepare data 
+rates <- choices %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
+  filter(!c(ep_r_low == 0 | ep_r_high == 0)) %>% # remove choices where the risky option was not experienced as such
+  mutate(r_averse = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
+  group_by(model, psi, threshold, theta, r_averse) %>% 
+  summarise(n = n()) %>% 
+  mutate(rate = round(n/sum(n), 2)) %>% 
+  ungroup() %>%
+  filter(!(r_averse == 0))
+
+r_averse_summary <- rates %>%  
+  filter(model == "summary" & threshold == "relative") %>% 
+  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)
+
+ggsave(file = "supplements/starting option bias/figures/bias_risk_seeking.png", width = 8, height = 6)
+
+
 # starting bias risky choice proportions
 
 choice_sr_ext %>% group_by(psi, threshold, theta, ep_r_high, choice) %>% 

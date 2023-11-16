@@ -656,18 +656,6 @@ rates <- choices %>%
   ungroup() %>%
   filter(!(r_averse == 0))
 
-# compute proportions of choice problems, where safe option is larger than sampled mean of risky option
-rates_obj <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>%
-  mutate(sampled_ev_ratio = ifelse(safe > mean_r, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, sampled_ev_ratio) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>% 
-  filter(!(sampled_ev_ratio == 0))
-rates_obj_sr <- rates_obj %>% filter(model == "summary", threshold == "relative" ) 
-rates_obj_rr <- rates_obj %>% filter(model == "roundwise", threshold == "relative" ) 
-
 r_averse_summary <- rates %>%  
   filter(model == "summary" & threshold == "relative") %>% 
   #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
@@ -675,15 +663,13 @@ r_averse_summary <- rates %>%
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary", 
-       x = expression(paste("Switching Probability  ", psi)),
-       y = "Proportion",
-       color = "Threshold") +
-  geom_line(data = rates_obj_sr, color = "gray", linewidth = 1, alpha = .3) +
-  geom_point(data = rates_obj_sr, color = "gray", size = 3, alpha = .3) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 r_averse_roundwise <- rates %>%
   filter(model == "roundwise" & threshold == "relative") %>% 
@@ -692,15 +678,13 @@ r_averse_roundwise <- rates %>%
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Round-wise", 
-       x = expression(paste("Switching Probability  ", psi)),
-       y = "Proportion",
-       color = "Threshold") +
-  geom_line(data = rates_obj_rr, color = "gray", linewidth = 1, alpha = .3) +
-  geom_point(data = rates_obj_rr, color = "gray", size = 3, alpha = .3) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20)
 
 r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A")
 ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height = 6)

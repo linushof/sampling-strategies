@@ -367,6 +367,132 @@ effort_roundwise <- choices %>%
 effort_summary + effort_roundwise + plot_layout(ncol = 2) + plot_annotation(tag_levels = "A")
 ggsave("manuscript/figures/sample_size.png", width = 14, height = 6)
 
+# reward rate --------------------------------------------
+
+# prepare data
+
+## Maximization as a function of comparison strategies and sample size
+
+### ground-truth
+max_n <- choices %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>% 
+  mutate(norm = case_when(r_ev/safe > 1 ~ "r", 
+                          r_ev/safe < 1 ~ "s")) %>%
+  filter(!is.na(norm)) %>%
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, threshold, psi, theta) %>% 
+  summarise(n = n(), 
+            median_n = median(n_sample) , 
+            mean_n = mean(n_sample) , 
+            max_prop = sum(max)/n)
+
+### sampled 
+max_n_exp <- choices %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>% 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
+                          mean_r/safe < 1 ~ "s")) %>%
+  filter(!is.na(norm)) %>%
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
+  group_by(model, threshold, psi, theta) %>% 
+  summarise(n = n(), 
+            median_n = median(n_sample) , 
+            mean_n = mean(n_sample) , 
+            max_prop = sum(max)/n)
+
+## reward rate
+
+reward_rates <- choices %>%  
+  mutate(higher_EV_option = ifelse(ev_ratio > 1, "r", ifelse(ev_ratio < 1 , "s", NA)) ,
+         higher_EV_exp_option = ifelse(mean_r > safe, "r", ifelse(mean_r < safe, "s", NA)) ,
+         higher_EV_choice = choice == higher_EV_option , 
+         higher_EV_exp_choice = choice == higher_EV_exp_option , 
+         chosen_option_ev = ifelse(choice == "s", safe, ifelse(choice == "r", r_ev, NA)) ,
+         chosen_option_ev_exp = ifelse(choice == "s", safe, ifelse(choice == "r", mean_r, NA)) , 
+         rr_ev = chosen_option_ev/n_sample , 
+         rr_ev_exp = chosen_option_ev_exp/n_sample)
+
+# plot data
+
+## ground-truth
+
+### Maximization as a function of comparison strategies and sample size
+
+#### summary
+max_n_summary <- max_n %>% 
+  filter(model == "summary", threshold == "relative") %>% 
+  ggplot(aes(x=median_n, y=max_prop, group = psi, color = psi)) +
+  scale_color_scico(palette = "tokyo", alpha = .7, end = .8) +
+  labs(title = "Summary Comparison", 
+       x = "Median Sample Size",
+       y = "% EV Maximization",
+       color = "Switching\nProbability\n(Search Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  theme_minimal(base_size = 20)
+
+#### roundwise
+max_n_roundwise <- max_n %>% 
+  filter(model == "roundwise", threshold == "relative") %>% 
+  ggplot(aes(x=median_n, y=max_prop, group = psi,  color = psi)) +
+  scale_color_scico(palette = "tokyo", alpha = .7, end = .8) +
+  labs(title = "Roundwise Comparison", 
+       x = "Median Sample Size",
+       y = "% EV Maximization", 
+       color = "Switching\nProbability\n(Search Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  theme_minimal(base_size = 20)
+
+#### merge
+max_n_EV <- ggarrange(max_n_summary, max_n_roundwise, nrow = 1, common.legend = TRUE, legend = "right")
+
+### reward rate
+
+#### summary
+rr_summary <- reward_rates %>% 
+  group_by(model, psi, threshold, theta) %>% 
+  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE)) %>% 
+  filter(model == "summary", threshold == "relative") %>%  
+  ggplot(aes(x = psi, y = mean_rr_ev, group = theta, color = theta)) + 
+  scale_color_scico(palette = "imola") + 
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  scale_shape_discrete(labels=c('EV', 'Average Outcome')) + 
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)", 
+       y = "Mean Reward Rate",
+       color = "Threshold\n(Stopping Rule)") + 
+  scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  theme_minimal(base_size = 20)
+
+#### roundwise
+rr_roundwise <- reward_rates %>% 
+  group_by(model, psi, threshold, theta) %>% 
+  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE)) %>% 
+  filter(model == "roundwise", threshold == "relative") %>%  
+  ggplot(aes(x = psi, y = mean_rr_ev, group = theta, color = as.factor(theta))) + 
+  scale_color_scico_d(palette = "imola") + 
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  scale_shape_discrete(labels=c('EV', 'Average Outcome')) + 
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)", 
+       y = "Mean Reward Rate",
+       color = "Threshold\n(Stopping Rule)") + 
+  scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  theme_minimal(base_size = 20)
+
+#### merge and save
+rrates <- ggarrange(rr_summary, rr_roundwise, nrow = 1)
+max_n_EV + rrates + 
+  plot_layout(ncol = 1, guides = "auto", ) + 
+  plot_annotation(tag_levels = "A") & 
+  theme(plot.tag = element_text(size = 24, face = "plain"))
+ggsave(file = "manuscript/figures/efficiency.png", width = 14, height = 10)
 
 # sampled frequencies -----------------------------------------------------
 
@@ -474,179 +600,6 @@ undersampling_latent + undersampling_trial +
   theme(plot.tag = element_text(size = 24, face = "plain"))
 ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 10)
 
-# effort and reward rate ---------------------------------------------
-
-# reward rate 
-
-reward_rates <- choices %>%  
-  mutate(higher_EV_option = ifelse(ev_ratio > 1, "r", ifelse(ev_ratio < 1 , "s", NA)) ,
-         higher_EV_exp_option = ifelse(mean_r > safe, "r", ifelse(mean_r < safe, "s", NA)) ,
-         higher_EV_choice = choice == higher_EV_option , 
-         higher_EV_exp_choice = choice == higher_EV_exp_option , 
-         chosen_option_ev = ifelse(choice == "s", safe, ifelse(choice == "r", r_ev, NA)) ,
-         chosen_option_ev_exp = ifelse(choice == "s", safe, ifelse(choice == "r", mean_r, NA)) , 
-         rr_ev = chosen_option_ev/n_sample , 
-         rr_ev_exp = chosen_option_ev_exp/n_sample)
-
-# maximization performance based on number of samples
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  ggplot(aes(x = n_sample, y = max_ev_rate, group = psi, color = psi)) + 
-  geom_point() +
-  geom_smooth(se = F) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
-  ggplot(aes(x = n_sample, y = max_ev_rate, group = psi, color = psi)) + 
-  geom_point() +
-  geom_smooth(se = F) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "summary", threshold == "relative", n_sample < 50) %>% 
-  ggplot(aes(x = n_sample, y = max_ev_rate)) + 
-  geom_density_2d_filled() +
-  facet_wrap(~psi, nrow = 2) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "roundwise", threshold == "relative", n_sample < 50) %>% 
-  ggplot(aes(x = n_sample, y = max_ev_rate)) + 
-  geom_density_2d_filled() +
-  facet_wrap(~psi, nrow = 2) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  ggplot(aes(x = n_sample, y = max_ev_exp_rate, group = psi, color = psi)) + 
-  geom_point() +
-  geom_smooth(se = F) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-reward_rates %>% 
-  group_by(model, psi, threshold, n_sample) %>% 
-  summarise(max_ev_rate = mean(higher_EV_choice, na.rm = TRUE), 
-            max_ev_exp_rate = mean(higher_EV_exp_choice, na.rm = TRUE)
-  ) %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
-  ggplot(aes(x = n_sample, y = max_ev_exp_rate, group = psi, color = psi)) + 
-  geom_point() +
-  geom_smooth(se = F) + 
-  scale_x_continuous(limits = c(0,50)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  theme_minimal()
-
-# reward rates (obtained option's ev/exp ev normalized by n_samples)
-rr_roundwise <- reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE), 
-            mean_rr_ev_exp = mean(rr_ev_exp, na.rm = TRUE)
-  ) %>% 
-  pivot_longer(cols = c(mean_rr_ev, mean_rr_ev_exp), names_to = "metric", values_to = "values") %>% 
-  filter(model == "roundwise", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = values, color = metric)) + 
-  geom_point(size = 3, alpha = .5) +
-  geom_line(linewidth = 1, alpha = .5) + 
-  facet_grid(~theta) + 
-  labs(title = "Roundwise") + 
-  theme_minimal()
-
-rr_roundwise <- reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE), 
-            mean_rr_ev_exp = mean(rr_ev_exp, na.rm = TRUE)
-  ) %>% 
-  pivot_longer(cols = c(mean_rr_ev, mean_rr_ev_exp), names_to = "metric", values_to = "values") %>% 
-  filter(model == "roundwise", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = values, color = metric)) + 
-  scale_color_discrete(labels=c('EV', 'Average Outcome')) + 
-  geom_point(size = 3, alpha = .5) +
-  geom_line(linewidth = 1, alpha = .5) + 
-  facet_grid(~theta) + 
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)", 
-       y = "Mean Reward Rate",
-       color = "Accuracy Metric") + 
-  theme_minimal()
-
-rr_summary <- reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE), 
-            mean_rr_ev_exp = mean(rr_ev_exp, na.rm = TRUE)
-  ) %>% 
-  pivot_longer(cols = c(mean_rr_ev, mean_rr_ev_exp), names_to = "metric", values_to = "values") %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = values, color = metric)) + 
-  scale_color_discrete(labels=c('EV', 'Average Outcome')) + 
-  geom_point(size = 3, alpha = .5) +
-  geom_line(linewidth = 1, alpha = .5) + 
-  facet_grid(~theta) + 
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)", 
-       y = "Mean Reward Rate",
-       color = "Accuracy Metric") + 
-  theme_minimal()
-
-rr_summary + rr_roundwise + plot_annotation(tag_levels = "A") + plot_layout(nrow = 2)
-ggsave(file = "manuscript/figures/reward_rates.png", width = 14, height = 8)
-
-# proportion correct/n_samples 
-reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(norm_max_ev_rate = mean(higher_EV_choice/n_sample, na.rm = TRUE), 
-            norm_max_ev_exp_rate = mean(higher_EV_exp_choice/n_sample, na.rm = TRUE)) %>% 
-  pivot_longer(cols = c(norm_max_ev_rate, norm_max_ev_exp_rate), names_to = "metric", values_to = "values") %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = values, color = metric)) + 
-  geom_point(size = 3, alpha = .5) +
-  geom_line(linewidth = 1, alpha = .5) + 
-  facet_grid(~theta) + 
-  theme_minimal()
-
-reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(norm_max_ev_rate = mean(higher_EV_choice/n_sample, na.rm = TRUE), 
-            norm_max_ev_exp_rate = mean(higher_EV_exp_choice/n_sample, na.rm = TRUE)) %>% 
-  pivot_longer(cols = c(norm_max_ev_rate, norm_max_ev_exp_rate), names_to = "metric", values_to = "values") %>% 
-  filter(model == "roundwise", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = values, color = metric)) + 
-  geom_point(size = 3, alpha = .5) +
-  geom_line(linewidth = 1, alpha = .5) + 
-  facet_grid(~theta) + 
-  theme_minimal()
 
 # risk aversion -----------------------------------------------------------
 

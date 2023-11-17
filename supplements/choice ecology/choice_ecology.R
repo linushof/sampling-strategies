@@ -6,8 +6,7 @@ pacman::p_load(here,
                latex2exp, # for LaTeX expressions in plots
                papaja,
                ggpubr,
-               patchwork, 
-               gganimate)
+               patchwork)
 
 
 # load data
@@ -223,4 +222,3 @@ max_EV + max_EV_exp +
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
 ggsave(file = "supplements/choice ecology/figures/ecology_maximization.png", width = 14, height = 10)
-

@@ -223,41 +223,9 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 
 # maximization rates ------------------------------------------------------
 
-effort_summary <- choices %>% 
-  filter(model == "summary", threshold == "relative") %>% 
-  group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = theta)) + 
-  scale_color_scico(palette = "imola") + 
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "Average Sample Size",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) + 
-  theme_minimal(base_size = 20)
-
-effort_roundwise <- choices %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
-  group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = as.factor(theta))) + 
-  scale_color_scico_d(palette = "imola") + 
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "Average Sample Size",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) + 
-  theme_minimal(base_size = 20)
-
-effort <- ggarrange(effort_summary, effort_roundwise, nrow = 1)
-
 # compute maximization rates
 
-# sampled average
+## sampled average
 rates_EV_exp <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
   mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
@@ -270,7 +238,7 @@ rates_EV_exp <- choices %>%
   ungroup() %>%
   filter(!(max == 0))
 
-# expected values
+## expected values
 rates_EV <- choices %>%
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
   mutate(norm = case_when(r_ev/safe > 1 ~ "r", 
@@ -358,11 +326,47 @@ max_EV_roundwise <- rates_EV %>%
 max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
 
 ### merge and save plots
-effort + max_EV + max_EV_exp + 
+max_EV + max_EV_exp + 
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 14)
+ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
+
+# sample size -------------------------------------------------------------
+
+effort_summary <- choices %>% 
+  filter(model == "summary", threshold == "relative") %>% 
+  group_by(psi, theta) %>% 
+  summarise(mean_n = mean(n_sample), 
+            median_n = median(n_sample)) %>% 
+  ggplot(aes(x=psi, y=median_n, group=theta, color = theta)) + 
+  scale_color_scico(palette = "imola") + 
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "Median Sample Size",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  theme_minimal(base_size = 20)
+
+effort_roundwise <- choices %>% 
+  filter(model == "roundwise", threshold == "relative") %>% 
+  group_by(psi, theta) %>% 
+  summarise(mean_n = mean(n_sample), 
+            median_n = median(n_sample)) %>% 
+  ggplot(aes(x=psi, y=median_n, group=theta, color = as.factor(theta))) + 
+  scale_color_scico_d(palette = "imola") + 
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "Median Sample Size",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  theme_minimal(base_size = 20)
+
+effort_summary + effort_roundwise + plot_layout(ncol = 2) + plot_annotation(tag_levels = "A")
+ggsave("manuscript/figures/sample_size.png", width = 14, height = 6)
+
 
 # sampled frequencies -----------------------------------------------------
 

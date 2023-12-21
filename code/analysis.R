@@ -25,7 +25,7 @@ label_psi <- function(string) {
   TeX(paste("$\\psi=$", string, sep = ""))
 }
 
-# propbability of high risky outcome
+# probability of high risky outcome
 label_rare <- function(string) {
   TeX(paste("$\\p_{high}\\in$", string, sep = "")) 
 }
@@ -103,15 +103,15 @@ summary_median_sub <- summary_median %>%
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-ann_risky <- data.frame(psi=(1-.9), smp_no = 40, diff=60, label="Risky Threshold \n 8.6 (19%) or 17.36 (81%)")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 40, diff=-60, label="Safe Threshold \n 15.70 (100%)")
+ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 8.6 (19%) or 17.36 (81%)")
+ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 15.70 (100%)")
 
 summary_trajectories <- summary_sub %>% 
   ggplot(aes(x = smp_no, y = diff)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
                      breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary", 
+  labs(title = "Summary Comparison", 
        x = "Number of Sampled Outcomes",
        y = "Difference in Cumulative Sums",
        color = expression(psi),
@@ -119,9 +119,10 @@ summary_trajectories <- summary_sub %>%
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
   geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
   geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
-  geom_line(data = summary_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_apa(base_size = 20)
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .5, color = "gray") + 
+  geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
 
 ## round-wise
 
@@ -139,15 +140,16 @@ round_trajectories <- round_sub %>%
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-round_boundary, round_boundary), 
                      breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise", 
+  labs(title = "Roundwise Comparison", 
        x = "Number of Sampled Outcomes",
        y = "Difference in Round Wins",
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
-  geom_line(data = round_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_apa(base_size = 20)
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .5, color = "gray") + 
+  geom_line(data = round_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
 
 ### merge and save plots
 summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
@@ -170,15 +172,15 @@ summary_median_sub <- summary_median %>%
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-ann_risky <- data.frame(psi=(1-.9), smp_no = 50, diff=60, label="Risky Threshold \n 10.44 (84%) or 12.33 (16%)")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 50, diff=-60, label="Safe Threshold \n 10.51 (100%)")
+ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 10.44 (84%) or 12.33 (16%)")
+ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 10.51 (100%)")
 
 summary_trajectories <- summary_sub %>% 
   ggplot(aes(x = smp_no, y = diff)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
                      breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary", 
+  labs(title = "Summary Comparison", 
        x = "Number of Sampled Outcomes",
        y = "Difference in Cumulative Sums",
        color = expression(psi),
@@ -188,7 +190,8 @@ summary_trajectories <- summary_sub %>%
   geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
   geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
   geom_line(data = summary_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
 
 ## round-wise
 round_boundary <- 5
@@ -207,7 +210,7 @@ round_trajectories <- round_sub %>%
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-round_boundary, round_boundary), 
                      breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise", 
+  labs(title = "Roundwise Comparison", 
        x = "Number of Sampled Outcomes",
        y = "Difference in Round Wins",
        color = expression(psi),
@@ -215,7 +218,8 @@ round_trajectories <- round_sub %>%
   geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
   geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
   geom_line(data = round_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_apa(base_size = 20)
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
 
 ### merge and save plots
 summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")

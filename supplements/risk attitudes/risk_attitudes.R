@@ -1,3 +1,7 @@
+library(psych)
+
+# granular pattern
+
 # prepare data 
 risk_rates <- choices %>% 
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
@@ -11,15 +15,12 @@ risk_rates <- choices %>%
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup()
 
-
-# granular pattern 
-
 risk_rates <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(risk = case_when(choice == "s" & ev_r > safe ~ "averse" ,
-                          choice == "r" & ev_r < safe ~ "seeking" ,
-                          choice == "s" & ev_r <= safe ~ "neutral" , 
-                          choice == "r" & ev_r >= safe ~ "neutral"), 
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended
+  mutate(risk = case_when(choice == "s" & r_ev > safe ~ "averse" ,
+                          choice == "r" & r_ev < safe ~ "seeking" ,
+                          choice == "s" & r_ev <= safe ~ "neutral" , 
+                          choice == "r" & r_ev >= safe ~ "neutral") ,
          risk = as.factor(risk)) %>% # risk attitude
   group_by(model, psi, threshold, theta, risk) %>% 
   summarise(n = n()) %>% 
@@ -40,7 +41,7 @@ risk_rates %>%
        fill="Risk Attitude",
        title = "Proportion of Risk-averse vs. Risk-seeking Choices",
        subtitle = "Summary Comparison Rule") + 
-  theme_apa()
+  theme_minimal()
 ggsave("supplements/risk attitudes/risk_attitudes_summary.png", width=16,height=9)
 
 risk_rates %>% 
@@ -56,7 +57,7 @@ risk_rates %>%
        fill="Risk Attitude",
        title = "Proportion of Risk-averse vs. Risk-seeking Choices",
        subtitle = "Roundwise Comparison Rule") + 
-  theme_apa()
+  theme_minimal()
 ggsave("supplements/risk attitudes/risk_attitudes_roundwise.png", width=16,height=9)
 
 
@@ -122,20 +123,33 @@ ggsave(file = "supplements/risk attitudes/rates_safe_control.png", width = 14, h
 
 ## Also run logistic regression (since Figure too complicated???)
 
-
 # Conceptual explanation
 
-## Risk-seeking of roundwise comparison rule -> more trials where risky option provides better frequent outcome?
-
-problems %>% mutate(risk_better_freq = case_when(p_r_high > .5 ~ 1 ,
-                                                 p_r_high < .5 ~ 0 ,
-                                                 p_r_high == .5 ~ NA)) %>% 
-  group_by(risk_better_freq) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = count/sum(count))
-
-
 ## Risk aversion of summary comparison rule
+
+
+# Skewness of outcomes
+names(problems)
+skew <- problems %>% mutate(ad.safe = safe - r_low , 
+                            ad.risky = abs(safe - r_high) , 
+                            ad.diff = round(ad.safe - ad.risky, 3)
+                            )
+
+
+skew %>% filter(rare=="unattractive") %>% describe() # -.45
+skew %>% filter(rare=="attractive") %>% describe() # -.74
+skew %>% filter(rare=="none") %>% describe() # -.1
+
+
+describe(attr)
+ggplot(skew, aes(x=ad.diff)) + 
+  facet_wrap(~rare, nrow = 3) +
+  theme_minimal() + 
+  geom_density()
+
+
+# granular 
+
 
 neutral_rates_attractive <- problems %>% 
   filter(rare == "attractive") %>% 
@@ -231,3 +245,12 @@ r_averse_roundwise_rare_event <- rates_rare_event %>%
 
 
 
+## Risk-seeking of roundwise comparison rule -> more trials where risky option provides better frequent outcome?
+
+problems %>% mutate(risk_better_freq = case_when(p_r_high > .5 ~ 1 ,
+                                                 p_r_high < .5 ~ 0 ,
+                                                 p_r_high == .5 ~ NA)) %>% 
+  group_by(risk_better_freq) %>% 
+  summarise(count = n()) %>% 
+  mutate(prop = count/sum(count))
+# Based on the ground-truth, the safe option offers the better frequent outcome in more problems - cannot explain the difference

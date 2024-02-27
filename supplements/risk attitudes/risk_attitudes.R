@@ -1,15 +1,33 @@
+
+# Setup -------------------------------------------------------------
+
 # load packages 
-pacman::p_load(tidyverse, scico, psych, rethinking)
+pacman::p_load(tidyverse, scico, psych, rethinking, latex2exp, ggpubr)
 
 # load data
 problems <- read_rds("data/choice_problems.rds")
 choices <- read_rds("data/choice_data.rds.bz2")
 
-# Risk Attitudes: Control for ORDINAL EV differences ----------------------
+# labels
+label_theta <- function(string) {
+  TeX(paste("$\\theta=$", string, sep = ""))
+}
 
-# prepare data
+label_psi <- function(string) {
+  TeX(paste("$\\psi=$", string, sep = ""))
+}
 
-## expected* proportion of safe choices (under risk neutrality)
+# probability of high risky outcome
+label_rare <- function(string) {
+  TeX(paste("$\\p_{high}\\in$", string, sep = "")) 
+}
+
+
+
+# Pre-processing --------------------------------------------------------------------
+
+# expected* proportion of safe choices (under risk neutrality)
+
 expected_rates <- problems %>% 
   mutate(better_safe = case_when(safe > r_ev ~ 1, 
                                  safe < r_ev ~ 0, 
@@ -20,7 +38,9 @@ expected_rates <- problems %>%
 safe_prop <- round(expected_rates[[2,3]], 3)
 safe_prop ## Safe proportion = .533
 
-## observed - expected proportion of safe choices (under risk neutrality)
+
+# observed - expected proportion of safe choices (under risk neutrality)
+
 deviation_rates <- choices %>% 
   filter(!c(n_s == 0 | n_r == 0)) %>% 
   mutate(safe_choice = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
@@ -31,38 +51,10 @@ deviation_rates <- choices %>%
   filter(!(safe_choice == 0)) %>% 
   mutate(deviation_rate = (rate - safe_prop)*100)
 
-#Proportion or risk averse/seeking/neutral choices
-risk_rates <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended
-  mutate(risk = case_when(choice == "s" & r_ev > safe ~ "averse" ,
-                          choice == "r" & r_ev < safe ~ "seeking" ,
-                          choice == "s" & r_ev <= safe ~ "neutral" , 
-                          choice == "r" & r_ev >= safe ~ "neutral") ,
-         risk = as.factor(risk)) %>% # risk attitude
-  group_by(model, psi, threshold, theta, risk) %>% 
-  summarise(n = n()) %>% 
-  mutate(risk_rate = round(n/sum(n), 2)) %>% 
-  ungroup()
 
-# summary comparison
+# logistic regression: probability of safe choice, controlling for ordinal differences in EV 
 
-## deviation rate 
-deviation_rates %>%  
-  filter(model == "summary" & threshold == "relative") %>% 
-  ggplot(aes(x=psi, y=deviation_rate, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-10, 10), breaks = seq(-10, 10, 5)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "% Safe Choices\nObserved vs. Expected",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_hline(yintercept = 0) +
-  theme_minimal(base_size = 20)
-
-#### Logistic Regression ####
+## prepare data as list
 
 dat <- choices %>%
   filter(threshold=="relative") %>% 
@@ -78,7 +70,9 @@ d <- list(
   S = dat$strategy , 
   C = dat$choice , 
   EV_1 = dat$better_ev
-  )
+)
+
+## fit model
 
 m1 <- alist( 
   C ~ dbern(theta) , 
@@ -86,24 +80,76 @@ m1 <- alist(
   a[S] ~ dnorm(0,2) ,
   b ~ dnorm(0,2)
 )
-
 m1.fit <- ulam(m1, data=d, chains=8, cores=8, iter = 500, cmdstan = TRUE)
-traceplot(m1.fit)
-precis(m1.fit, depth = 2)
-plot(m1.fit, depth = 2)
 
+#traceplot(m1.fit) # check convergence
+#precis(m1.fit, depth = 2) # b=3.35 (3.34, 3.36)
+#plot(m1.fit, depth = 2)
 
-# store data
+## store results
 strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts <- tibble(strategy = as.factor(1:100) ,                   intercept = coef(m1.fit)[1:100])
-by <- join_by(strategy)
-logreg <- left_join(strategies, intercepts, by=by)
-write_rds(logreg, "supplements/risk attitudes/risk_aversion_intercepts.rds")
+intercepts <- tibble(strategy = as.factor(1:100) ,
+                     intercept = coef(m1.fit)[1:100])
+logreg <- left_join(strategies, intercepts, by=join_by(strategy))
+logreg <- logreg %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
+write_rds(logreg, "supplements/risk attitudes/logreg.rds")
 
-#### Logistic Regression ####
+
+## Proportion of risk averse/seeking/neutral choices
+
+risk_rates <- choices %>% 
+  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended
+  mutate(risk = case_when(choice == "s" & r_ev > safe ~ "averse" ,
+                          choice == "r" & r_ev < safe ~ "seeking" ,
+                          choice == "s" & r_ev <= safe ~ "neutral" , 
+                          choice == "r" & r_ev >= safe ~ "neutral") ,
+         risk = as.factor(risk)) %>% # risk attitude
+  group_by(model, psi, threshold, theta, risk) %>% 
+  summarise(n = n()) %>% 
+  mutate(risk_rate = round(n/sum(n), 2)) %>% 
+  ungroup()
 
 
-## risk rate 
+# Summary Comparison ------------------------------------------------------
+
+
+## Pattern -----------------------------------------------------------------
+
+# deviation rate 
+
+deviation_rates %>%  
+  filter(model == "summary" & threshold == "relative") %>% 
+  ggplot(aes(x=psi, y=deviation_rate, group=theta, color=theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-10, 10), breaks = seq(-10, 10, 5)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "% Safe Choices\nObserved vs. Expected",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0) +
+  theme_minimal(base_size = 20)
+
+# predicted probability of false safe 
+
+log_summary <- logreg %>%  
+  filter(model == "summary") %>% 
+  ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "Probability of False Safe Choice",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)
+
+# risk rate 
+
 risk_rates %>% 
   filter(model=="summary", threshold=="relative", risk != "neutral") %>% 
   ggplot(aes(x=risk, y=risk_rate, fill=risk)) +
@@ -120,42 +166,7 @@ risk_rates %>%
   theme_minimal()
 
 
-# roundwise comparison
-
-## deviation rate 
-deviation_rates %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
-  ggplot(aes(x=psi, y=deviation_rate, group=theta, color=as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", alpha = .7) + 
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-10, 10), breaks = seq(-10, 10, 5)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "% Safe Choices\nObserved vs. Expected",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_hline(yintercept = 0) +
-  theme_minimal(base_size = 20)
-# Run logistic regression (since Figure too complicated)
-
-# risk rate 
-risk_rates %>% 
-  filter(model=="roundwise", threshold=="relative", risk != "neutral") %>% 
-  ggplot(aes(x=risk, y=risk_rate, fill=risk)) +
-  scale_fill_viridis_d() + 
-  facet_grid(theta~psi, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
-                                            psi = as_labeller(label_psi, default = label_parsed))) +
-  geom_bar(stat="identity", position = "stack") + 
-  scale_y_continuous(limits = c(0, .3), breaks = seq(0,.3,.05)) +
-  labs(x="Risk Attitude",
-       y="Proportion", 
-       fill="Risk Attitude",
-       title = "Proportion of Risk-averse vs. Risk-seeking Choices",
-       subtitle = "Roundwise Comparison Rule") + 
-  theme_minimal()
-
-# Pattern Explanation --------------------------------------------------
+## Explanation -------------------------------------------------------------
 
 
 # Summary comparison: risk aversion
@@ -166,7 +177,7 @@ names(problems)
 skew <- problems %>% mutate(ad.safe = safe - r_low , 
                             ad.risky = abs(safe - r_high) , 
                             ad.diff = round(ad.safe - ad.risky, 3)
-                            )
+)
 
 
 skew %>% filter(rare=="unattractive") %>% describe() # -.45
@@ -248,8 +259,8 @@ rates_rare_event <-  rates_rare_event %>%
   mutate(rate_EV_control = case_when(rare == "attractive" ~ (rate-safe_prop_attractive)*100 ,
                                      rare == "unattractive" ~ (rate-safe_prop_unattractive)*100 , 
                                      rare == "none" ~ (rate-safe_prop_none)*100
-                                     )
-         )
+  )
+  )
 
 
 r_averse_summary_rare_event <- rates_rare_event %>%  
@@ -288,6 +299,65 @@ r_averse_roundwise_rare_event <- rates_rare_event %>%
   theme_minimal(base_size = 20)
 
 
+
+
+# Roundwise Comparison ----------------------------------------------------
+
+
+## Pattern -----------------------------------------------------------------
+
+# deviation rate 
+
+deviation_rates %>%  
+  filter(model == "roundwise" & threshold == "relative") %>% 
+  ggplot(aes(x=psi, y=deviation_rate, group=as.factor(theta), color=as.factor(theta))) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-10, 10), breaks = seq(-10, 10, 5)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "% Safe Choices\nObserved vs. Expected",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0) +
+  theme_minimal(base_size = 20)
+
+# predicted probability of false safe 
+
+logreg %>%  
+  filter(model == "roundwise") %>% 
+  ggplot(aes(x=psi, y=p_false_safe, group=as.factor(theta), color=as.factor(theta))) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "Probability of False Safe Choice",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)
+
+# risk rate
+
+risk_rates %>% 
+  filter(model=="roundwise", threshold=="relative", risk != "neutral") %>% 
+  ggplot(aes(x=risk, y=risk_rate, fill=risk)) +
+  scale_fill_viridis_d() + 
+  facet_grid(theta~psi, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
+                                            psi = as_labeller(label_psi, default = label_parsed))) +
+  geom_bar(stat="identity", position = "stack") + 
+  scale_y_continuous(limits = c(0,.3), breaks = seq(0, .3, .05)) +
+  labs(x="Risk Attitude",
+       y="Proportion", 
+       fill="Risk Attitude",
+       title = "Proportion of Risk-averse vs. Risk-seeking Choices",
+       subtitle = "Roundwise Comparison Rule") + 
+  theme_minimal()
+
+
+## Explanation --------------------------------------------------
 
 ## Risk-seeking of roundwise comparison rule -> more trials where risky option provides better frequent outcome?
 

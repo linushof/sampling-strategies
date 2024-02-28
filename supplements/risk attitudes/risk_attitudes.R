@@ -7,6 +7,7 @@ pacman::p_load(tidyverse, scico, psych, rethinking, latex2exp, ggpubr)
 # load data
 problems <- read_rds("data/choice_problems.rds")
 choices <- read_rds("data/choice_data.rds.bz2")
+logreg <- read_rds("supplements/risk attitudes/logreg.rds")
 
 # labels
 label_theta <- function(string) {
@@ -54,49 +55,48 @@ deviation_rates <- choices %>%
 
 # logistic regression: probability of safe choice, controlling for ordinal differences in EV 
 
-## prepare data as list
-
 dat <- choices %>%
   filter(threshold=="relative") %>% 
-  select(model, theta, psi, choice, ev_diff) %>%
+  mutate(choice = if_else(choice == "s",1,0), 
+         better_ev = if_else(safe > r_ev, 1, 0)) %>% 
+  select(model, theta, psi, choice, problem, ev_diff, better_ev) %>%
   group_by(model, theta, psi) %>%
-  mutate(strategy = cur_group_id()) %>%
-  ungroup() %>% 
-  mutate(choice = if_else(choice == "s",1,0),
-         better_ev = if_else(ev_diff < 0, 1, 0),
-         strategy = as.factor(strategy))
+  mutate(strategy = as.factor(cur_group_id())) %>% 
+  group_by(strategy, problem, ev_diff, better_ev, .add=T) %>% 
+  summarise(n_choice = sum(choice)) %>% 
+  mutate(ev_diff_a = abs(ev_diff))
 
 d <- list(
   S = dat$strategy , 
-  C = dat$choice , 
-  EV_1 = dat$better_ev
+  nC = dat$n_choice , 
+  EV_1 = dat$better_ev ,
+  EV_2 = dat$ev_diff_a ,
+  EV_3 = dat$ev_diff
 )
 
-## fit model
 
+## fit model
 m1 <- alist( 
-  C ~ dbern(theta) , 
+  nC ~ dbinom(200, theta) , 
   logit(theta) <- a[S] + b*EV_1 , 
   a[S] ~ dnorm(0,2) ,
   b ~ dnorm(0,2)
 )
-m1.fit <- ulam(m1, data=d, chains=8, cores=8, iter = 500, cmdstan = TRUE)
+m1.fit <- ulam(m1, data=d, chains=8, cores=8, cmdstan = TRUE)
 
 #traceplot(m1.fit) # check convergence
-#precis(m1.fit, depth = 2) # b=3.35 (3.34, 3.36)
+#precis(m1.fit, depth = 2)
 #plot(m1.fit, depth = 2)
 
 ## store results
 strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts <- tibble(strategy = as.factor(1:100) ,
-                     intercept = coef(m1.fit)[1:100])
-logreg <- left_join(strategies, intercepts, by=join_by(strategy))
-logreg <- logreg %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
-write_rds(logreg, "supplements/risk attitudes/logreg.rds")
+intercepts_m1 <- tibble(strategy = as.factor(1:100) ,
+                        intercept = coef(m1.fit)[1:100])
+logreg1 <- left_join(strategies, intercepts_m1, by=join_by(strategy))
+logreg1 <- logreg1 %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
 
 
 ## Proportion of risk averse/seeking/neutral choices
-
 risk_rates <- choices %>% 
   filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended
   mutate(risk = case_when(choice == "s" & r_ev > safe ~ "averse" ,
@@ -134,12 +134,12 @@ deviation_rates %>%
 
 # predicted probability of false safe 
 
-log_summary <- logreg %>%  
+p1 <- logreg1 %>%  
   filter(model == "summary") %>% 
   ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  #scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y =  "Probability of False Safe Choice",
@@ -168,43 +168,146 @@ risk_rates %>%
 
 ## Explanation -------------------------------------------------------------
 
+# below, I check the explanation that the choice difficulty differs 
+# for gambles where the safe or the risky option has the higher expectation
 
-# Summary comparison: risk aversion
+diff <- problems %>% 
+  mutate(problem = row_number() , 
+         better_ev = as.factor(if_else(safe > r_ev, 1, 0)) ,
+         ev_diff_a = abs(ev_diff)) %>% 
+  select(problem, rare, better_ev, ev_diff, ev_diff_a, everything())
+
+means <- aggregate(ev_diff_a ~ better_ev, data = diff, FUN = mean)
+ggplot(diff, aes(x=ev_diff_a, group = better_ev, fill = better_ev, color = better_ev)) +
+  geom_density() + 
+  geom_vline(data = means, aes(xintercept = ev_diff_a, color = better_ev), linetype = "dashed", linewidth = 2) +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d(alpha = .5) +
+  theme_minimal()
+
+# EV differences are somewhat larger if safe option has a better EV
+# are probabilities smaller if EV differences are controlled for? 
+
+#### M2 ##### THIS DOESN'T WORK
+'m2 <- alist( 
+  nC ~ dbinom(200, theta) , 
+  logit(theta) <- a[S] + b[S]*EV_1, 
+  a[S] ~ dnorm(0,2) ,
+  b[S] ~ dnorm(0,2)
+)
+m2.fit <- ulam(m2, data=d, chains=8, cores=8, iter = 1000, cmdstan = TRUE)
+
+#traceplot(m2.fit) # check convergence
+#precis(m2.fit, depth = 2) # b=3.35 (3.34, 3.36)
+plot(m2.fit, depth = 2)
+
+## store results
+intercepts_m2 <- tibble(strategy = as.factor(1:100) ,
+                        intercept = coef(m2.fit)[1:100])
+logreg2 <- left_join(strategies, intercepts_m2, by=join_by(strategy))
+logreg2 <- logreg2 %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
 
 
-# Skewness of outcomes
-names(problems)
-skew <- problems %>% mutate(ad.safe = safe - r_low , 
-                            ad.risky = abs(safe - r_high) , 
-                            ad.diff = round(ad.safe - ad.risky, 3)
+p2 <- logreg2 %>%  
+  filter(model == "summary") %>% 
+  ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "Probability of False Safe Choice",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)'
+
+
+
+#### M3 #### This works as M1
+m3 <- alist( 
+  nC ~ dbinom(200, theta) , # binomial 
+  logit(theta) <- a[S] + b*EV_3, 
+  a[S] ~ dnorm(0,2) ,
+  b ~ dnorm(0,2)
 )
 
+m3.fit <- ulam(m3, data=d, chains=8, cores=8, iter = 1000, cmdstan = TRUE)
 
-skew %>% filter(rare=="unattractive") %>% describe() # -.45
-skew %>% filter(rare=="attractive") %>% describe() # -.74
-skew %>% filter(rare=="none") %>% describe() # -.1
+traceplot(m3.fit) # check convergence
+precis(m3.fit, depth = 2)
+plot(m3.fit, depth = 2)
 
-names(problems)
-problems %>% filter(r_ev > safe) %>% summarise(m = mean(ev_diff)) # advantage risky: 2.99 
-problems %>% filter(r_ev < safe) %>% summarise(m = mean(ev_diff)) # advantage safe: 3.41
-skew %>% filter(rare=="unattractive") %>% summarise(m = mean(ev_diff)) # 2.44
-skew %>% filter(rare=="attractive") %>% summarise(m = mean(ev_diff)) # -4.26
-skew %>% filter(rare=="none") %>% summarise(m = mean(ev_diff)) # .548
+intercepts_m3 <- tibble(strategy = as.factor(1:100) ,
+                        intercept = coef(m3.fit)[1:100])
+logreg3 <- left_join(strategies, intercepts_m3, by=join_by(strategy))
+logreg3 <- logreg3 %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
+
+p3 <- logreg3 %>%  
+  filter(model == "summary") %>% 
+  ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "Probability of Safe Choice",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)
+
+### M4 
+m4 <- alist( 
+  nC ~ dbinom(200, theta) , # binomial 
+  logit(theta) <- a[S] + b1*EV_1 + b2*EV_2, 
+  a[S] ~ dnorm(0,2) ,
+  b1 ~ dnorm(0,2) , 
+  b2 ~ dnorm(0,2)
+)
+m4.fit <- ulam(m4, data=d, chains=8, cores=8, iter = 1000, cmdstan = TRUE)
+
+intercepts_m4 <- tibble(strategy = as.factor(1:100) ,
+                        intercept = coef(m4.fit)[1:100])
+logreg4 <- left_join(strategies, intercepts_m4, by=join_by(strategy))
+logreg4 <- logreg4 %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
+
+p4 <- logreg4 %>%  
+  filter(model == "summary") %>% 
+  ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(0, .4), breaks = seq(0, .4, .1)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y =  "Probability of Safe Choice",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20)
 
 
-ggplot(problems, aes(x=ev_diff)) + 
-  facet_wrap(~rare, nrow = 3) +
-  theme_minimal() + 
-  geom_density()
+p3
 
-ggplot(skew, aes(x=ad.diff)) + 
-  facet_wrap(~rare, nrow = 3) +
-  theme_minimal() + 
-  geom_density()
+# for different rare event conditions 
+ggplot(diff, aes(x=ev_diff_a, group = better_ev, fill = better_ev, color = better_ev)) +
+  facet_wrap(~rare) + 
+  geom_density() +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d(alpha = .5) + 
+  theme_minimal() 
 
+
+deviation_rates
+
+logreg
+
+#problems %>% filter(rare=="unattractive") %>% summarise(m = mean(ev_diff)) # 2.44
+#problems %>% filter(rare=="attractive") %>% summarise(m = mean(ev_diff)) # -4.26
+#problems %>% filter(rare=="none") %>% summarise(m = mean(ev_diff)) # .548
+View(choices)
 
 # granular 
-
 
 neutral_rates_attractive <- problems %>% 
   filter(rare == "attractive") %>% 
@@ -300,6 +403,29 @@ r_averse_roundwise_rare_event <- rates_rare_event %>%
 
 
 
+'skew <- problems %>% mutate(ad.safe = safe - r_low , 
+                            ad.risky = abs(safe - r_high) , 
+                            ad.diff = round(ad.safe - ad.risky, 3)
+)
+
+
+skew %>% filter(rare=="unattractive") %>% describe() # -.45
+skew %>% filter(rare=="attractive") %>% describe() # -.74
+skew %>% filter(rare=="none") %>% describe() # -.1
+
+
+ggplot(problems, aes(x=ev_diff)) + 
+  facet_wrap(~rare, nrow = 3) +
+  theme_minimal() + 
+  geom_density()
+
+ggplot(skew, aes(x=ad.diff)) + 
+  facet_wrap(~rare, nrow = 3) +
+  theme_minimal() + 
+  geom_density()'
+
+
+
 
 # Roundwise Comparison ----------------------------------------------------
 
@@ -325,7 +451,7 @@ deviation_rates %>%
 
 # predicted probability of false safe 
 
-logreg %>%  
+pr2 <- logreg2 %>%  
   filter(model == "roundwise") %>% 
   ggplot(aes(x=psi, y=p_false_safe, group=as.factor(theta), color=as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) +
@@ -339,7 +465,7 @@ logreg %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-# risk rate
+ggarrange(p2, pr2, nrow = 2)
 
 risk_rates %>% 
   filter(model=="roundwise", threshold=="relative", risk != "neutral") %>% 

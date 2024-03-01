@@ -2,12 +2,10 @@
 pacman::p_load(tidyverse, scico, ggbeeswarm)
 
 # data
+'summary <- read_rds("data/simulation_summary.rds.bz2")'
 
 ## pre-processing
-choice_sr_ext <- read_rds("supplements/starting option bias/choices_sr_ext.rds.bz2") 
-
-'summary <- read_rds("data/simulation_summary.rds.bz2") 
-choice_sr_ext <- summary %>%
+'choice_sr_ext <- summary %>%
   group_by(psi, threshold, theta, problem, agent) %>%
   mutate(sample = row_number(), 
          start = ifelse(sample == 1 & attended == "r", "r", ifelse(sample == 1 & attended == "s", "s", NA)), 
@@ -22,8 +20,8 @@ choice_sr_ext <- summary %>%
   filter(!is.na(choice), threshold == "relative") %>% # discard single samples
   mutate(psi = 1-(psi+.5)) %>% # to interpret psi as switching probability
   select(psi:problem, rare, p_r_low:ev_ratio, agent, n_sample, sample, start_o, n_s, n_r, ep_r_low, ep_r_high, mean_r, r_sum, s_sum, diff, choice)
-
 write_rds(choice_sr_ext, "supplements/starting option bias/choices_sr_ext.rds.bz2", compress = "bz2")'
+choice_sr_ext <- read_rds("supplements/starting option bias/choices_sr_ext.rds.bz2") 
 
 # labels 
 

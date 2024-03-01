@@ -310,66 +310,7 @@ left_join(strategies, intercepts_m_diff, by=join_by(strategy)) %>%
   theme_minimal()
 
 
-
-
-
-###### old
-
-d <- list(
-  S = dat$strategy , 
-  nC = dat$n_choice , 
-  EV = dat$better_ev ,
-  EV_diff = abs(dat$ev_diff) 
-)
-
-m2 <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV , 
-  a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2) 
-  
-)
-m2.fit <- ulam(m2, data=d, chains=8, cores=8, cmdstan = TRUE)
-
-strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts_m2 <- tibble(strategy = as.factor(1:100) ,
-                        intercept = coef(m2.fit)[1:100])
-logreg2 <- left_join(strategies, intercepts_m2, by=join_by(strategy))
-logreg2 <- logreg2 %>% mutate(p_false_risky = round(exp(intercept) / (1+exp(intercept)), 3))
-
-
-logreg2 %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=p_false_risky, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Probability of False Risky Choice",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-
-logreg1 <- as_data_frame(logreg1) 
-test <- as.double(logreg2$p_false_risky)
-comp <- logreg1 %>% mutate(p_false_risky = test)
-comp <- comp %>% mutate(diff = p_false_safe - p_false_risky)
-
-comp %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=diff, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Difference False Safe - False Risky",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
+###### Contrast to false risky?
 
 
 # safe
@@ -463,6 +404,9 @@ comp %>%
 
 comp %>% filter(model=="summary") %>% View()
 
+
+
+
 # granular 
 
 neutral_rates_attractive <- problems %>% 
@@ -522,7 +466,7 @@ rates_rare_event <-  rates_rare_event %>%
   )
 
 
-r_averse_summary_rare_event <- rates_rare_event %>%  
+rates_rare_event %>%  
   filter(model == "summary" & threshold == "relative") %>% 
   #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate_EV_control, group = theta, color = theta)) +
@@ -538,132 +482,6 @@ r_averse_summary_rare_event <- rates_rare_event %>%
   geom_point(size = 3) +
   geom_hline(yintercept = 0) +
   theme_minimal(base_size = 20)
-
-
-
-View(problems)
-problems %>% 
-  mutate(better_ev = if_else(safe > r_ev, 1, 0),
-         ev_diff_a = abs(ev_diff)) %>% 
-  View()
-
-
-dat <- choices %>%
-  filter(threshold=="relative", rare == "none") %>% 
-  mutate(choice = if_else(choice == "s",1,0), 
-         better_ev = if_else(safe > r_ev, 1, 0)) %>% 
-  select(model, theta, psi, choice, problem, ev_diff, better_ev) %>%
-  group_by(model, theta, psi) %>%
-  mutate(strategy = as.factor(cur_group_id())) %>% 
-  group_by(strategy, problem, ev_diff, better_ev, .add=T) %>% 
-  summarise(n_choice = sum(choice))
-
-d <- list(
-  S = dat$strategy , 
-  nC = dat$n_choice , 
-  EV = dat$better_ev ,
-  EV_diff = dat$ev_diff 
-)
-
-
-## fit model
-m <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV, 
-  a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
-)
-m.fit <- ulam(m, data=d, chains=8, cores=8, cmdstan = TRUE)
-
-## store results
-strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts_m <- tibble(strategy = as.factor(1:100) ,
-                        intercept = coef(m.fit)[1:100])
-logreg <- left_join(strategies, intercepts_m, by=join_by(strategy))
-logreg <- logreg %>% mutate(p_false_safe = round(exp(intercept) / (1+exp(intercept)), 3))
-
-
-
-logreg %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Difference False Safe - False Risky",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-dat <- choices %>%
-  filter(threshold=="relative", rare == "none") %>% 
-  mutate(choice = if_else(choice == "r",1,0), 
-         better_ev = if_else(r_ev > safe, 1, 0)) %>% 
-  select(model, theta, psi, choice, problem, ev_diff, better_ev) %>%
-  group_by(model, theta, psi) %>%
-  mutate(strategy = as.factor(cur_group_id())) %>% 
-  group_by(strategy, problem, ev_diff, better_ev, .add=T) %>% 
-  summarise(n_choice = sum(choice))
-
-d <- list(
-  S = dat$strategy , 
-  nC = dat$n_choice , 
-  EV = dat$better_ev ,
-  EV_diff = dat$ev_diff 
-)
-
-
-## fit model
-m10 <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV, 
-  a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
-)
-m10.fit <- ulam(m10, data=d, chains=8, cores=8, cmdstan = TRUE)
-
-## store results
-strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts_m10 <- tibble(strategy = as.factor(1:100) ,
-                       intercept = coef(m10.fit)[1:100])
-logreg10 <- left_join(strategies, intercepts_m10, by=join_by(strategy))
-logreg10 <- logreg10 %>% mutate(p_false_risky = round(exp(intercept) / (1+exp(intercept)), 3))
-
-logreg10 %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=p_false_risky, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Difference False Safe - False Risky",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-
-logreg <- as_data_frame(logreg) 
-p_risky <- as.double(logreg10$p_false_risky)
-comp <- logreg %>% mutate(p_false_risky = p_risky)
-comp <- comp %>% mutate(diff = p_false_safe - p_false_risky)
-
-comp %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=diff, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Difference False Safe - False Risky",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-
 
 
 # Roundwise Comparison ----------------------------------------------------

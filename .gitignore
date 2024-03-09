@@ -12,6 +12,9 @@ code/README.Rmd
 # additional data formats
 *.zip
 *.qmd
+*.docx
+*.ppt
+*.xlsx
 data/csv/
 data/rds/
 # posteriors

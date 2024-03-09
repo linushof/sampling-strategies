@@ -1,4 +1,4 @@
-library(tidyverse)
+pacman::p_load(tidyverse, scico)
 problems <- read_rds("data/choice_problems_balanced.rds")
 
 ###### Sampling strategy with summary comparison rule
@@ -129,11 +129,31 @@ data %>%
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_minimal(base_size = 20)
+  theme_minimal()
 
 
 ## risk aversion 
 
+### aggregate
+data %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  #facet_wrap(~rare) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+### rare event
 data %>% 
   group_by(rare, theta, psi) %>% 
   summarise(rate = mean(prop)) %>% 
@@ -150,4 +170,32 @@ data %>%
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_minimal(base_size = 20)
+  theme_minimal()
+
+
+### problem-wise
+data %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, prop, group = theta, color = theta)) +
+  facet_wrap(~problem, nrow=6) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+## asymmetric: 21, 22, 23, 24, 26, 27, 28, 29
+##  safe outcomes remain the same in the different environments
+## attractive rare event: better safe: in most cases, the safe outcome is markedly better than the probable risky outcome (in the direction of ev diff)
+## attractive rare event: better risky: in most cases, the safe outcome is markedly better than the probable risky outcome (against the direction ev differences -> under low thresholds, sampling error would cause false safe choices)
+## attractive rare event: from randomness to more systematic sampling error; where safe outcome is not much better, the binomial distribution is most skewed
+
+## unattractive rare event: better safe: in most cases, the attractive common event is only slightly better than the safe outcome
+## unattractive rare event: better risky: in most cases, the attractive common event is substantially better than the safe outcome
+
+problems %>% mutate(no = row_number()) %>% View()

@@ -44,6 +44,7 @@ deviation_rates <- choices %>%
   filter(!(safe_choice == 0)) %>% 
   mutate(deviation_rate = (rate - safe_prop)*100)
 
+
 ## Proportion of risk averse/seeking/neutral choices
 risk_rates <- choices %>% 
   filter(!c(n_s == 0 | n_r == 0)) %>% # 
@@ -212,7 +213,6 @@ risk_rates %>%
 
 # below, I check the explanation that the choice difficulty differs 
 
-
 ## conditioned on problems with better safe/risky EV
 
 diff <- problems %>% 
@@ -310,99 +310,100 @@ left_join(strategies, intercepts_m_diff, by=join_by(strategy)) %>%
   theme_minimal()
 
 
-###### Contrast to false risky?
+
+# difference in the probability of rare event 
 
 
-# safe
+pA <- problems %>% 
+  filter(rare == "attractive") %>% 
+  ggplot(aes(x=p_r_high)) + 
+  geom_density() + 
+  geom_histogram()+ 
+  labs(title="rare attractive", 
+       x="p(attractive)") + 
+  theme_minimal()
+
+pU <- problems %>% 
+  filter(rare == "unattractive") %>% 
+  ggplot(aes(x=p_r_low)) + 
+  geom_density() + 
+  geom_histogram() + 
+  labs(title="rare unattractive",
+       x="p(unattractive)") + 
+  theme_minimal()
+
+ggarrange(pA, pU, nrow = 2)
+  
+problems %>% 
+  filter(rare=="attractive") %>% 
+  describe()
+
+problems %>% 
+  filter(rare=="unattractive") %>% 
+  describe()
+
+# probability of the unattractive rare event is larger than the probability of the rare event 
+# in line with the prediction that there is an asymmetric sampling error
+# sampling error (underweighting of rare event) is stronger when the rare event is desirable,
+# leading to higher (lower) proportion of the safe (risky option) choices 
+# sampling error (underweighting of rare event) is less severe when the rare event is undesirable, 
+# leading to a lower (higher) proportion of the risky (safer) option 
+
 
 dat <- choices %>%
-  filter(threshold=="relative") %>% 
-  mutate(choice = if_else(choice == "s",1,0), 
-         better_ev = if_else(safe > r_ev, 1, 0)) %>% 
-  select(model, theta, psi, choice, problem, ev_diff, better_ev) %>%
+  filter(model == "summary", threshold=="relative") %>% 
+  mutate(choice = if_else(choice == "s",1,0) , 
+         EV_dummy = if_else(safe > r_ev, 1, 0), 
+         EV_effect = if_else(safe > r_ev, 1, -1)) %>% 
+  select(model, theta, psi, choice, problem, ev_diff, p_r_high, EV_dummy, EV_effect) %>%
   group_by(model, theta, psi) %>%
-  mutate(strategy = as.factor(cur_group_id())) %>% 
-  group_by(strategy, problem, ev_diff, better_ev, .add=T) %>% 
+  mutate(strategy = as.factor(cur_group_id()))
+
+names(choices)
+dat_effect <- dat %>% 
+  group_by(strategy, problem, ev_diff, p_r_high, EV_effect, .add=T) %>% 
   summarise(n_choice = sum(choice))
 
-d <- list(
-  S = dat$strategy , 
-  nC = dat$n_choice , 
-  EV = dat$better_ev ,
-  EV_diff = dat$ev_diff
+
+d_effect <- list(
+  S = dat_effect$strategy , 
+  nC = dat_effect$n_choice , 
+  EV_effect = dat_effect$EV_effect,
+  p_high = dat_effect$p_r_high
 )
 
-m3 <- alist( 
+
+## fit model
+m_effect <- alist( 
   nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV_diff , 
+  logit(theta) <- a[S] + b1*EV_effect + b2*p_high  , 
   a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
+  b1 ~ dnorm(0, 2) , 
+  b2 ~ dnorm(0,2)
 )
+m_effect_fit <- ulam(m_effect, data=d_effect, chains=8, cores=8, cmdstan = TRUE)
 
-m3.fit <- ulam(m3, data=d, chains=8, cores=8, cmdstan = TRUE)
+precis(m_effect_fit, depth = 2)
+plot(m_effect_fit)
 
-strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts_m3 <- tibble(strategy = as.factor(1:100) ,
-                        intercept = coef(m3.fit)[1:100])
-logreg3 <- left_join(strategies, intercepts_m3, by=join_by(strategy))
-logreg3 <- logreg3 %>% mutate(p_safe = round(exp(intercept) / (1+exp(intercept)), 3))
-logreg3 %>% filter(model == "summary") %>% View()
+## store results
+intercepts_m_effect <- tibble(strategy = as.factor(1:50) ,
+                              intercept = coef(m_effect_fit)[1:50])
 
-
-# risky
-
-dat <- choices %>%
-  filter(threshold=="relative") %>% 
-  mutate(choice = if_else(choice == "r",1,0), 
-         better_ev = if_else(r_ev > safe, 1, 0)) %>% 
-  select(model, theta, psi, choice, problem, ev_diff, better_ev) %>%
-  group_by(model, theta, psi) %>%
-  mutate(strategy = as.factor(cur_group_id())) %>% 
-  group_by(strategy, problem, ev_diff, better_ev, .add=T) %>% 
-  summarise(n_choice = sum(choice))
-
-d <- list(
-  S = dat$strategy , 
-  nC = dat$n_choice , 
-  EV = dat$better_ev ,
-  EV_diff = dat$ev_diff 
-)
-
-m4 <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV_diff , 
-  a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
-)
-
-m4.fit <- ulam(m4, data=d, chains=8, cores=8, cmdstan = TRUE)
-
-strategies <- dat %>% distinct(model, theta, psi, strategy)
-intercepts_m4 <- tibble(strategy = as.factor(1:100) ,
-                        intercept = coef(m4.fit)[1:100])
-logreg4 <- left_join(strategies, intercepts_m4, by=join_by(strategy))
-logreg4 <- logreg4 %>% mutate(p_risky = round(exp(intercept) / (1+exp(intercept)), 3))
-
-logreg3 <- as_data_frame(logreg3) 
-p_risky <- as.double(logreg4$p_risky)
-comp <- logreg3 %>% mutate(p_risky = p_risky)
-comp <- comp %>% mutate(diff = p_safe - p_risky)
-
-comp %>% filter(model=="summary") %>% View()
-comp %>%  
-  filter(model == "summary") %>% 
-  ggplot(aes(x=psi, y=diff, group=theta, color=theta)) +
+## plot results
+left_join(strategies, intercepts_m_effect, by=join_by(strategy)) %>% 
+  mutate(p_safe = round(exp(intercept) / (1+exp(intercept)), 3)) %>% 
+  ggplot(aes(x=psi, y=p_safe, group=theta, color=theta)) +
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
+       subtitle = "logit(p_safe) ~ a[strategy] + b1*EV_effect + b2*p_attractive" ,
        x = "Switching Probability\n(Search Rule)",
-       y =  "Difference False Safe - False Risky",
+       y =  "p_safe",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-comp %>% filter(model=="summary") %>% View()
+  theme_minimal()
 
 
 

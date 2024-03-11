@@ -157,12 +157,12 @@ points(psi.store,choice.store.unattract[3,], pch=19, col= "red")
 
 
 #Properties of the lottery problem
-out.safe <- 10
+out.safe <- 6
 p.safe <- 1
 
 #No rare event
-out.risky <- c(15,5)
-p.risky <- c(.5,.5)
+out.risky <- c(20,3.75)
+p.risky <- c(.2,.8)
 
 #Rare event is attractive
 #out.risky <- c(19,9)
@@ -187,7 +187,7 @@ for (k in 1:length(theta.store)){
     #psi <- .5 #Switching probability
     #theta <- 3 #Decision threshold
     
-    nRuns <- 100000
+    nRuns <- 10000
     choice <- vector(length = nRuns)
     
     for (i in 1:nRuns){

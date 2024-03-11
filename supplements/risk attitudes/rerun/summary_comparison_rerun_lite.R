@@ -107,8 +107,7 @@ problems <- problems %>% mutate(problem = row_number())
 data <- left_join(problems, results, by=join_by(problem)) %>% 
   select(problem, everything())
 write_rds(data, "supplements/risk attitudes/rerun/results_summary_rerun_lite.rds")
-
-
+data <- read_rds("supplements/risk attitudes/rerun/results_summary_rerun_lite.rds")
 
 # plot results 
 
@@ -144,7 +143,7 @@ data %>%
   #facet_wrap(~rare) + 
   scale_color_scico_d(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% Safe Choices",
@@ -160,10 +159,10 @@ data %>%
   mutate(theta = as.factor(theta) , 
          psi = as.double(psi)) %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare) + 
+  facet_wrap(~rare, nrow = 3) + 
   scale_color_scico_d(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% Safe Choices",
@@ -181,7 +180,7 @@ data %>%
   facet_wrap(~problem, nrow=6) + 
   scale_color_scico_d(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% Safe Choices",
@@ -197,5 +196,3 @@ data %>%
 
 ## unattractive rare event: better safe: in most cases, the attractive common event is only slightly better than the safe outcome
 ## unattractive rare event: better risky: in most cases, the attractive common event is substantially better than the safe outcome
-
-problems %>% mutate(no = row_number()) %>% View()

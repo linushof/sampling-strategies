@@ -7,7 +7,7 @@ pacman::p_load(tidyverse, scico, psych, rethinking, latex2exp, ggpubr)
 # load data
 problems <- read_rds("data/choice_problems.rds")
 choices <- read_rds("data/choice_data.rds.bz2")
-
+        
 # labels
 label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
@@ -100,19 +100,21 @@ dat_dummy <- dat %>%
 d_dummy <- list(
   S = dat_dummy$strategy , 
   nC = dat_dummy$n_choice , 
-  EV_dummy = dat_dummy$EV_dummy 
+  EV_dummy = dat_dummy$EV_dummy ,
+  EV_abs_diff = abs(dat_dummy$ev_diff)
 )
 
 
 ## fit model
 m_dummy <- alist( 
   nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV_dummy, 
+  logit(theta) <- a[S] + b[S]*EV_dummy, 
   a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
+  b[S] ~ dnorm(0,2)
 )
 m_dummy_fit <- ulam(m_dummy, data=d_dummy, chains=8, cores=8, cmdstan = TRUE)
-
+precis(m_dummy_fit, depth = 2)
+plot(m_dummy_fit, depth = 2)
 
 ## store results
 strategies <- dat %>% distinct(theta, psi, strategy)
@@ -125,6 +127,7 @@ left_join(strategies, intercepts_m_dummy, by=join_by(strategy)) %>%
   ggplot(aes(x=psi, y=p_false_safe, group=theta, color=theta)) +
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        subtitle = "Dummy: Probability of false safe choice" , 
        x = "Switching Probability\n(Search Rule)",
@@ -136,7 +139,7 @@ left_join(strategies, intercepts_m_dummy, by=join_by(strategy)) %>%
 
 
 # predicted probability of safe choice, given no EV differences (effect coding)
-
+dat
 dat_effect <- dat %>% 
   group_by(strategy, problem, ev_diff, EV_effect, .add=T) %>% 
   summarise(n_choice = sum(choice))
@@ -155,6 +158,7 @@ m_effect <- alist(
   b ~ dnorm(0,2)
 )
 m_effect_fit <- ulam(m_effect, data=d_effect, chains=8, cores=8, cmdstan = TRUE)
+precis(m_effect_fit, depth = 2)
 
 ## store results
 intercepts_m_effect <- tibble(strategy = as.factor(1:50) ,
@@ -166,6 +170,7 @@ left_join(strategies, intercepts_m_effect, by=join_by(strategy)) %>%
   ggplot(aes(x=psi, y=p_safe, group=theta, color=theta)) +
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        subtitle = "Effect: Probability of safe choice, given no (ordinal) EV differences" ,
        x = "Switching Probability\n(Search Rule)",
@@ -268,51 +273,7 @@ ggplot(diff, aes(x=ev_diff)) +
        color = "Mean")  
 
 
-### Statistical control for differences in EV magnitude
-
-dat_diff <- dat %>% 
-  group_by(strategy, problem, ev_diff, .add=T) %>% 
-  summarise(n_choice = sum(choice))
-
-d_diff <- list(
-  S = dat_diff$strategy , 
-  nC = dat_diff$n_choice , 
-  EV_diff = dat_diff$ev_diff 
-)
-
-
-## fit model
-m_diff <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b*EV_diff, 
-  a[S] ~ dnorm(0,2) ,
-  b ~ dnorm(0,2)
-)
-m_diff_fit <- ulam(m_diff, data=d_diff, chains=8, cores=8, cmdstan = TRUE)
-
-## store results
-intercepts_m_diff <- tibble(strategy = as.factor(1:50) ,
-                            intercept = coef(m_diff_fit)[1:50])
-
-## plot results
-left_join(strategies, intercepts_m_diff, by=join_by(strategy)) %>% 
-  mutate(p_safe = round(exp(intercept) / (1+exp(intercept)), 3)) %>% 
-  ggplot(aes(x=psi, y=p_safe, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       subtitle = "Effect: Probability of safe choice, given no (metric) EV differences" ,
-       x = "Switching Probability\n(Search Rule)",
-       y =  "Probability of Safe Choice",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-
-
-
 # difference in the probability of rare event 
-
 
 pA <- problems %>% 
   filter(rare == "attractive") %>% 
@@ -331,16 +292,7 @@ pU <- problems %>%
   labs(title="rare unattractive",
        x="p(unattractive)") + 
   theme_minimal()
-
 ggarrange(pA, pU, nrow = 2)
-  
-problems %>% 
-  filter(rare=="attractive") %>% 
-  describe()
-
-problems %>% 
-  filter(rare=="unattractive") %>% 
-  describe()
 
 # probability of the unattractive rare event is larger than the probability of the rare event 
 # in line with the prediction that there is an asymmetric sampling error
@@ -349,140 +301,6 @@ problems %>%
 # sampling error (underweighting of rare event) is less severe when the rare event is undesirable, 
 # leading to a lower (higher) proportion of the risky (safer) option 
 
-
-dat <- choices %>%
-  filter(model == "summary", threshold=="relative") %>% 
-  mutate(choice = if_else(choice == "s",1,0) , 
-         EV_dummy = if_else(safe > r_ev, 1, 0), 
-         EV_effect = if_else(safe > r_ev, 1, -1)) %>% 
-  select(model, theta, psi, choice, problem, ev_diff, p_r_high, EV_dummy, EV_effect) %>%
-  group_by(model, theta, psi) %>%
-  mutate(strategy = as.factor(cur_group_id()))
-
-names(choices)
-dat_effect <- dat %>% 
-  group_by(strategy, problem, ev_diff, p_r_high, EV_effect, .add=T) %>% 
-  summarise(n_choice = sum(choice))
-
-
-d_effect <- list(
-  S = dat_effect$strategy , 
-  nC = dat_effect$n_choice , 
-  EV_effect = dat_effect$EV_effect,
-  p_high = dat_effect$p_r_high
-)
-
-
-## fit model
-m_effect <- alist( 
-  nC ~ dbinom(200, theta) , 
-  logit(theta) <- a[S] + b1*EV_effect + b2*p_high  , 
-  a[S] ~ dnorm(0,2) ,
-  b1 ~ dnorm(0, 2) , 
-  b2 ~ dnorm(0,2)
-)
-m_effect_fit <- ulam(m_effect, data=d_effect, chains=8, cores=8, cmdstan = TRUE)
-
-precis(m_effect_fit, depth = 2)
-plot(m_effect_fit)
-
-## store results
-intercepts_m_effect <- tibble(strategy = as.factor(1:50) ,
-                              intercept = coef(m_effect_fit)[1:50])
-
-## plot results
-left_join(strategies, intercepts_m_effect, by=join_by(strategy)) %>% 
-  mutate(p_safe = round(exp(intercept) / (1+exp(intercept)), 3)) %>% 
-  ggplot(aes(x=psi, y=p_safe, group=theta, color=theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       subtitle = "logit(p_safe) ~ a[strategy] + b1*EV_effect + b2*p_attractive" ,
-       x = "Switching Probability\n(Search Rule)",
-       y =  "p_safe",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-
-
-
-
-# granular 
-
-neutral_rates_attractive <- problems %>% 
-  filter(rare == "attractive") %>% 
-  mutate(better_safe = case_when(safe > r_ev ~ 1, 
-                                 safe < r_ev ~ 0, 
-                                 safe == r_ev ~ NA)) %>% 
-  group_by(better_safe) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = count/sum(count))
-safe_prop_attractive <- round(neutral_rates_attractive[[2,3]], 3)
-
-neutral_rates_unattractive <- problems %>% 
-  filter(rare == "unattractive") %>% 
-  mutate(better_safe = case_when(safe > r_ev ~ 1, 
-                                 safe < r_ev ~ 0, 
-                                 safe == r_ev ~ NA)) %>% 
-  group_by(better_safe) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = count/sum(count))
-safe_prop_unattractive <- round(neutral_rates_unattractive[[2,3]], 3)
-
-neutral_rates_none <- problems %>% 
-  filter(rare == "none") %>% 
-  mutate(better_safe = case_when(safe > r_ev ~ 1, 
-                                 safe < r_ev ~ 0, 
-                                 safe == r_ev ~ NA)) %>% 
-  group_by(better_safe) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = count/sum(count))
-safe_prop_none <- round(neutral_rates_none[[2,3]], 3)
-
-safe_prop_attractive #.95 with randomness, risk seeking is expected
-safe_prop_unattractive #.1 with randomness, risk aversion is expected
-safe_prop_none #.55 with randomness, risk seeking is expected
-
-# according to the above logic, risk seeking should be stronger
-# but below, it is the other way around ... 
-#why is the risk aversion markedly stronger???
-# why do we obtain the U-Shape on the aggregate?
-
-
-rates_rare_event <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(r_averse = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
-  group_by(model, psi, threshold, theta, rare, r_averse) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>% 
-  filter(!(r_averse == 0))
-
-rates_rare_event <-  rates_rare_event %>% 
-  mutate(rate_EV_control = case_when(rare == "attractive" ~ (rate-safe_prop_attractive)*100 ,
-                                     rare == "unattractive" ~ (rate-safe_prop_unattractive)*100 , 
-                                     rare == "none" ~ (rate-safe_prop_none)*100
-  )
-  )
-
-
-rates_rare_event %>%  
-  filter(model == "summary" & threshold == "relative") %>% 
-  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
-  ggplot(aes(psi, rate_EV_control, group = theta, color = theta)) +
-  facet_wrap(~rare) + 
-  scale_color_scico(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-100, 100), breaks = seq(-100, 100, 10)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y =  "% Safe Choices \n Observed - Expected under EV max.",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_hline(yintercept = 0) +
-  theme_minimal(base_size = 20)
 
 
 # Roundwise Comparison ----------------------------------------------------

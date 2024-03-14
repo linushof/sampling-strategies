@@ -1,9 +1,9 @@
 pacman::p_load(tidyverse, scico, readxl)
-problems <- read_xlsx("data/choice_problems_revised.xlsx")
+problems <- read_rds("rerun/data/choice_problems_balanced.rds")
 
 # Define tested parameter values
-psi.store <- seq(.05, 1, .05) 
-theta.store <- c(1, 5, 10)
+psi.store <- c(.1, .3, .5, .7, .9) 
+theta.store <- c(1, 3, 5, 10)
 
 # list entry for each problem
 choice.store <- matrix(NA, ncol=length(psi.store),nrow = length(theta.store))
@@ -24,9 +24,6 @@ for (m in seq_len(nProblems)){
     for (j in 1:length(psi.store)){
     psi <- psi.store[j] #Switching probability
     theta <- theta.store[k] #Decision threshold
-    
-    #psi <- .5 #Switching probability
-    #theta <- 3 #Decision threshold
     
     nRuns <- 1000
     choice <- vector(length = nRuns)
@@ -51,57 +48,65 @@ for (m in seq_len(nProblems)){
         currentOption <- 0 #risky option
       }
       
-      #Start sampling
-      if (currentOption==1){
-        nSamples.safe <- nSamples.safe + 1
-        nRoundSamples.safe <- nRoundSamples.safe + 1
-        samples.safe <- samples.safe + out.safe[rbinom(1,1,p.safe)] 
-      } else {
-        nSamples.risky <- nSamples.risky + 1
-        nRoundSamples.risky <- nRoundSamples.risky + 1
-        samples.risky <- samples.risky + out.risky[rbinom(1,1,p.risky[2])+1] 
-      }
-      
-      roundstart <- TRUE
-      
+      # Start sampling and evidence accumulation
       while (abs(DV)<theta){
-        # Determine whether to switch or stay
-        switch <- rbinom(1,1,psi) 
-        if (switch==1){
-          currentOption <- abs(currentOption-1)
-          roundstart <- FALSE
-        } else {
-          currentOption <- currentOption
-        }
         
-        # Draw sample
-        if (currentOption==1){
-          nSamples.safe <- nSamples.safe + 1
-          nRoundSamples.safe <- nRoundSamples.safe + 1
-          samples.safe <- samples.safe + out.safe[rbinom(1,1,p.safe)] 
-        } else {
-          nSamples.risky <- nSamples.risky + 1
-          nRoundSamples.risky <- nRoundSamples.risky + 1
-          samples.risky <- samples.risky + out.risky[rbinom(1,1,p.risky[2])+1] 
-        }
-        
-        if (roundstart==FALSE){
-          DV <- DV + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))>0)*1 + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))<0)*-1
-          roundstart <- TRUE
-          if(initial.option==1){
-            currentOption <- 1
-            nRoundSamples.safe <- 1
-            samples.safe <- out.safe[rbinom(1,1,p.safe)]
-            nRoundSamples.risky <- 0
-            samples.risky <- 0
-          }else{
-            currentOption <- 0
-            nRoundSamples.safe <- 0
-            samples.safe <- 0
-            nRoundSamples.risky <- 1
-            samples.risky <- out.risky[rbinom(1,1,p.risky[2])+1]
+        while (currentOption==initial.option){
+          
+          # Draw samples from initial option
+          if (currentOption==1){
+            nSamples.safe <- nSamples.safe + 1
+            nRoundSamples.safe <- nRoundSamples.safe + 1
+            samples.safe <- samples.safe + out.safe[rbinom(1,1,p.safe)] 
+          } else {
+            nSamples.risky <- nSamples.risky + 1
+            nRoundSamples.risky <- nRoundSamples.risky + 1
+            samples.risky <- samples.risky + out.risky[rbinom(1,1,p.risky[2])+1] 
           }
-        } 
+          
+          # Determine whether to switch or stay
+          switch <- rbinom(1,1,psi) 
+          if (switch==1){
+            currentOption <- abs(currentOption-1) # after switch: currentOption != initial.option
+          } else {
+            currentOption <- currentOption
+          }
+        }
+        
+        # draw samples from the other (second) option
+        while (currentOption!=initial.option){
+          
+          # Draw samples from initial option
+          if (currentOption==1){
+            nSamples.safe <- nSamples.safe + 1
+            nRoundSamples.safe <- nRoundSamples.safe + 1
+            samples.safe <- samples.safe + out.safe[rbinom(1,1,p.safe)] 
+          } else {
+            nSamples.risky <- nSamples.risky + 1
+            nRoundSamples.risky <- nRoundSamples.risky + 1
+            samples.risky <- samples.risky + out.risky[rbinom(1,1,p.risky[2])+1] 
+          }
+          
+          # Determine whether to switch or stay
+          switch <- rbinom(1,1,psi) 
+          if (switch==1){
+            currentOption <- abs(currentOption-1) #after switch: currentOption == initial.option
+          } else {
+            currentOption <- currentOption
+          }
+        }
+        
+        # Make roundwise comparison
+        DV <- DV + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))>0)*1 + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))<0)*-1
+
+        
+        # Reset roundwise values and loop until abs(DV) == theta
+        nRoundSamples.safe <- 0
+        samples.safe <- 0
+        nRoundSamples.risky <- 0
+        samples.risky <- 0
+        
+
       }
       
       if (DV>0){
@@ -119,13 +124,13 @@ for (m in seq_len(nProblems)){
 
 # store results
 for (set in 1:length(problem.store)){ 
-  dimnames(problem.store[[set]]) <- list(c("1", "5", "10"), c("0.05", "0.1", "0.15", "0.2", "0.25", "0.3", "0.35", "0.4", "0.45", "0.5", "0.55", "0.6",  "0.65", "0.7",  "0.75", "0.8",  "0.85", "0.9",  "0.95", "1"  ))
+  dimnames(problem.store[[set]]) <- list(c("1", "3", "5", "10"), c(".1", ".3", ".5", ".7", ".9"))
   problem.store[[set]] <- as.data.frame(problem.store[[set]])
   
   problem.store[[set]] <- problem.store[[set]] %>% 
-    mutate(theta = c(1, 5, 10),
+    mutate(theta = c(1, 3, 5, 10),
            problem = set) %>% 
-    pivot_longer(names_to = "psi", values_to = "prop", cols = `0.05`:`1`) %>% 
+    pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`.9`) %>% 
     select(problem, theta, psi, prop)
 }
 
@@ -133,7 +138,7 @@ results <- bind_rows(problem.store)
 problems <- problems %>% mutate(problem = row_number())
 data <- left_join(problems, results, by=join_by(problem)) %>% 
   select(problem, everything())
-write_rds(data, "supplements/risk attitudes/rerun/results_comparison_rerun_lite.rds")
+#write_rds(data, "supplements/risk attitudes/rerun/results_comparison_rerun_lite.rds")
 
 # plot results 
 

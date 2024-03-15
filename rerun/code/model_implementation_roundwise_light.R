@@ -3,7 +3,7 @@ problems <- read_rds("rerun/data/choice_problems_balanced.rds")
 
 # Define tested parameter values
 psi.store <- c(.1, .3, .5, .7, .9) 
-theta.store <- c(1, 3, 5, 10)
+theta.store <- c(1, 3, 5)
 
 # list entry for each problem
 choice.store <- matrix(NA, ncol=length(psi.store),nrow = length(theta.store))
@@ -66,6 +66,7 @@ for (m in seq_len(nProblems)){
           
           # Determine whether to switch or stay
           switch <- rbinom(1,1,psi) 
+          #switch <- sample(1:0, size=1,replace=T, prob = c(psi, 1-psi))
           if (switch==1){
             currentOption <- abs(currentOption-1) # after switch: currentOption != initial.option
           } else {
@@ -89,6 +90,7 @@ for (m in seq_len(nProblems)){
           
           # Determine whether to switch or stay
           switch <- rbinom(1,1,psi) 
+          #switch <- sample(1:0, size=1,replace=T, prob = c(psi, 1-psi))
           if (switch==1){
             currentOption <- abs(currentOption-1) #after switch: currentOption == initial.option
           } else {
@@ -98,7 +100,7 @@ for (m in seq_len(nProblems)){
         
         # Make roundwise comparison
         DV <- DV + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))>0)*1 + (((samples.safe/nRoundSamples.safe)-(samples.risky/nRoundSamples.risky))<0)*-1
-
+        #print(paste(m, i, theta, psi, initial.option, nRoundSamples.safe, nRoundSamples.risky)) 
         
         # Reset roundwise values and loop until abs(DV) == theta
         nRoundSamples.safe <- 0
@@ -124,11 +126,11 @@ for (m in seq_len(nProblems)){
 
 # store results
 for (set in 1:length(problem.store)){ 
-  dimnames(problem.store[[set]]) <- list(c("1", "3", "5", "10"), c(".1", ".3", ".5", ".7", ".9"))
+  dimnames(problem.store[[set]]) <- list(c("1", "3", "5"), c(".1", ".3", ".5", ".7", ".9"))
   problem.store[[set]] <- as.data.frame(problem.store[[set]])
   
   problem.store[[set]] <- problem.store[[set]] %>% 
-    mutate(theta = c(1, 3, 5, 10),
+    mutate(theta = c(1, 3, 5),
            problem = set) %>% 
     pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`.9`) %>% 
     select(problem, theta, psi, prop)
@@ -143,6 +145,8 @@ data <- left_join(problems, results, by=join_by(problem)) %>%
 # plot results 
 
 ## maximization
+
+### aggregate
 data %>% 
   mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
   group_by(theta, psi) %>% 
@@ -161,7 +165,7 @@ data %>%
   geom_point(size = 3) +
   theme_minimal()
 
-
+### rare event
 data %>% 
   mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
   group_by(theta, psi, rare) %>% 
@@ -178,7 +182,28 @@ data %>%
        y = "% EV Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
-  geom_point(size = 3) 
+  geom_point(size = 3) + 
+  theme_minimal()
+
+
+### problem-wise
+data %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, maxprop, group = theta, color = theta)) +
+  facet_wrap(~problem, nrow=6) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) + 
+  theme_minimal()
+
 
 
 ## risk aversion 
@@ -193,7 +218,7 @@ data %>%
   #facet_wrap(~rare) + 
   scale_color_scico_d(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
+  #scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% Safe Choices",
@@ -209,10 +234,10 @@ data %>%
   mutate(theta = as.factor(theta) , 
          psi = as.double(psi)) %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare) + 
+  facet_wrap(~rare, nrow=3) + 
   scale_color_scico_d(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% Safe Choices",

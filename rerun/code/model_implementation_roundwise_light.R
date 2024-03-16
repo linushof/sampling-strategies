@@ -2,13 +2,19 @@ pacman::p_load(tidyverse, scico, readxl)
 problems <- read_rds("rerun/data/choice_problems_balanced.rds")
 
 # Define tested parameter values
-psi.store <- c(.1, .3, .5, .7, .9) 
-theta.store <- c(1, 3, 5)
+psi.store <- seq(.1, 1, .1) 
+theta.store <- seq(1, 10, 1)
 
 # list entry for each problem
-choice.store <- matrix(NA, ncol=length(psi.store),nrow = length(theta.store))
 nProblems <- nrow(problems)
-problem.store <- param_list <- vector("list", nProblems) 
+
+## choices
+problem.store.choices <- vector("list", nProblems) 
+choice.store <- matrix(NA, ncol=length(psi.store),nrow = length(theta.store))
+
+## samples
+problem.store.samples <- vector("list", nProblems) 
+sample.store <- matrix(NA, ncol=length(psi.store),nrow = length(theta.store))
 
 
 for (m in seq_len(nProblems)){
@@ -25,8 +31,9 @@ for (m in seq_len(nProblems)){
     psi <- psi.store[j] #Switching probability
     theta <- theta.store[k] #Decision threshold
     
-    nRuns <- 1000
+    nRuns <- 10000
     choice <- vector(length = nRuns)
+    samples <- vector(length = nRuns)
     
     for (i in 1:nRuns){
       
@@ -116,162 +123,53 @@ for (m in seq_len(nProblems)){
       } else {
         choice[i] <- 0 #risky option chosen
       }
+      
+      samples[i] <- nSamples.safe + nSamples.risky
+      
     }
     choice.store[k,j] <- mean(choice)
+    sample.store[k,j] <- mean(samples)
   }
   }
-  problem.store[[m]] <- choice.store
+  problem.store.choices[[m]] <- choice.store
+  problem.store.samples[[m]] <-  sample.store
   print(paste("\u2713 Problem No. ", m, " finished!"))
 }
 
 # store results
-for (set in 1:length(problem.store)){ 
-  dimnames(problem.store[[set]]) <- list(c("1", "3", "5"), c(".1", ".3", ".5", ".7", ".9"))
-  problem.store[[set]] <- as.data.frame(problem.store[[set]])
+
+
+## choices
+for (set in 1:length(problem.store.choices)){ 
+  dimnames(problem.store.choices[[set]]) <- list(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
+                                         c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  problem.store.choices[[set]] <- as.data.frame(problem.store.choices[[set]])
   
-  problem.store[[set]] <- problem.store[[set]] %>% 
-    mutate(theta = c(1, 3, 5),
+  problem.store.choices[[set]] <- problem.store.choices[[set]] %>% 
+    mutate(theta = seq(1, 10, 1),
            problem = set) %>% 
-    pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`.9`) %>% 
+    pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, prop)
 }
+results.choices <- bind_rows(problem.store.choices)
 
-results <- bind_rows(problem.store)
+## samples
+for (set in 1:length(problem.store.samples)){ 
+  dimnames(problem.store.samples[[set]]) <- list(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
+                                                 c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  problem.store.samples[[set]] <- as.data.frame(problem.store.samples[[set]])
+  
+  problem.store.samples[[set]] <- problem.store.samples[[set]] %>% 
+    mutate(theta = seq(1, 10, 1),
+           problem = set) %>% 
+    pivot_longer(names_to = "psi", values_to = "samples", cols = `.1`:`1`) %>% 
+    select(problem, theta, psi, samples)
+}
+results.samples <- bind_rows(problem.store.samples)
+
+results <- left_join(results.choices, results.samples, by=join_by(problem, theta, psi))
 problems <- problems %>% mutate(problem = row_number())
 data <- left_join(problems, results, by=join_by(problem)) %>% 
   select(problem, everything())
-#write_rds(data, "supplements/risk attitudes/rerun/results_comparison_rerun_lite.rds")
 
-# plot results 
-
-## maximization
-
-### aggregate
-data %>% 
-  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
-  group_by(theta, psi) %>% 
-  summarise(rate = mean(maxprop)) %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% EV Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-
-### rare event
-data %>% 
-  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
-  group_by(theta, psi, rare) %>% 
-  summarise(rate = mean(maxprop)) %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare, nrow=3) + 
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% EV Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) + 
-  theme_minimal()
-
-
-### problem-wise
-data %>% 
-  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, maxprop, group = theta, color = theta)) +
-  facet_wrap(~problem, nrow=6) + 
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% EV Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) + 
-  theme_minimal()
-
-
-
-## risk aversion 
-
-### aggregate
-data %>% 
-  group_by(theta, psi) %>% 
-  summarise(rate = mean(prop)) %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  #facet_wrap(~rare) + 
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  #scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-
-### rare event
-data %>% 
-  group_by(rare, theta, psi) %>% 
-  summarise(rate = mean(prop)) %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare, nrow=3) + 
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-
-
-### problem-wise
-data %>% 
-  mutate(theta = as.factor(theta) , 
-         psi = as.double(psi)) %>% 
-  ggplot(aes(psi, prop, group = theta, color = theta)) +
-  facet_wrap(~problem, nrow=6) + 
-  scale_color_scico_d(palette = "imola", alpha = .7) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, .6), breaks = seq(.4, .6, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal()
-## asymmetric: 21, 22, 23, 24, 26, 27, 28, 29
-##  safe outcomes remain the same in the different environments
-## attractive rare event: better safe: in most cases, the safe outcome is markedly better than the probable risky outcome (in the direction of ev diff)
-## attractive rare event: better risky: in most cases, the safe outcome is markedly better than the probable risky outcome (against the direction ev differences -> under low thresholds, sampling error would cause false safe choices)
-## attractive rare event: from randomness to more systematic sampling error; where safe outcome is not much better, the binomial distribution is most skewed
-
-## unattractive rare event: better safe: in most cases, the attractive common event is only slightly better than the safe outcome
-## unattractive rare event: better risky: in most cases, the attractive common event is substantially better than the safe outcome
-
-problems %>% mutate(no = row_number()) %>% View()
-
-#test
+write_rds(data, "rerun/data/rerun_lite_results_roundwise.rds")

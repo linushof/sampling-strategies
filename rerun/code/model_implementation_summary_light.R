@@ -1,4 +1,4 @@
-pacman::p_load(tidyverse, scico, readxl)
+pacman::p_load(tidyverse, scico)
 problems <- read_rds("rerun/data/choice_problems_balanced.rds")
 
 ###### Sampling strategy with summary comparison rule
@@ -6,7 +6,6 @@ problems <- read_rds("rerun/data/choice_problems_balanced.rds")
 # Define tested parameter values
 psi.store <- seq(.1, 1, .1)
 theta.store <- seq(100, 1000, 100)
-
 
 # list entry for each problem
 nProblems <- nrow(problems)
@@ -34,7 +33,8 @@ for (m in seq_len(nProblems)){
     for (j in 1:length(psi.store)){
       psi <- psi.store[j] #Switching probability
       theta <- theta.store[k]
-      nRuns <- 10000
+      #nRuns <- 10000
+      nRuns <- 2000
       
       choice <- vector(length = nRuns)
       samples <- vector(length = nRuns)
@@ -106,12 +106,12 @@ for (m in seq_len(nProblems)){
 
 ## choices
 for (set in 1:length(problem.store.choices)){ 
-  dimnames(problem.store.choices[[set]]) <- list(c("100", "200", "300", "400", "500", "600", "700", "800", "900", "1000"),
-                                                 c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  dimnames(problem.store.choices[[set]]) <- list(as.character(theta.store),
+                                                 as.character(psi.store))
   problem.store.choices[[set]] <- as.data.frame(problem.store.choices[[set]])
   
   problem.store.choices[[set]] <- problem.store.choices[[set]] %>% 
-    mutate(theta = seq(100, 1000, 100),
+    mutate(theta = theta.store,
            problem = set) %>% 
     pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, prop)
@@ -120,12 +120,12 @@ results.choices <- bind_rows(problem.store.choices)
 
 ## samples
 for (set in 1:length(problem.store.samples)){ 
-  dimnames(problem.store.samples[[set]]) <- list(c("100", "200", "300", "400", "500", "600", "700", "800", "900", "1000"),
-                                                 c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  dimnames(problem.store.samples[[set]]) <- list(as.character(theta.store),
+                                                 as.character(psi.store))
   problem.store.samples[[set]] <- as.data.frame(problem.store.samples[[set]])
   
   problem.store.samples[[set]] <- problem.store.samples[[set]] %>% 
-    mutate(theta = seq(100, 1000, 100),
+    mutate(theta = theta.store,
            problem = set) %>% 
     pivot_longer(names_to = "psi", values_to = "samples", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, samples)

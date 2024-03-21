@@ -141,12 +141,12 @@ for (m in seq_len(nProblems)){
 
 ## choices
 for (set in 1:length(problem.store.choices)){ 
-  dimnames(problem.store.choices[[set]]) <- list(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
-                                         c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  dimnames(problem.store.choices[[set]]) <- list(as.character(theta.store),
+                                                 as.character(psi.store))
   problem.store.choices[[set]] <- as.data.frame(problem.store.choices[[set]])
   
   problem.store.choices[[set]] <- problem.store.choices[[set]] %>% 
-    mutate(theta = seq(1, 10, 1),
+    mutate(theta = theta.store,
            problem = set) %>% 
     pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, prop)
@@ -155,12 +155,12 @@ results.choices <- bind_rows(problem.store.choices)
 
 ## samples
 for (set in 1:length(problem.store.samples)){ 
-  dimnames(problem.store.samples[[set]]) <- list(c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
-                                                 c(".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9", "1"))
+  dimnames(problem.store.samples[[set]]) <- list(as.character(theta.store),
+                                                 as.character(psi.store))
   problem.store.samples[[set]] <- as.data.frame(problem.store.samples[[set]])
   
   problem.store.samples[[set]] <- problem.store.samples[[set]] %>% 
-    mutate(theta = seq(1, 10, 1),
+    mutate(theta = theta.store,
            problem = set) %>%
     pivot_longer(names_to = "psi", values_to = "samples", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, samples)

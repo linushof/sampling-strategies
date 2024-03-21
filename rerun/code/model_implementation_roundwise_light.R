@@ -161,7 +161,7 @@ for (set in 1:length(problem.store.samples)){
   
   problem.store.samples[[set]] <- problem.store.samples[[set]] %>% 
     mutate(theta = seq(1, 10, 1),
-           problem = set) %>% 
+           problem = set) %>%
     pivot_longer(names_to = "psi", values_to = "samples", cols = `.1`:`1`) %>% 
     select(problem, theta, psi, samples)
 }

@@ -3,12 +3,11 @@ pacman::p_load(tidyverse, digest, crayon)
 source("code/helper_functions/fun_compute_cumulative_stats.R") # call functions for computing cumulative stats
 
 # test set
-choice_problems <- read_rds("data/choice_problems.rds")
+problems <- read_rds("data/choice_problems.rds")
 n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
 param <- expand_grid(psi = seq(-.5, .4, .1) , # probability increment added to unbiased sampling probability of p = .5 (switching probability)
-                     threshold = c("absolute", "relative") , # threshold type
                      theta = seq(15, 75, 15)) # thresholds
 
 # simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
@@ -58,16 +57,10 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 
         ### after each sample, check if accumulated evidence reached threshold
 
-        if(param[[set, "threshold"]] == "absolute") {
-          fd <- fd %>%
-            mutate(choice = case_when(r_sum >= param[[set, "theta"]] ~ "r" ,
-                                      s_sum >= param[[set, "theta"]] ~ "s"))
-          } else {
-            fd <- fd %>%
-              mutate(diff = round(r_sum - s_sum, 2) ,
-                     choice = case_when(diff >= param[[set, "theta"]] ~ "r",
-                                      diff <= -1*param[[set, "theta"]] ~ "s"))
-        }
+        fd <- fd %>%
+          mutate(diff = round(r_sum - s_sum, 2) ,
+                 choice = case_when(diff >= param[[set, "theta"]] ~ "r",
+                                    diff <= -1*param[[set, "theta"]] ~ "s"))
 
         ### if threshold isn't reached, draw new sample according to psi
 

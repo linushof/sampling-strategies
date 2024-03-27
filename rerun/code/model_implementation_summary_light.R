@@ -33,8 +33,7 @@ for (m in seq_len(nProblems)){
     for (j in 1:length(psi.store)){
       psi <- psi.store[j] #Switching probability
       theta <- theta.store[k]
-      #nRuns <- 10000
-      nRuns <- 2000
+      nRuns <- 10000
       
       choice <- vector(length = nRuns)
       samples <- vector(length = nRuns)
@@ -113,7 +112,7 @@ for (set in 1:length(problem.store.choices)){
   problem.store.choices[[set]] <- problem.store.choices[[set]] %>% 
     mutate(theta = theta.store,
            problem = set) %>% 
-    pivot_longer(names_to = "psi", values_to = "prop", cols = `.1`:`1`) %>% 
+    pivot_longer(names_to = "psi", values_to = "prop", cols = `0.1`:`1`) %>% 
     select(problem, theta, psi, prop)
 }
 results.choices <- bind_rows(problem.store.choices)
@@ -127,7 +126,7 @@ for (set in 1:length(problem.store.samples)){
   problem.store.samples[[set]] <- problem.store.samples[[set]] %>% 
     mutate(theta = theta.store,
            problem = set) %>% 
-    pivot_longer(names_to = "psi", values_to = "samples", cols = `.1`:`1`) %>% 
+    pivot_longer(names_to = "psi", values_to = "samples", cols = `0.1`:`1`) %>% 
     select(problem, theta, psi, samples)
 }
 results.samples <- bind_rows(problem.store.samples)

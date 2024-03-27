@@ -30,8 +30,13 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 
       ## parameters to initiate trials with
       
-      fd <- data.frame() # storage for sampled outcomes (fd = frequency distribution)
-      attented <- c()
+      attended <- NULL
+      samples_r <- NULL
+      samples_s <- NULL
+      DV_risky <- NULL
+      DV_safe <- NULL
+      DV_trace <- NULL
+      
       boundary_reached <- FALSE
       
       init <- sample(c("r", "s"), size=1) # option attended first; no attention bias
@@ -43,46 +48,41 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
         
         attended <- c(attended, attend)
         
-        ### draw single sample from either risky (r) or safe (s) option
+        ### draw sample and update evidence for respective option
 
         if(attend == "r") {
           
-          single_smpl <- choice_problems[problem, ] %>%
-            mutate(attended = attend ,
-                   r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)) ,
-                   s = NA)
+          sampled_outcome <- sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high))
+          samples_r <- c(samples_r, sampled_outcome)
+          samples_s <- c(samples_s, NA)
+          DV_risky <- DV_risky + sampled_outcome
+          
           p_attend_r <- 1-psi
           
           } else {
             
-            single_smpl <- choice_problems[problem, ] %>%
-              mutate(attended = attend ,
-                     r = NA ,
-                   s = safe)
+            samples_s <- c(samples_s, safe)
+            samples_r <- c(samples_r, NA)
+            DV_safe <- DV_safe + safe
+            
             p_attend_r <- psi
             
           }
         
-        ### add sample to other sampled outcomes and update evidence
+        ### check if accumulated evidence reached threshold
         
-        fd <- bind_rows(fd, single_smpl) %>%
-          mutate(r_sum = cumsum2(r, na.rm = TRUE) ,
-                 s_sum = cumsum2(s, na.rm = TRUE))
-
-        ### after each sample, check if accumulated evidence reached threshold
-
-        fd <- fd %>%
-          mutate(diff = round(r_sum - s_sum, 2) ,
-                 choice = case_when(diff >= theta ~ "r",
-                                    diff <= -1*theta ~ "s"))
+        DV <- DV_risky - DV_safe # returns NA if not at least one sample from each option has been drawn
+        DV_trace <- c(DV_trace, DV)
+        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
 
         ### if threshold isn't reached, draw new sample according to psi
 
-        if(is.na(fd[[nrow(fd), "choice"]]) == FALSE) {
-          boundary_reached <- TRUE
+        if(is.na(choice)) {
+          attend <- sample(c("r", "s"), size=1, prob=c(p_attend_r, 1-p_attend_r))
         } else {
-          attend <- sample(c("r", "s"), size=1, prob = c(p_attend_r, 1-p_attend_r))
+          boundary_reached <- TRUE
         }
+        
       } # close loop choice trial
       agents_list[[agent]] <- expand.grid(agent, fd)
     } # close loop agents

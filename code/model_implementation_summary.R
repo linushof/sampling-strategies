@@ -7,7 +7,7 @@ problems <- read_rds("data/choice_problems.rds")
 n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
-param <- expand_grid(psi = seq(-.5, .4, .1) , # probability increment added to unbiased sampling probability of p = .5 (switching probability)
+param <- expand.grid(psi = seq(-.5, .4, .1) , # probability increment added to unbiased sampling probability of p = .5 (switching probability)
                      theta = seq(15, 75, 15)) # thresholds
 
 # simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
@@ -22,7 +22,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 
       ## parameters to initiate trials with
       
-      fd <- tibble() # storage for sampled outcomes (fd = frequency distribution)
+      fd <- data.frame() # storage for sampled outcomes (fd = frequency distribution)
       p <- .5  # no attention bias
       psi <- 0
       init <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi)) # option attended first
@@ -70,14 +70,14 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
           attend <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi))
         }
       } # close loop choice trial
-      agents_list[[agent]] <- expand_grid(agent, fd)
+      agents_list[[agent]] <- expand.grid(agent, fd)
     } # close loop agents
     all_agents <- agents_list %>% bind_rows()
-    problem_list[[problem]] <- expand_grid(problem, all_agents)
+    problem_list[[problem]] <- expand.grid(problem, all_agents)
     print(paste("\u2713 Parameter Set No. ", set, ", Problem No. ", problem, " finished!"))
   } # close loop choice problems
   all_problems <- problem_list %>% bind_rows()
-  param_list[[set]] <- expand_grid(param[set, ], all_problems)
+  param_list[[set]] <- expand.grid(param[set, ], all_problems)
 } # close loop parameters
 simulation_summary <- param_list %>% bind_rows()
 

@@ -7,7 +7,7 @@ problems <- read_rds("data/choice_problems.rds")
 n_agents <- 200 # number of synthetic agents
 
 # simulation parameters
-param <- expand.grid(psi = seq(-.5, .4, .1) , # probability increment added to unbiased sampling probability of p = .5 (switching probability)
+param <- expand.grid(psi = seq(.1, 1, .1) , # switching probability
                      theta = seq(15, 75, 15)) # thresholds
 
 # simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
@@ -15,38 +15,52 @@ param <- expand.grid(psi = seq(-.5, .4, .1) , # probability increment added to u
 set.seed(19543)
 param_list <- vector("list", nrow(param)) 
 for (set in seq_len(nrow(param))) { # loop over parameter combinations
+  
+  psi <- param[[set,"psi"]]
+  theta <- param[[set, "theta"]]
+  
   problem_list <- vector("list", nrow(choice_problems))
+  
   for (problem in seq_len(nrow(choice_problems))) { # loop over choice problems
+    
+    # retrieve problem features here
+    
     agents_list <- vector("list", n_agents)
     for (agent in seq_along(1:n_agents)){ # loop over agents
 
       ## parameters to initiate trials with
       
       fd <- data.frame() # storage for sampled outcomes (fd = frequency distribution)
-      p <- .5  # no attention bias
-      psi <- 0
-      init <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi)) # option attended first
-      attend <- init
+      attented <- c()
       boundary_reached <- FALSE
+      
+      init <- sample(c("r", "s"), size=1) # option attended first; no attention bias
+      attend <- init
 
       ## sampling and accumulation process
       
       while(boundary_reached == FALSE) {
         
+        attended <- c(attended, attend)
+        
         ### draw single sample from either risky (r) or safe (s) option
 
         if(attend == "r") {
+          
           single_smpl <- choice_problems[problem, ] %>%
             mutate(attended = attend ,
                    r = sample(x = c(r_low, r_high), size = 1, prob = c(p_r_low, p_r_high)) ,
                    s = NA)
-          psi <- param[[set, "psi"]] # to update the probability of sampling from r again
+          p_attend_r <- 1-psi
+          
           } else {
+            
             single_smpl <- choice_problems[problem, ] %>%
               mutate(attended = attend ,
                      r = NA ,
                    s = safe)
-            psi <- -1*param[[set, "psi"]] # to update the probability of sampling from s again
+            p_attend_r <- psi
+            
           }
         
         ### add sample to other sampled outcomes and update evidence
@@ -59,15 +73,15 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 
         fd <- fd %>%
           mutate(diff = round(r_sum - s_sum, 2) ,
-                 choice = case_when(diff >= param[[set, "theta"]] ~ "r",
-                                    diff <= -1*param[[set, "theta"]] ~ "s"))
+                 choice = case_when(diff >= theta ~ "r",
+                                    diff <= -1*theta ~ "s"))
 
         ### if threshold isn't reached, draw new sample according to psi
 
         if(is.na(fd[[nrow(fd), "choice"]]) == FALSE) {
           boundary_reached <- TRUE
         } else {
-          attend <- sample(c("r", "s"), size = 1, prob = c(p + psi, p - psi))
+          attend <- sample(c("r", "s"), size=1, prob = c(p_attend_r, 1-p_attend_r))
         }
       } # close loop choice trial
       agents_list[[agent]] <- expand.grid(agent, fd)

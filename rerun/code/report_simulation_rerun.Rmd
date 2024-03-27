@@ -1,0 +1,540 @@
+---
+title: "Sampling Strategies: Behavioral Results"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(pacman)
+p_load(tidyverse, scico, patchwork, here, knitr)
+
+#data 
+here::i_am("rerun/report_simulation_rerun.Rmd")
+data_summary <- read_rds(here("rerun", "data", "rerun_lite_results_summary.rds"))
+data_roundwise <- read_rds(here("rerun", "data", "rerun_lite_results_roundwise.rds"))
+problems <- read_rds(here("rerun", "data", "choice_problems_balanced.rds"))
+```
+
+# Problem Set
+
+| Rare Event Condition | Safe \> EV_Risky | Safe \< EV_Riskky | Total  |
+|:---------------------|:-----------------|:------------------|:-------|
+| No rare event        | 10               | 10                | **20** |
+| Attractive           | 10               | 10                | **20** |
+| Unattractive         | 10               | 10                | **20** |
+| **Total**            | **30**           | **30**            | **60** |
+
+-   Attractive rare event ($r_1 > safe$): $p_{r_1}=\{.02, .05, .10, .15, .20\}$
+
+-   Unattractive rare event ($r_1 < safe$): $p_{r_1}=\{.02, .05, .10, .15, .20\}$
+
+```{r echo=FALSE}
+problems %>% mutate(problem = row_number()) %>% select(problem, everything()) %>% kable()
+```
+
+# Simulated Strategies
+
+| Building Block  | Simulated Levels                                   |
+|-----------------|----------------------------------------------------|
+| Comparison rule | Summary, roundwise                                 |
+| Search rule     | $.1$, $.2$, ..., $1$                               |
+| Stopping rule   | $100$, $200$, ..., $1000$ (for summary comparison) |
+|                 | $1$, $2$, ..., $10$ (for roundwise comparison)     |
+
+-   Each strategy (rule combination) was used $10,000$ times to solve the entire problem set, that is, $10,000 \cdot 60 = 600,000$ choices per strategy combination.
+
+# Sample Size
+
+Plots show the average number of sampled outcomes, separately for each sampling strategy.
+
+```{r echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+samples_summary <- data_summary %>% 
+  group_by(theta, psi) %>% 
+  summarise(mean.samples = mean(samples), 
+            median.samples = median(samples)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, mean.samples, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "Average Sample Size",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+
+samples_roundwise <- data_roundwise %>% 
+  group_by(theta, psi) %>% 
+  summarise(mean.samples = mean(samples), 
+            median.samples = median(samples)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, mean.samples, group = theta, color = theta)) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+samples <- samples_summary + samples_roundwise
+samples
+```
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Summary Comparison                                                                                                                                                                                                                                                                                                                      | Roundwise Comparison                                                                                                                                                                                                                                                     |
++=========================================================================================================================================================================================================================================================================================================================================+==========================================================================================================================================================================================================================================================================+
+| *Similar patterns as in the original simulation.*                                                                                                                                                                                                                                                                                       | *Similar patterns as in the original simulation.*                                                                                                                                                                                                                        |
+|                                                                                                                                                                                                                                                                                                                                         |                                                                                                                                                                                                                                                                          |
+| -   The sample size increases with increasing switching probability and increasing thresholds. Under high switching probabilities, evidence accumulation is more balanced, slowing down the rate with which an option approaches a threshold. Higher thresholds require more sampled evidence, which is only obtained by sampling more. | -   The sample size decreases with increasing switching probabilities and decreasing thresholds. With increasing switching probabilities, the number of samples within each round decreases. Higher thresholds require more roundwise comparisons and thus more samples. |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# Maximization
+
+Plots show the proportion of trials maximizing the EV, separately for each sampling strategy.
+
+```{r echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+max_summary <- data_summary %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(maxprop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+max_roundwise <- data_roundwise %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(maxprop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+max_EV <- max_summary + max_roundwise
+max_EV
+```
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Summary Comparison                                                                                                                                                                                                                                                                                                                                                                            | Roundwise Comparison                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++===============================================================================================================================================================================================================================================================================================================================================================================================+:================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================+
+| *Similar patterns as in the original simulation. However, increase in EV rates is more curved.*                                                                                                                                                                                                                                                                                               | *Similar patterns as in original simulation. However, decrease in EV rates is less linear, especially given high thresholds.*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -   High switching probability improves EV maximization: Low switching probability creates large initial bias, favoring the initially sampled option (random). High switching probability reduces initial bias and ensures balanced evidence accumulation. Differences in accumulated evidence then approximate differences in EV as outcomes are implicitly weighted by their probabilities. | -   High switching probability impairs EV maximization: With high switching probabilities, sampling strategies choose the frequent winner, which must not maximize the EV. (The problem set is such that frequent winner maximizes the EV 50% of the time, explaining why the rates do not drop further.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -   The curved (rather than linear) increase in EV maximization might be due to the high choice difficulty in all problems: Requires large and balanced samples to reliably detect difference in the EV with the summary rule. The smaller the EV differences, the more impact should (even small) initial biases have.                                                                       | -   With low switching probabilities, the frequent winner is chosen less consistently. Rather, comparison rounds now encompass more samples such that the round means better reflect/approximate differences in the EVs, improving EV maximization. (However, EV maximization does not improve (change) much over a wide range of switching probabilities. Moreover, EV performance of the roundwise comparison rule with low switching probabilities is much worse than of the summary comparison rule with high switching probabilities. A likely explanation is that the sample sizes within comparison rounds do not increase enough to prevent sampling error in the rare event conditions--particularly if the rare event probability is very small. This is indicated by the different maximization patterns in the rare event conditions, where maximization only consistently improves in the absence of rare events.) |
+|                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -   High thresholds improve EV maximization: Low thresholds lead to a larger impact of initial bias\* and larger sampling error (undersampling of rare events and noise). Sampling error is especially evident under high switching probabilities, where low thresholds perform considerably worse than high thresholds.                                                                      | -   High thresholds have different effects on EV maximization depending on the switching probability: High thresholds improve EV maximization under low switching probabilities, but not under high switching probabilities. In the latter case, sampling strategies with high thresholds choose the frequent winner even more consistently. (Running against the canonical explanation that more information necessarily leads to more maximization.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+|                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| \*Initial bias has a smaller effect under high thresholds: The initial option is less likely to reach the threshold before the first switch, allowing the other option to catch up.                                                                                                                                                                                                           | -   Overall, this results in an interesting pattern, where changes in the switching probability produce stronger changes in EV maximization for high thresholds. (It might even be that, when controlling for sampling error, high thresholds lead to best/worse reward maximization under low/high switching probabilities.)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# Risk Aversion
+
+Plots show the proportion of safe choices, separately for each sampling strategy (the second plot zooms in on the y-axis). Since in 50% of the problems the safe (risky) option has the better EV, a fully risk-neutral sampling strategy should choose the safe option 50% of the time.
+
+```{r echo=FALSE, fig.height=4, fig.width=12, message=FALSE, warning=FALSE}
+risk_summary <- data_summary %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk_roundwise <- data_roundwise %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk <- risk_summary + risk_roundwise
+risk
+```
+
+```{r echo=FALSE, fig.height=4, fig.width=12, message=FALSE, warning=FALSE}
+risk_summary <- data_summary %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk_roundwise <- data_roundwise %>% 
+  group_by(theta, psi) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk <- risk_summary + risk_roundwise
+risk
+```
+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Summary Comparison                                                                                                                                                                                                                                                                                                                                       | Roundwise Comparison                                                                                                                                                                                                                                      |
++==========================================================================================================================================================================================================================================================================================================================================================+===========================================================================================================================================================================================================================================================+
+| -   The proportion of safe choices is almost\* the same for all settings of the search and stopping rule (50%). That is, strategies with a roundwise comparison rule have no genuine risk preference (risk neutrality).                                                                                                                                  | -   The proportion of safe choices is the same for all settings of the search and stopping rule (50%). That is, strategies with a roundwise comparison rule have no genuine risk preference (risk-neutrality).                                            |
+|                                                                                                                                                                                                                                                                                                                                                          |                                                                                                                                                                                                                                                           |
+| \*There is still a small bump (towards "risk aversion") for the two smallest thresholds of the summary comparison rule. Specifically, strategies with a summary comparison rule, a small threshold and intermediate (but not small or high) switching probabilities choose the safe option slightly more often than expected under full risk-neutrality. | -   However, the choice ecology has strong effects on the proportion of safe (risky) choices (see below): Rare (un)desirable events increase the proportion of safe (risky) choices, which is masked by pooling the choices from the different ecologies. |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# Choice Ecology
+
+Below, the maximization rates and proportions of safe choices are plotted, separately for sampling strategies and rare event conditions.
+
+## Maximization
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=FALSE, warning=FALSE}
+
+max_summary_rare <- data_summary %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(maxprop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow = 3) + 
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+
+max_roundwise_rare <- data_roundwise %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(maxprop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow = 3) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+max_rare <- max_summary_rare + max_roundwise_rare
+max_rare
+```
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Summary Comparison                                                                                                                                                                                                                               | Roundwise Comparison                                                                                                                                                                                                                                                                                                                                                                                                                      |
++==================================================================================================================================================================================================================================================+===========================================================================================================================================================================================================================================================================================================================================================================================================================================+
+| -   The qualitative pattern in each ecology matches the aggregate pattern: EV maximization improves with a high switching probability and a high threshold.                                                                                      | -   The choice ecology has a strong effect on EV maximization: In both rare event conditions, EV maximization is impaired and increases only slightly under very low switching probabilities.                                                                                                                                                                                                                                             |
+|                                                                                                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -   The choice ecology doesn't affect EV maximization much. Yet, intriguingly, there are small differences:                                                                                                                                      | -   With rare attractive events, the safe option is the frequent winner. If the safe option has the better EV, maximization rates increase. Vice versa, if the risky option has the better EV, maximization rates decrease. These two patterns cancel each other out, leading to maximization rates at 50%, which only increase slightly when switching probabilities decrease. The analogous picture holds for rare unattractive events. |
+|                                                                                                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|     -   EV maximization is impaired if there is no rare event, which is particularly evident under high switching probabilities.                                                                                                                 | -   In the absence of a rare event, the qualitative pattern matches the aggregate pattern: The maximization rates increase as the switching probabilities decrease. However, the maximization rates are substantially higher than in the aggregate, since the the two rare event conditions with small maximization rates are not considered.                                                                                             |
+|                                                                                                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|     -   Rare events are undersampled, which should facilitate/impair EV maximization in 50% of the trials--this shouldn't lead to better EV maximization when pooling the behavior.                                                              | -   Morever, in the condition without a rare event, there is a counterintuitive drop in maximization rates with very low switching probabilities. (This drop gets smaller with very large thresholds and with larger EV differences. Could it be that the choice difficulty limits the degree to which maximization is possible for the roundwise comparison rule?)                                                                       |
+|                                                                                                                                                                                                                                                  |                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|     -   Yet, rare event probabilities **do** have subtle effects on EV maximization: When comparing the behavior on each problem separately, EV maximization increases when rare event probabilities decrease. What might be the mechanism here? |                                                                                                                                                                                                                                                                                                                                                                                                                                           |
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+## Risk Aversion
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=FALSE, warning=FALSE}
+
+## rare event conditions 
+risk_summary_rare <- data_summary %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow = 3) + 
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk_roundwise_rare <- data_roundwise %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow=3) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+
+risk_rare <- risk_summary_rare + risk_roundwise_rare
+risk_rare
+```
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=FALSE, warning=FALSE}
+
+## rare event conditions 
+risk_summary_rare <- data_summary %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.double(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow = 3) + 
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+risk_roundwise_rare <- data_roundwise %>% 
+  group_by(theta, psi, rare) %>% 
+  summarise(rate = mean(prop)) %>% 
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, c("none", "attractive", "unattractive")), nrow=3) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 3) +
+  theme_minimal()
+
+
+risk_rare <- risk_summary_rare + risk_roundwise_rare
+risk_rare
+```
+
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Summary Comparison                                                                                                                                                                                                                                                                                                                                                                              | Roundwise Comparison                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
++=================================================================================================================================================================================================================================================================================================================================================================================================+=====================================================================================================================================================================================================================================================================================================================================================================================================================================================================================+
+| -   The choice ecology has no strong effect on the proportion of safe choices. In all ecologies, the behavior seems to be risk neutral.\*                                                                                                                                                                                                                                                       | -   The choice ecology has a strong effect on the proportion of safe choices.                                                                                                                                                                                                                                                                                                                                                                                                       |
+|                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -   In the two rare event conditions, low thresholds lead to larger sampling error. Thus, the safe option is favored more with rare attractive events and favored less with rare unattractive events.                                                                                                                                                                                           | -   In the absence of a rare event, the proportion of safe choices is 50% (risk neutrality). With high switching probabilities, the roundwise comparison rule chooses the frequent winner, which is the safe (risky) option in 50% of the time. With low switching probabilities, the comparison rule tends to maximizes the EV, which is also the safe (risky) option in 50% of the time.                                                                                          |
+|                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -   In the absence of a rare event, the proportion of safe choices is close to 50% for most thresholds.                                                                                                                                                                                                                                                                                         | -   With rare attractive events, the the roundwise comparison rule favors the safe option as frequent winner and more so under high switching probabilities. Even when the switching probabilities are low and round-wise sample sizes are larger, rare events tend to be undersampled, favoring the safe option. The analogous pattern holds for rare unattractive events. When pooling the choices from all three ecologies, the two rare event conditions cancel each other out. |
+|                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| \*However, there is still a small bump (towards "risk aversion") for the smallest thresholds of the summary comparison rule. Specifically, strategies with an intermediate (but not small or high) switching probabilities choose the safe option slightly more often than expected under full risk-neutrality. e smallest thresholds, there is a small bump, indicating towards risk aversion. |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+# Problem Analysis
+
+## Maximization
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=FALSE, warning=FALSE}
+max_summary_problem <- data_summary %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  mutate(psi = as.double(psi)) %>% 
+  ggplot(aes(psi, maxprop, group = theta, color = theta)) +
+  facet_wrap(factor(rare, c("none", "attractive", "unattractive"))~problem, nrow = 6) + 
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point() +
+  theme_minimal()
+
+max_roundwise_problem <- data_roundwise %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  mutate(theta = as.factor(theta), 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, maxprop, group = theta, color = theta)) +
+  facet_wrap(factor(rare, c("none", "attractive", "unattractive"))~problem, nrow = 6) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  #scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% EV Maximization",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point() +
+  theme_minimal()
+
+max_summary_problem
+max_roundwise_problem
+```
+
+## Risk Aversion
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=TRUE, warning=TRUE}
+risk_summary_problem <- data_summary %>%
+  mutate(psi = as.double(psi)) %>% 
+  ggplot(aes(psi, prop, group = theta, color = theta)) +
+  facet_wrap(factor(rare, c("none", "attractive", "unattractive"))~problem, nrow=6) + 
+  scale_color_scico(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Summary Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 2) +
+  theme_minimal()
+
+risk_roundiwse_problem <- data_roundwise %>%
+  mutate(theta = as.factor(theta) , 
+         psi = as.double(psi)) %>% 
+  ggplot(aes(psi, prop, group = theta, color = theta)) +
+  facet_wrap(factor(rare, c("none", "attractive", "unattractive"))~problem, nrow=6) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Switching Probability\n(Search Rule)",
+       y = "% Safe Choices",
+       color = "Threshold\n(Stopping Rule)") +
+  geom_line(linewidth = 1) + 
+  geom_point(size = 2) +
+  theme_minimal()
+
+risk_summary_problem
+risk_roundiwse_problem
+```
+
+```{r eval=FALSE, fig.height=4, fig.width=14, message=FALSE, warning=FALSE, include=FALSE}
+
+eff_summary <- data_summary %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi) %>% 
+  summarise(mean.samples = mean(samples), 
+            median.samples = median(samples),
+            rate = mean(maxprop))
+
+eff_roundwise <- data_roundwise %>% 
+  mutate(maxprop = if_else(better_ev == "safe", prop, 1-prop)) %>% 
+  group_by(theta, psi) %>% 
+  summarise(mean.samples = mean(samples), 
+            median.samples = median(samples),
+            rate = mean(maxprop))
+
+
+eff_summary_plot <- eff_summary %>% 
+  ggplot(aes(x=median.samples, y=rate, group = psi, color = psi)) +
+  scale_color_scico_d(palette = "tokyo", alpha = .7, end = .8) +
+  labs(title = "Summary Comparison", 
+       x = "Median Sample Size",
+       y = "% EV Maximization",
+       color = "Switching\nProbability\n(Search Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  theme_minimal(base_size = 20)
+
+#### summary
+eff_roundwise_plot <- eff_roundwise %>% 
+  ggplot(aes(x=median.samples, y=rate, group = psi, color = psi)) +
+  scale_color_scico_d(palette = "tokyo", alpha = .7, end = .8) +
+  labs(title = "Roundwise Comparison", 
+       x = "Median Sample Size",
+       y = "% EV Maximization",
+       color = "Switching\nProbability\n(Search Rule)") +
+  geom_point(size = 3) + 
+  geom_line(linewidth = 1) + 
+  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  theme_minimal(base_size = 20)
+
+eff_summary_plot + eff_roundwise_plot
+```

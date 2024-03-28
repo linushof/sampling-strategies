@@ -3,15 +3,15 @@ pacman::p_load(tidyverse, digest, crayon)
 
 # test set
 problems <- as.data.frame(readRDS("data/choice_problems_balanced.rds"))
-n_agents <- 10 # number of synthetic agents
+n_agents <- 1000 # number of synthetic agents
 
 # simulation parameters
 param <- expand.grid(psi = seq(.1, 1, .1) , # switching probability
-                     theta = seq(10, 50, 10)) # thresholds
+                     theta = seq(100, 300, 50)) # thresholds
 
 # simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
 
-set.seed(19543)
+set.seed(8172651)
 param_list <- vector("list", nrow(param)) 
 for (set in seq_len(nrow(param))) { # loop over parameter combinations
   
@@ -102,7 +102,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
           DV_trace <- c(DV_trace, DV)
         }
         
-        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
+        choice <- ifelse(DV >= theta, "risky", ifelse(DV <= -1*theta, "safe", NA))
         choice_trace <- c(choice_trace, choice)
 
         ### if threshold isn't reached, draw new sample according to psi
@@ -125,19 +125,6 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 } # close loop parameters
 simulation_summary <- bind_rows(param_list)
 
-# save data  
-simulation_summary <- read_rds("data/merged/simulation_summary_merged.rds.bz2")
-
-## full data set
+# save data
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
-write_rds(simulation_summary, "data/simulation_summary.rds.bz2", compress = "bz2")
-
-## relative thresholds (default)
-#simulation_summary_rt <- simulation_summary %>% filter(threshold == "relative")
-#checksum_simulation_summary_rt <- digest(simulation_summary_rt, "sha256")
-#write_rds(simulation_summary_rt, "data/relative_thresholds/simulation_summary_rt.rds.bz2", compress = "bz2")
-
-## absolute thresholds
-#simulation_summary_at <- simulation_summary %>% filter(threshold == "absolute")
-#checksum_simulation_summary_at <- digest(simulation_summary_at, "sha256")
-#write_rds(simulation_summary_at, "data/absolute_thresholds/simulation_summary_absolute.rds.bz2", compress = "bz2")
+write_rds(simulation_summary, "data/simulation_summary_balanced.rds.bz2", compress = "bz2")

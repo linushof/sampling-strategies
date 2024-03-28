@@ -1,18 +1,17 @@
 # load pkgs
 pacman::p_load(tidyverse, digest, crayon)
-#source("code/helper_functions/fun_compute_cumulative_stats.R")
 
 # test set
 problems <- as.data.frame(readRDS("data/choice_problems_balanced.rds"))
-n_agents <- 10 # number of synthetic agents
+n_agents <- 1000 # number of synthetic agents
 
 # simulation parameters
-param <- expand.grid(psi = c(.1, .5, 1) , # switching probability
+param <- expand.grid(psi = seq(.1, 1, .1) , # switching probability
                      theta = 1:5) # thresholds
 
 # simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
 
-set.seed(56221)
+set.seed(7126527)
 param_list <- vector("list", nrow(param))
 for (set in seq_len(nrow(param))) {  # loop over parameter combinations
   
@@ -187,7 +186,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
         round_store <- data.frame(round, round_N_samples_r_trace, round_sum_r_trace, round_winner_trace)
         all_rounds <- rbind(all_rounds, round_store)
         
-        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
+        choice <- ifelse(DV >= theta, "risky", ifelse(DV <= -1*theta, "safe", NA))
         choice_trace <- c(choice_trace, choice)
         
         
@@ -216,7 +215,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
       
     } # close loop agents
     all_agents <- bind_rows(agents_list)
-    problem_list[[problem]] <- expand_grid(problem, all_agents)
+    problem_list[[problem]] <- expand_grid(problems[problem, ], all_agents)
   } # close loop problems
   all_problems <- bind_rows(problem_list)
   param_list[[set]] <- expand_grid(param[set, ], all_problems)
@@ -225,17 +224,5 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
 simulation_roundwise <- bind_rows(param_list)
 
 # save data
-
-## full data set
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
-write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")
-
-## relative thresholds
-#simulation_roundwise_rt <- simulation_roundwise %>% filter(threshold == "relative")
-#checksum_simulation_roundwise_rt <- digest(simulation_roundwise_rt, "sha256")
-#write_rds(simulation_roundwise_rt, "data/relative_thresholds/simulation_roundwise_rt.rds.bz2", compress = "bz2")
-
-## absolute thresholds
-#simulation_roundwise_at <- simulation_roundwise %>% filter(threshold == "absolute")
-#checksum_simulation_roundwise_at <- digest(simulation_roundwise_at, "sha256")
-#write_rds(round_at, "data/absolute_thresholds/simulation_roundwise_absolute_rt.rds.bz2", compress = "bz2")
+write_rds(simulation_roundwise, "data/simulation_roundwise_balanced.rds.bz2", compress = "bz2")

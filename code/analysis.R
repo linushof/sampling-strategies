@@ -10,10 +10,10 @@ pacman::p_load(tidyverse,
 
 
 # load data
-choices <- read_rds("data/choice_data.rds.bz2") 
-cpt <- read_rds("data/cpt_estimates.rds") 
-round <- read_rds("data/simulation_roundwise.rds.bz2") 
-summary <- read_rds("data/simulation_summary.rds.bz2")
+choices <- read_rds("data/choice_data_balanced.rds.bz2") 
+cpt <- read_rds("data/cpt_estimates_balanced.rds") 
+round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
+summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
 
 # plot labels
 
@@ -30,19 +30,6 @@ label_rare <- function(string) {
   TeX(paste("$\\p_{high}\\in$", string, sep = "")) 
 }
 
-# discarded trials --------------------------------------------------------
-
-total_discarded <- choices %>% filter(c(n_s == 0 | n_r == 0)) %>% nrow() # 119971
-total_discarded/nrow(choices) # 4.9% 
-roundwise_discarded <- choices %>% filter(model ==  "roundwise" & c(n_s == 0 | n_r == 0)) %>% nrow() # 0
-summary_discarded <- choices %>% filter(model ==  "summary" & c(n_s == 0 | n_r == 0)) %>% nrow() # 119971
-summary_discarded_relative <- choices %>% filter(model ==  "summary" & threshold == "relative" & c(n_s == 0 | n_r == 0)) %>% nrow() # 0
-summary_discarded_absolute <- choices %>% filter(model ==  "summary" & threshold == "absolute" & c(n_s == 0 | n_r == 0)) %>% nrow() # 119917
-summary_absolute <- choices %>% filter(model ==  "summary" & threshold == "absolute") %>% nrow() # 119971
-summary_discarded_absolute / summary_absolute # 20%
-
-
-
 # Behavioral --------------------------------------------------------------
 
 
@@ -54,8 +41,6 @@ summary_discarded_absolute / summary_absolute # 20%
 
 ### summary
 summary <- summary %>% 
-  mutate(psi = 1-(psi+.5)) %>% # recode psi
-  filter(threshold == "relative") %>% 
   group_by(psi, threshold, theta, problem, agent) %>% # group by trial
   mutate(smp_no = row_number(), # assign sample numbers
          diff = if_else(smp_no == 1, 0, diff)) %>% 
@@ -70,8 +55,6 @@ summary_median <- summary %>%
 
 ### round
 round <- round %>% 
-  mutate(psi = 1-(psi+.5)) %>% # recode psi
-  filter(threshold == "relative") %>% 
   group_by(psi, threshold, theta, problem, agent) %>% # group by trial
   mutate(smp_no = row_number(), # assign sample numbers
          diff = if_else(smp_no == 1, 0, diff)) %>% # fill missing values
@@ -235,12 +218,11 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 
 ## sampled average
 rates_EV_exp <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  mutate(norm = case_when(mean_r/safe > 1 ~ "risky", 
+                          mean_r/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, max) %>% 
+  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  group_by(model, psi, theta, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>%
@@ -248,12 +230,11 @@ rates_EV_exp <- choices %>%
 
 ## expected values
 rates_EV <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(norm = case_when(r_ev/safe > 1 ~ "r", 
-                          r_ev/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
+                          ev_risky/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, max) %>% 
+  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  group_by(model, psi, theta, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>%
@@ -265,7 +246,7 @@ rates_EV <- choices %>%
 
 ### summary
 max_EV_exp_summary <- rates_EV_exp %>%
-  filter(model == "summary" & threshold == "relative") %>% 
+  filter(model == "summary") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
   scale_color_scico(palette = "imola", alpha = .7) + 
@@ -281,7 +262,7 @@ max_EV_exp_summary <- rates_EV_exp %>%
 
 ### round-wise
 max_EV_exp_roundwise <- rates_EV_exp %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
+  filter(model == "roundwise") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
@@ -302,7 +283,7 @@ max_EV_exp <- ggarrange(max_EV_exp_summary, max_EV_exp_roundwise, nrow = 1)
 
 ### summary
 max_EV_summary <- rates_EV %>%
-  filter(model == "summary" & threshold == "relative") %>% 
+  filter(model == "summary") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
   scale_color_scico(palette = "imola", alpha = .7) + 
@@ -318,7 +299,7 @@ max_EV_summary <- rates_EV %>%
 
 ### round-wise
 max_EV_roundwise <- rates_EV %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
+  filter(model == "roundwise") %>% 
   # filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
@@ -338,7 +319,7 @@ max_EV + max_EV_exp +
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/maximization_balanced.png", width = 14, height = 10)
 
 
 ## Undersampling -----------------------------------------------------
@@ -348,73 +329,73 @@ ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
 ## compute trial-level and round-level frequencies
 
 ### higher risky outcome
-freq_high  <- round %>% 
-  mutate(psi = 1-(psi+.5)) %>% # recode psi
-  filter(psi %in% c((1-.9), .5, 1),
-         threshold == "relative") %>% 
-  group_by(psi, theta, problem, agent) %>%
-  mutate(n_sample = n(), # compute trial-level n 
-         n_s = sum(is.na(r)), 
-         n_r = n_sample - n_s, 
-         trial_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
+freq  <- round %>% 
+  filter(psi %in% c(.1, .5, 1)) %>% 
+  group_by(psi, theta, id, agent) %>%
+  mutate(n_sample = n(), # total number of single samples
+         n_s = sum(is.na(samples_r)), # number of single samples drawn from safe option
+         n_r = n_sample - n_s, # number of single samples drawn from risky option
+         ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_r, 2), # experienced probability of higher risky outcome
+         ep_r_2 = round(1 - ep_r_1, 2)) %>% 
   ungroup() %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>%
-  group_by(psi, theta, problem, agent, round) %>% 
+  group_by(psi, theta, id, agent, round) %>% 
   mutate(n_round = n(), 
-         n_round_s = sum(is.na(r)),
+         n_round_s = sum(is.na(samples_r)),
          n_round_r = n_round - n_round_s,
-         round_freq = round(sum(if_else(r == r_high, 1, 0), na.rm = TRUE)/n_round_r, 2)) 
-
-### lower risky outcome
-freq_low  <- round %>% 
-  mutate(psi = 1-(psi+.5)) %>% # recode psi
-  filter(psi %in% c((1-.9), .5, 1),
-         threshold == "relative") %>% 
-  group_by(psi, theta, problem, agent) %>%
-  mutate(n_sample = n(), # compute trial-level n 
-         n_s = sum(is.na(r)), 
-         n_r = n_sample - n_s, 
-         trial_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_r, 2)) %>% # compute trial-level frequencies
-  ungroup() %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>%
-  group_by(psi, theta, problem, agent, round) %>% 
-  mutate(n_round = n(), 
-         n_round_s = sum(is.na(r)),
-         n_round_r = n_round - n_round_s,
-         round_freq = round(sum(if_else(r == r_low, 1, 0), na.rm = TRUE)/n_round_r, 2)) # compute round-level frequencies
+         round_ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_round_r, 2),
+         round_ep_r_2 = round(1 - round_ep_r_1, 2)
+  ) 
 
 
 ## compute median round-level frequencies ...
 
 ### ... for each sampled frequency on the trial level
-  
-freq_high_trial <- freq_high %>% distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) # drop redundant rows
-freq_low_trial <- freq_low %>% distinct(psi, threshold, theta, problem, agent, round, trial_freq, round_freq) 
-freq_trial <- bind_rows(freq_high_trial, freq_low_trial)
+
+freq_trial_1 <- freq %>% 
+  distinct(psi, theta, id, agent, round, ep_r_1, round_ep_r_1) %>% # drop redundant row
+  select(psi, theta, id, agent, round, ep_r_1, round_ep_r_1) %>% 
+  rename(ep = "ep_r_1", round_ep = "round_ep_r_1")
+
+freq_trial_2 <- freq %>% 
+  distinct(psi, theta, id, agent, round, ep_r_2, round_ep_r_2) %>% # drop redundant row
+  select(psi, theta, id, agent, round, ep_r_2, round_ep_r_2) %>% 
+  rename(ep = "ep_r_2", round_ep = "round_ep_r_2")
+
+freq_trial <- bind_rows(freq_trial_1, freq_trial_2) %>% 
+  mutate(diff = abs(ep - round_ep))
+
 freq_trial_median <- freq_trial %>% 
-  group_by(psi, theta, trial_freq) %>%
-  summarise(median_round_freq = median(round_freq, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
+  group_by(psi, theta, ep) %>%
+  summarise(median_round_ep = median(round_ep, na.rm = TRUE), 
+            mean_diff = mean(diff, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
 
 ### ... for each latent probability
 
-freq_high_latent <- freq_high %>% 
-  distinct(psi, threshold, theta, problem, agent, round, p_r_high, round_freq) %>% # drop redundant rows
-  mutate(p_r = p_r_high) %>% 
-  select(!p_r_high)
-freq_low_latent <- freq_low %>% 
-  distinct(psi, threshold, theta, problem, agent, round, p_r_low, round_freq) %>%  # drop redundant rows
-  mutate(p_r = p_r_low) %>% 
-  select(!p_r_low)
-freq_latent <- bind_rows(freq_high_latent, freq_low_latent)
+freq_latent_1 <- freq %>% distinct(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
+  select(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
+  rename(p = "p_r_1", round_ep = "round_ep_r_1")
+
+freq_latent_1 <- freq %>% distinct(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
+  select(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
+  rename(p = "p_r_1", round_ep = "round_ep_r_1")
+
+freq_latent_2 <- freq %>% distinct(psi, theta, id, agent, round, p_r_2, round_ep_r_2) %>% 
+  select(psi, theta, id, agent, round, p_r_2, round_ep_r_2) %>% 
+  rename(p = "p_r_2", round_ep = "round_ep_r_2")
+
+freq_latent <- bind_rows(freq_latent_1, freq_latent_2) %>% 
+  mutate(diff = abs(p - round_ep))
+
 freq_latent_median <- freq_latent %>% 
-  group_by(psi, theta, p_r) %>%
-  summarise(median_round_freq = median(round_freq, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
+  group_by(psi, theta, p) %>%
+  summarise(median_round_ep = median(round_ep, na.rm = TRUE), 
+            mean_diff = mean(diff, na.rm = TRUE)) 
 
 # plot data
 
 ## median for trial level frequencies
 undersampling_trial <- freq_trial_median %>% 
-  ggplot(aes(x = trial_freq, y = median_round_freq, color = as.factor(theta))) +
+  ggplot(aes(x = ep, y = median_round_ep, color = as.factor(theta))) +
   geom_jitter(size = 2) + 
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
@@ -423,12 +404,12 @@ undersampling_trial <- freq_trial_median %>%
        y = "Sampled Probability\nWithin Comparison Round", 
        color = "Threshold\n(Stopping Rule)") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
-  scale_color_scico_d(palette = "imola") + 
+  scale_color_scico_d(palette = "imola", alpha = .3) + 
   theme_minimal(base_size = 20)
 
 ## median for latent probabilities
 undersampling_latent <- freq_latent_median %>% 
-  ggplot(aes(x = p_r, y = median_round_freq, color = as.factor(theta))) +
+  ggplot(aes(x = p, y = median_round_ep, color = as.factor(theta))) +
   geom_jitter(size = 2) + 
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
@@ -437,7 +418,7 @@ undersampling_latent <- freq_latent_median %>%
        y = "Sampled Probability\nWithin Comparison Round", 
        color = "Threshold\n(Stopping Rule)") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
-  scale_color_scico_d(palette = "imola") + 
+  scale_color_scico_d(palette = "imola", alpha = .3) + 
   theme_minimal(base_size = 20)
 
 # merge and save plot
@@ -445,24 +426,22 @@ undersampling_latent + undersampling_trial +
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 10)
+ggsave(file = "figures/undersampling_balanced.png", width = 14, height = 10)
 
 
 ## Risk  -----------------------------------------------------------
 
 # prepare data 
 rates <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(r_averse = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
-  group_by(model, psi, threshold, theta, r_averse) %>% 
+  mutate(safe_choice = ifelse(choice_trace == "safe", 1, 0)) %>% # risk averse choice
+  group_by(model, psi, theta, safe_choice) %>% 
   summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
+  mutate(rate = n/sum(n)) %>% 
   ungroup() %>%
-  filter(!(r_averse == 0))
+  filter(!(safe_choice == 0))
 
 r_averse_summary <- rates %>%  
-  filter(model == "summary" & threshold == "relative") %>% 
-  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  filter(model == "summary") %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
@@ -476,8 +455,7 @@ r_averse_summary <- rates %>%
   theme_minimal(base_size = 20)
 
 r_averse_roundwise <- rates %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
-  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+  filter(model == "roundwise") %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
@@ -491,7 +469,7 @@ r_averse_roundwise <- rates %>%
   theme_minimal(base_size = 20)
 
 r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height = 6)
+ggsave(file = "manuscript/figures/rates_risk_aversion_balanced.png", width = 14, height = 6)
 
 
 
@@ -509,7 +487,7 @@ min(cpt$n.eff) # 17,000
 
 # prepare data
 weights <- cpt %>%
-  select(model, psi, threshold, theta, parameter, mean) %>%
+  select(model, psi, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>% 
   select(-c(alpha, rho)) %>%
   expand_grid(p = seq(0, 1, .05)) %>% # create vector of sampled relative frequencies
@@ -524,7 +502,7 @@ weights_summary <- weights %>% filter(model == "summary")
 
 #### gamma
 gamma_summary <- cpt_summary %>%
-  filter(parameter == "gamma", threshold == "relative") %>%
+  filter(parameter == "gamma") %>%
   ggplot(aes(psi, mean, color = psi)) + 
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
@@ -540,7 +518,7 @@ gamma_summary <- cpt_summary %>%
 
 #### delta
 delta_summary <- cpt_summary %>%
-  filter(parameter == "delta", threshold == "relative") %>%
+  filter(parameter == "delta") %>%
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
@@ -556,7 +534,6 @@ delta_summary <- cpt_summary %>%
 
 ####  probability weighting
 wf_summary <- weights_summary %>% 
-  filter(threshold == "relative") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
@@ -571,7 +548,7 @@ wf_summary <- weights_summary %>%
 # merge and save plots
 
 wf_summary + gamma_summary + delta_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/cpt_weighting_summary_balanced.png", width = 14, height = 10)
 
 ## roundwise
 
@@ -580,7 +557,7 @@ weights_roundwise <- weights %>% filter(model == "roundwise", !(psi == 1 & theta
 
 #### gamma
 gamma_roundwise <- cpt_roundwise %>%
-  filter(parameter == "gamma", threshold == "relative") %>%
+  filter(parameter == "gamma") %>%
   ggplot(aes(psi, mean, color = psi)) + 
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
@@ -596,7 +573,7 @@ gamma_roundwise <- cpt_roundwise %>%
 
 #### delta
 delta_roundwise <- cpt_roundwise %>%
-  filter(parameter == "delta", threshold == "relative") %>%
+  filter(parameter == "delta") %>%
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
@@ -612,7 +589,6 @@ delta_roundwise <- cpt_roundwise %>%
 
 ####  probability weighting
 wf_roundwise <- weights_roundwise %>% 
-  filter(threshold == "relative") %>% 
   ggplot(aes(p, w, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
@@ -627,7 +603,7 @@ wf_roundwise <- weights_roundwise %>%
 # merge and save plots
 
 wf_roundwise + gamma_roundwise + delta_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/cpt_weighting_roundwise_balanced.png", width = 14, height = 10)
 
 
 ## Outcome Sensitivity ---------------------------------------------------------
@@ -635,10 +611,10 @@ ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, heig
 # prepare data
 
 values <- cpt %>%
-  select(model, psi, threshold, theta, parameter, mean) %>%
+  select(model, psi, theta, parameter, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
   select(-c(gamma, delta, rho)) %>%
-  expand_grid(x = seq(0, 20, .5)) %>%  # create vector of possible outcomes
+  expand_grid(x = seq(0, 20, 1)) %>%  # create vector of possible outcomes
   mutate(v = round(x^alpha, 2)) # compute subjective values on the basis of estimated parameters
 
 # plot data 
@@ -649,7 +625,7 @@ values_summary <- values %>% filter(model == "summary")
 
 ### alpha
 alpha_summary <- cpt_summary %>%
-  filter(parameter == "alpha", threshold == "relative") %>% 
+  filter(parameter == "alpha") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) + 
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
@@ -665,7 +641,6 @@ alpha_summary <- cpt_summary %>%
 
 ### value function 
 vf_summary <- values_summary %>% 
-  filter(threshold == "relative") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
@@ -679,7 +654,7 @@ vf_summary <- values_summary %>%
 
 # merge and save plots
 vf_summary + alpha_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
+ggsave(file = "manuscript/figures/cpt_value_summary_balanced.png", width = 14, height = 7)
 
 ## round-wise
 
@@ -687,7 +662,7 @@ values_roundwise <- values %>% filter(model == "roundwise", !(psi == 1 & theta =
 
 ### alpha
 alpha_roundwise <- cpt_roundwise %>%
-  filter(parameter == "alpha", threshold == "relative") %>% 
+  filter(parameter == "alpha") %>% 
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) + 
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
@@ -703,12 +678,11 @@ alpha_roundwise <- cpt_roundwise %>%
 
 ### value function 
 vf_roundwise <- values_roundwise %>% 
-  filter(threshold == "relative") %>% 
   ggplot(aes(x, v, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
-  scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, 51), breaks = seq(0, 50, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
        color = "Switching\nProbability") +
@@ -717,77 +691,35 @@ vf_roundwise <- values_roundwise %>%
 
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
+ggsave(file = "manuscript/figures/cpt_value_roundwise_balanced.png", width = 14, height = 7)
 
 
 # Ecological  ----------------------------------------------------------
 
 ## Maximization  ---------------------------------------------------
 
-# Frequency of diverging predictions
-
-problems %>% 
-  mutate(same_op = case_when( (p_r_high > .5) & (r_ev < safe)  ~ 0 ,
-                              (p_r_high < .5) & (r_ev > safe)  ~ 0) ,
-         same_op = ifelse(is.na(same_op), 1, same_op)) %>%
-  group_by(same_op) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = round( count/sum(count), 2))  # n = 4 (p = 0.07)
-
-choices %>% 
-  filter(threshold == "relative") %>% 
-  mutate(same_op = case_when( (ep_r_high > .5) & (mean_r < safe)  ~ 0 ,
-                              (ep_r_high < .5) & (mean_r > safe)  ~ 0) ,
-         same_op = ifelse(is.na(same_op), 1, same_op)) %>%
-  group_by(same_op) %>% 
-  summarise(count = n()) %>% 
-  mutate(prop = round( count/sum(count), 2))  # n = 103630 (p = 0.09)
-
-# prepare data 
-
-## expected value
-
-rates_EV <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(norm = case_when(r_ev/safe > 1 ~ "r", 
-                          r_ev/safe < 1 ~ "s"), 
-         norm2 = case_when(p_r_high > .5 ~ "r", 
-                           p_r_high < .5 ~ "s")) %>% # determine option with higher sampled mean 
-  filter(norm != norm2) %>% # drop options where predictions are the same 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, max) %>% 
+## expected values
+rates_EV_rare <- choices %>%
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
+                          ev_risky/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
+  filter(!is.na(norm)) %>% # drop options without normative choice 
+  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  group_by(model, psi, theta, rare, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
   ungroup() %>%
   filter(!(max == 0))
 
-## sampled average 
-rates_EV_exp <- choices %>%
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s"), 
-         norm2 = case_when(ep_r_high > .5 ~ "r", 
-                           ep_r_high < .5 ~ "s")) %>% # determine option with higher sampled mean 
-  filter(norm != norm2) %>% # drop options where predictions are the same 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, threshold, theta, max) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>%
-  filter(!(max == 0))
+# plot data 
 
-
-# Plot data
-
-## expected value 
-
-### Summary
-max_EV_summary <- rates_EV %>%
-  filter(model == "summary" & threshold == "relative") %>% 
+## summary
+max_EV_rare_summary <- rates_EV_rare %>%
+  filter(model == "summary") %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
+  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_color_scico(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  # scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% EV Maximization",
@@ -796,13 +728,14 @@ max_EV_summary <- rates_EV %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-### Roundwise
-max_EV_roundwise <- rates_EV %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
+## roundwise
+max_EV_rare_roundwise <- rates_EV_rare %>%
+  filter(model == "roundwise") %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
+  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  # scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% EV Maximization",
@@ -811,86 +744,26 @@ max_EV_roundwise <- rates_EV %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-### merge plots
-max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
-
-
-## sampled average 
-
-### Summary
-max_EV_exp_summary <- rates_EV_exp %>%
-  filter(model == "summary" & threshold == "relative") %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  scale_color_scico(palette = "imola", alpha = .7) + 
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% Average Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-### Roundwise
-max_EV_exp_roundwise <- rates_EV_exp %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
-  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", alpha = .7) + 
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)",
-       y = "% Average Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
-
-### merge plots
-max_EV_exp <- ggarrange(max_EV_exp_summary, max_EV_exp_roundwise, nrow = 1)
-
-## merge and save plots
-max_EV + max_EV_exp + 
-  plot_layout(ncol = 1, guides = "collect") + 
-  plot_annotation(tag_levels = "A") & 
-  theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/ecology_maximization.png", width = 14, height = 10)
+max_EV <- ggarrange(max_EV_rare_summary, max_EV_rare_roundwise, nrow = 1)
+ggsave(file = "manuscript/figures/maximization_rare_balanced.png", width = 14, height = 10)
 
 
 ## Risk -----------------------------------------------------
 
-# choice problems with better EV for safe vs. risky 
-
-n_better_safe <- problems %>% filter(safe > r_ev) %>% nrow()
-round(n_better_safe/nrow(problems), 2) # .53
-
-n_better_safe_exp <- choices %>% filter(model == "roundwise", threshold == "relative", safe > mean_r) %>% nrow()
-n_exp <- choices %>% filter(model == "roundwise", threshold == "relative") %>% nrow()
-round(n_better_safe_exp/n_exp, 2) # .54
-
-# proportion of choice from the safe option, conditional on rare event
-
-## prepare data 
-rates <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% # remove choices where an option was not attended 
-  mutate(r_averse = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
-  group_by(model, psi, threshold, theta, rare, r_averse) %>% 
+# prepare data 
+rates_rare <- choices %>% 
+  mutate(safe_choice = ifelse(choice_trace == "safe", 1, 0)) %>% # risk averse choice
+  group_by(model, psi, theta, rare, safe_choice) %>% 
   summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
+  mutate(rate = n/sum(n)) %>% 
   ungroup() %>%
-  filter(!(r_averse == 0)) %>% 
-  mutate(rare = case_when(rare == "attractive" ~ "Rare Desirable Outcome", 
-                          rare == "unattractive" ~ "Rare Undesirable Outcome", 
-                          rare == "none" ~ "No Rare Outcome"))
+  filter(!(safe_choice == 0))
 
-## plot data
-r_averse_summary <- rates %>%  
-  filter(model == "summary" & threshold == "relative") %>% 
-  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+r_averse_rare_summary <- rates_rare %>%  
+  filter(model == "summary") %>% 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~rare, nrow = 3) +
   scale_color_scico(palette = "imola", alpha = .7) +
+  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
@@ -901,12 +774,11 @@ r_averse_summary <- rates %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-r_averse_roundwise <- rates %>%
-  filter(model == "roundwise" & threshold == "relative") %>% 
-  #filter(psi > .9 | psi == .5 | psi == (1-.9)) %>% 
+r_averse_rare_roundwise <- rates_rare %>%
+  filter(model == "roundwise") %>% 
   ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  facet_wrap(~rare, nrow = 3) + 
   scale_color_scico_d(palette = "imola", alpha = .7) + 
+  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
@@ -917,17 +789,15 @@ r_averse_roundwise <- rates %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A") + plot_layout(ncol = 2)
-ggsave(file = "manuscript/figures/ecology_rates_risk_aversion.png", width = 14, height = 10)
-
-
+r_averse_rare_summary + r_averse_rare_roundwise + plot_annotation(tag_levels = "A")
+ggsave(file = "manuscript/figures/rates_risk_aversion_rare_balanced.png", width = 14, height = 10)
 
 # Efficiency --------------------------------------------------------------
 
 ## Sample Size -------------------------------------------------------------
 
 effort_summary <- choices %>% 
-  filter(model == "summary", threshold == "relative") %>% 
+  filter(model == "summary") %>% 
   group_by(psi, theta) %>% 
   summarise(mean_n = mean(n_sample), 
             median_n = median(n_sample)) %>% 
@@ -942,7 +812,7 @@ effort_summary <- choices %>%
   theme_minimal(base_size = 20)
 
 effort_roundwise <- choices %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
+  filter(model == "roundwise") %>% 
   group_by(psi, theta) %>% 
   summarise(mean_n = mean(n_sample), 
             median_n = median(n_sample)) %>% 
@@ -957,61 +827,39 @@ effort_roundwise <- choices %>%
   theme_minimal(base_size = 20)
 
 effort_summary + effort_roundwise + plot_layout(ncol = 2) + plot_annotation(tag_levels = "A")
-ggsave("manuscript/figures/sample_size.png", width = 14, height = 6)
+ggsave("manuscript/figures/sample_size_balanced.png", width = 14, height = 6)
 
 ## Reward Rate --------------------------------------------
 
 # prepare data
 
 ## Maximization as a function of comparison strategies and sample size
-
-### ground-truth
 max_n <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% 
-  mutate(norm = case_when(r_ev/safe > 1 ~ "r", 
-                          r_ev/safe < 1 ~ "s")) %>%
-  filter(!is.na(norm)) %>%
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, threshold, psi, theta) %>% 
-  summarise(n = n(), 
-            median_n = median(n_sample) , 
-            mean_n = mean(n_sample) , 
-            max_prop = sum(max)/n)
-
-### sampled 
-max_n_exp <- choices %>% 
-  filter(!c(n_s == 0 | n_r == 0)) %>% 
-  mutate(norm = case_when(mean_r/safe > 1 ~ "r", 
-                          mean_r/safe < 1 ~ "s")) %>%
-  filter(!is.na(norm)) %>%
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, threshold, psi, theta) %>% 
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
+                          ev_risky/safe < 1 ~ "safe")) %>%
+  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  group_by(model, psi, theta) %>% 
   summarise(n = n(), 
             median_n = median(n_sample) , 
             mean_n = mean(n_sample) , 
             max_prop = sum(max)/n)
 
 ## reward rate
-
 reward_rates <- choices %>%  
-  mutate(higher_EV_option = ifelse(ev_ratio > 1, "r", ifelse(ev_ratio < 1 , "s", NA)) ,
-         higher_EV_exp_option = ifelse(mean_r > safe, "r", ifelse(mean_r < safe, "s", NA)) ,
-         higher_EV_choice = choice == higher_EV_option , 
-         higher_EV_exp_choice = choice == higher_EV_exp_option , 
-         chosen_option_ev = ifelse(choice == "s", safe, ifelse(choice == "r", r_ev, NA)) ,
-         chosen_option_ev_exp = ifelse(choice == "s", safe, ifelse(choice == "r", mean_r, NA)) , 
-         rr_ev = chosen_option_ev/n_sample , 
-         rr_ev_exp = chosen_option_ev_exp/n_sample)
+  mutate(higher_EV_option = ifelse(ev_risky/safe > 1, "risky", ifelse(ev_risky/safe < 1 , "safe", NA)) ,
+         higher_EV_choice = choice_trace == higher_EV_option , 
+         chosen_option_EV = ifelse(choice_trace == "safe", safe, ifelse(choice_trace == "risky", ev_risky, NA)) ,
+         rr_EV = chosen_option_EV/n_sample) %>% 
+  select(model, psi, theta, rr_EV)
+
 
 # plot data
 
-## ground-truth
+## Maximization as a function of comparison strategies and sample size
 
-### Maximization as a function of comparison strategies and sample size
-
-#### summary
+### summary
 max_n_summary <- max_n %>% 
-  filter(model == "summary", threshold == "relative") %>% 
+  filter(model == "summary") %>% 
   ggplot(aes(x=median_n, y=max_prop, group = psi, color = psi)) +
   scale_color_scico(palette = "tokyo", alpha = .7, end = .8) +
   labs(title = "Summary Comparison", 
@@ -1020,13 +868,13 @@ max_n_summary <- max_n %>%
        color = "Switching\nProbability\n(Search Rule)") +
   geom_point(size = 3) + 
   geom_line(linewidth = 1) + 
-  scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
-  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  #scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
   theme_minimal(base_size = 20)
 
-#### roundwise
+### roundwise
 max_n_roundwise <- max_n %>% 
-  filter(model == "roundwise", threshold == "relative") %>% 
+  filter(model == "roundwise") %>% 
   ggplot(aes(x=median_n, y=max_prop, group = psi,  color = psi)) +
   scale_color_scico(palette = "tokyo", alpha = .7, end = .8) +
   labs(title = "Roundwise Comparison", 
@@ -1035,47 +883,45 @@ max_n_roundwise <- max_n %>%
        color = "Switching\nProbability\n(Search Rule)") +
   geom_point(size = 3) + 
   geom_line(linewidth = 1) + 
-  scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
-  scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
+  #scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
   theme_minimal(base_size = 20)
 
-#### merge
+### merge
 max_n_EV <- ggarrange(max_n_summary, max_n_roundwise, nrow = 1, common.legend = TRUE, legend = "right")
 
-### reward rate
+## reward rate
 
-#### summary
+### summary
 rr_summary <- reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE)) %>% 
-  filter(model == "summary", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = mean_rr_ev, group = theta, color = theta)) + 
+  group_by(model, psi, theta) %>% 
+  summarise(mean_rr_EV = mean(rr_EV, na.rm = TRUE)) %>% 
+  filter(model == "summary") %>%  
+  ggplot(aes(x = psi, y = mean_rr_EV, group = theta, color = theta)) + 
   scale_color_scico(palette = "imola") + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  scale_shape_discrete(labels=c('EV', 'Average Outcome')) + 
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)", 
        y = "Mean Reward Rate",
        color = "Threshold\n(Stopping Rule)") + 
-  scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  #scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
   theme_minimal(base_size = 20)
 
 #### roundwise
 rr_roundwise <- reward_rates %>% 
-  group_by(model, psi, threshold, theta) %>% 
-  summarise(mean_rr_ev = mean(rr_ev, na.rm = TRUE)) %>% 
-  filter(model == "roundwise", threshold == "relative") %>%  
-  ggplot(aes(x = psi, y = mean_rr_ev, group = theta, color = as.factor(theta))) + 
+  group_by(model, psi, theta) %>% 
+  summarise(mean_rr_EV = mean(rr_EV, na.rm = TRUE)) %>% 
+  filter(model == "roundwise") %>%  
+  ggplot(aes(x = psi, y = mean_rr_EV, group = theta, color = as.factor(theta))) + 
   scale_color_scico_d(palette = "imola") + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  scale_shape_discrete(labels=c('EV', 'Average Outcome')) + 
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)", 
        y = "Mean Reward Rate",
        color = "Threshold\n(Stopping Rule)") + 
-  scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  #scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
   theme_minimal(base_size = 20)
 
 #### merge and save
@@ -1084,4 +930,4 @@ max_n_EV + rrates +
   plot_layout(ncol = 1, guides = "auto", ) + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/efficiency.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/efficiency_balanced.png", width = 14, height = 10)

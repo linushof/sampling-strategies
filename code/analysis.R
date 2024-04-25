@@ -10,10 +10,10 @@ pacman::p_load(tidyverse,
 
 
 # load data
-choices <- read_rds("data/choice_data_balanced.rds.bz2") 
+choices <- read_rds("data/choice_data_balanced.rds.bz2")
 cpt <- read_rds("data/cpt_estimates_balanced.rds") 
-round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
-summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
+#round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
+#summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
 
 # plot labels
 
@@ -475,15 +475,23 @@ ggsave(file = "manuscript/figures/rates_risk_aversion_balanced.png", width = 14,
 
 # Computational ---------------------------------------------------------------------
 
+# check convergence 
+
+max(cpt$Rhat) # 1.009
+min(cpt$n.eff) # 17,000
+
+# only consider strategies/models that converged (Rhat <= 1.01)
+
+converged <- cpt %>% 
+  filter(parameter!="deviance", !(Rhat > 1.01)) %>% 
+  group_by(model, psi, theta) %>% 
+  summarise(count = n())
+
+cpt <- left_join(cpt, converged, by=join_by(model, psi, theta)) %>% 
+  filter(count == 4)
+
 
 ## Probability Weighting ---------------------------------------------------------
-
-
-# check MCMC statistics / convergence 
-
-# scale reduction factor 
-max(cpt$Rhat) # 1.0014 ----> < 1.00 
-min(cpt$n.eff) # 17,000
 
 # prepare data
 weights <- cpt %>%

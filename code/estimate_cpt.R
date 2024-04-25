@@ -48,21 +48,21 @@ for(set in seq_len(nrow(params_sim))){
                                   inits = inits_MCMC,
                                   parameters.to.save = params_cpt,
                                   model.file = "code/CPT_model.txt",
-                                  n.chains = 20,
-                                  n.iter = 4000,
-                                  n.burnin = 2000,
+                                  n.chains = 24,
+                                  n.iter = 10000,
+                                  n.burnin = 5000,
                                   n.thin = 4,
-                                  n.cluster = 20, # run chains on different cores
+                                  n.cluster = 24, # run chains on different cores
                                   DIC = TRUE,
                                   jags.seed = 11617123)
-
+  
   ## posterior summary and MCMC diagnostics
   current_summary <- current_sample$BUGSoutput$summary %>% as_tibble(rownames = "parameter")
   estimates_cpt[[set]] <- expand_grid(params_sim[set, ], current_summary)
   
   ## full posterior
-  #current_posterior <- current_sample$BUGSoutput$sims.matrix %>% as_tibble()
-  #posterior_cpt[[set]] <- expand_grid(params_sim[set, ], current_posterior)
+  current_posterior <- current_sample$BUGSoutput$sims.matrix %>% as_tibble()
+  posterior_cpt[[set]] <- expand_grid(params_sim[set, ], current_posterior)
   
   ## status
   print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
@@ -78,4 +78,5 @@ checksum_estimates_cpt <- digest(estimates_cpt, "sha256")
 write_rds(estimates_cpt, "data/cpt_estimates_balanced.rds")
 
 checksum_posterior_cpt <- digest(posterior_cpt, "sha256")
-write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2")
+write_rds(posterior_cpt, "data/cpt_posteriors_balanced.rds.bz2", compress = "bz2") 
+

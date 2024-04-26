@@ -18,9 +18,7 @@ choice_data_summary <- simulation_summary %>%
 ## tidy data 
 choice_data_summary <- choice_data_summary %>% 
   mutate(model = "summary") %>% # to interpret psi as switching probability
-  rename(N_samples_trace = "sample_trace") %>% 
-  select(model, psi:samples_r, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
-# rm(simulation_summary)
+  select(model, psi, theta, id, agent, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
 
 # roundwise model
 #simulation_roundwise <- read_rds("data/simulation_roundwise.rds.bz2")
@@ -41,9 +39,7 @@ choice_data_roundwise <- simulation_roundwise %>%
 ## tidy data
 choice_data_roundwise <- choice_data_roundwise %>% 
   mutate(model = "roundwise") %>%
-  select(-samples_s) %>% 
-  select(model, psi:samples_r, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
-#rm(simulation_roundwise)
+  select(model, psi, theta, id, agent, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
 
 # join data sets and save as compressed data file
 

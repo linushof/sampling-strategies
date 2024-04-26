@@ -1,120 +1,125 @@
-# load pkgs
+# Preparation -------------------------------------------------------------
+
+# load packages
 pacman::p_load(tidyverse, digest, crayon)
 
-# test set
+# load choice problems
 problems <- as.data.frame(readRDS("data/choice_problems_balanced.rds"))
-n_agents <- 1000 # number of synthetic agents
 
-# simulation parameters
-param <- expand.grid(psi = seq(.1, 1, .1) , # switching probability
-                     theta = seq(100, 300, 50)) # thresholds
+# Simulation --------------------------------------------------------------
+# for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
 
-# simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
+# specify parameters for search rule (psi; switching probability) and stopping rule (theta; threshold)
+param <- expand.grid(psi = seq(.1, 1, .1) , 
+                     theta = seq(100, 300, 50))
 
-set.seed(8172651)
+n_agents <- 1000 # specify number of agents (iterations per strategy and problem)
+
+set.seed(1978) # seed random number generator to make simulations reproducible
+
+# loop over strategies
 param_list <- vector("list", nrow(param)) 
-for (set in seq_len(nrow(param))) { # loop over parameter combinations
+for (set in seq_len(nrow(param))) {
   
+  # retrieve settings for the search rule and the stopping rule
   psi <- param[[set,"psi"]]
   theta <- param[[set, "theta"]]
   
+  # loop over choice problems
   problem_list <- vector("list", nrow(problems))
-  
-  for (problem in seq_len(nrow(problems))) { # loop over choice problems
+  for (problem in seq_len(nrow(problems))) {
     
-    # retrieve problem features here
-    p_r_1 <- problems[[problem, "p_r_1"]]
-    p_r_2 <- problems[[problem, "p_r_2"]]
-    r_1 <- problems[[problem, "r_1"]]
-    r_2 <- problems[[problem, "r_2"]]
-    safe <- problems[[problem, "safe"]]
+    # retrieve problem features
+    p_r_1 <- problems[[problem, "p_r_1"]] # probability risky outcome 1
+    p_r_2 <- problems[[problem, "p_r_2"]] # probability risky outcome 2
+    r_1 <- problems[[problem, "r_1"]] # risky outcome 1
+    r_2 <- problems[[problem, "r_2"]] # risky outcome 2
+    safe <- problems[[problem, "safe"]] # safe outcome
     
+    # loop over agents
     agents_list <- vector("list", n_agents)
-    
-    for (agent in seq_along(1:n_agents)){ # loop over agents
+    for (agent in seq_along(1:n_agents)){
 
-      ## parameters to initiate trials with
+      # specify settings to initiate each choice trial
       
-      at <- NULL
-      sample_n <- 0
-      samples_n_r <- 0
-      samples_n_s <- 0
-      samples_r <- NULL
-      samples_s <- NULL
-      DV_risky <- 0
-      DV_safe <- 0
+      at <- NULL # attended option
+      smp_total <- 0 # total number of sampled outcomes
+      smp_total_r <- 0 # total number of sampled outcomes (risky option)
+      smp_total_s <- 0 # total number of sampled outcomes (safe option)
+      out_r <- NULL # sampled outcome (risky option)
+      out_s <- NULL # sampled outcome (safe option)
+      D_r <- 0 # accumulated evidence (risky option) 
+      D_s <- 0 # accumulated evidence (safe option)
+      boundary_reached <- FALSE # choice trial is stopped when TRUE
       
-      sample_trace <- NULL
-      DV_risky_trace <- NULL
-      DV_safe_trace <- NULL
-      DV_trace <- NULL
-      choice_trace <- NULL
+      # specify vectors to store sampling & evidence history
       
-      boundary_reached <- FALSE
+      smp <- NULL # total number of sampled outcomes
+      D <- NULL # trajectory of decision variable
+      choice <- NULL # final choice (risky or safe or no choice)
+
+      # START SAMPLING AND ACCUMULATION PROCESS
       
-      init <- sample(c("r", "s"), size=1) # option attended first; no attention bias
+      init <- sample(c("r", "s"), size=1) # randomly choose option to initially sample from
       attend <- init
-
-      ## sampling and accumulation process
-      
       while(boundary_reached == FALSE) {
         
-        at <- c(at, attend)
-        sample_n <- sample_n + 1
-        sample_trace <- c(sample_trace, sample_n)
+        # update number of samples
         
-        ### draw sample and update evidence for respective option
-
-        if(attend == "r") {
+        at <- c(at, attend)
+        smp_total <- smp_total + 1
+        smp <- c(smp, smp_total)
+        
+        # sample outcome and update evidence for respective option
+        
+        if(attend == "r") {# risky option
           
-          samples_n_r <- samples_n_r + 1
-          
+          smp_total_r <- smp_total_r + 1
           sampled_outcome <- sample(x = c(r_1, r_2), size = 1, prob = c(p_r_1, p_r_2))
-          samples_r <- c(samples_r, sampled_outcome)
-          samples_s <- c(samples_s, NA)
-          DV_risky <- DV_risky + sampled_outcome
-          DV_risky_trace <- c(DV_risky_trace, DV_risky)
-          DV_safe_trace <- c(DV_safe_trace, DV_safe)
-          
-          p_attend_r <- 1-psi
-          
-          } else {
+          out_r <- c(out_r, sampled_outcome)
+          out_s <- c(out_s, NA)
+          D_r <- D_r + sampled_outcome
+          p_attend_r <- 1-psi # probability of remaining on the risky option (for the next sample)
+        
+          } else {# safe option
             
-            samples_n_s <- samples_n_s + 1
-            
-            samples_s <- c(samples_s, safe)
-            samples_r <- c(samples_r, NA)
-            DV_safe <- DV_safe + safe
-            DV_safe_trace <- c(DV_safe_trace, DV_safe)
-            DV_risky_trace <- c(DV_risky_trace, DV_risky)
-            
-            p_attend_r <- psi
+            smp_total_s <- smp_total_s + 1
+            out_s <- c(out_s, safe)
+            out_r <- c(out_r, NA)
+            D_s <- D_s + safe
+            p_attend_r <- psi # probability of switching to the safe option (for the next sample)
             
           }
         
-        ### check if accumulated evidence reached threshold
+        # update decision variable
         
-        if(samples_n_s > 0 & samples_n_r > 0){
-        DV <- DV_risky - DV_safe # returns NA if not at least one sample from each option has been drawn
-        DV_trace <- c(DV_trace, DV)
-        } else {
-          DV <- 0
-          DV_trace <- c(DV_trace, DV)
+        if(smp_total_s > 0 & smp_total_r > 0){ # choice is only possible after both options were sampled
+        diff <- D_r - D_s
+        D <- c(D, diff)
+        } else { 
+          diff <- 0
+          D <- c(D, diff)
         }
         
-        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
-        choice_trace <- c(choice_trace, choice)
-
-        ### if threshold isn't reached, draw new sample according to psi
-
-        if(is.na(choice)) {
+        # check if the decision threshold is reached: if true, make a choice and stop trial
+        
+        boundary <- ifelse(diff >= theta, "r", ifelse(diff <= -1*theta, "s", NA))
+        choice <- c(choice, boundary)
+        
+        if(is.na(boundary)) { # if threshold isn't reached (no choice), determine from which option to sample next and continue
+          
           attend <- sample(c("r", "s"), size=1, prob=c(p_attend_r, 1-p_attend_r))
-          } else {
-            boundary_reached <- TRUE
+          
+        } else {
+          
+          boundary_reached <- TRUE
+          
+          # STOP SAMPLING AND ACCUMULATION PROCESS
+          
         }
         
       } # close loop choice trial
-      agents_list[[agent]] <- data.frame(agent, sample_trace, at, samples_r, samples_s, DV_risky_trace, DV_safe_trace,DV_trace, choice_trace)
+      agents_list[[agent]] <- data.frame(agent, smp, at, out_r, out_s, D, choice)
     } # close loop agents
     all_agents <- bind_rows(agents_list)
     problem_list[[problem]] <- as.data.frame(expand_grid(id=problems[problem,"id"], all_agents))
@@ -122,9 +127,10 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
   all_problems <- bind_rows(problem_list) 
   param_list[[set]] <- as.data.frame(expand_grid(param[set, ], all_problems))
   print(paste("\u2713 Parameter Set No. ", set, " finished!"))
-} # close loop parameters
+} # close loop strategies
 simulation_summary <- bind_rows(param_list)
 
-# save data
+# Storage --------------------------------------------------------------
+
 checksum_simulation_summary <- digest(simulation_summary, "sha256")
 write_rds(simulation_summary, "data/simulation_summary_balanced.rds.bz2", compress = "bz2")

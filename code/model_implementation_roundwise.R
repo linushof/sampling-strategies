@@ -1,228 +1,213 @@
-# load pkgs
+# Preparation -------------------------------------------------------------
+
+# load packages
 pacman::p_load(tidyverse, digest, crayon)
 
-# test set
+# load choice problems
 problems <- as.data.frame(readRDS("data/choice_problems_balanced.rds"))
-n_agents <- 1000 # number of synthetic agents
 
-# simulation parameters
-param <- expand.grid(psi = seq(.1, 1, .1) , # switching probability
-                     theta = 1:5) # thresholds
+# Simulation --------------------------------------------------------------
+# for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
 
-# simulation: for each parameter combination (rows of param), all choice problems (rows of choice_problems) are solved by all agents
+# specify parameters for search rule (psi; switching probability) and stopping rule (theta; threshold)
+param <- expand.grid(psi = seq(.1, 1, .1) ,
+                     theta = 1:5)
 
-set.seed(7126527)
+n_agents <- 1000 # specify number of agents (iterations per strategy and problem)
+
+set.seed(1955) # seed random number generator to make simulations reproducible
+
+# loop over strategies
 param_list <- vector("list", nrow(param))
-for (set in seq_len(nrow(param))) {  # loop over parameter combinations
+for (set in seq_len(nrow(param))) {
   
+  # retrieve settings for the search rule and the stopping rule
   psi <- param[[set,"psi"]]
   theta <- param[[set, "theta"]]
   
+  # loop over choice problems
   problem_list <- vector("list", nrow(problems))
-  for (problem in seq_len(nrow(problems))) { # loop over choice problems
+  for (problem in seq_len(nrow(problems))) {
     
-    # retrieve problem features here
-    p_r_1 <- problems[[problem, "p_r_1"]]
-    p_r_2 <- problems[[problem, "p_r_2"]]
-    r_1 <- problems[[problem, "r_1"]]
-    r_2 <- problems[[problem, "r_2"]]
-    safe <- problems[[problem, "safe"]]
+    # retrieve problem features
+    p_r_1 <- problems[[problem, "p_r_1"]] # probability risky outcome 1
+    p_r_2 <- problems[[problem, "p_r_2"]] # probability risky outcome 2
+    r_1 <- problems[[problem, "r_1"]] # risky outcome 1
+    r_2 <- problems[[problem, "r_2"]] # risky outcome 2
+    safe <- problems[[problem, "safe"]] # safe outcome
     
+    # loop over agents
     agents_list <- vector("list", n_agents)
-    for (agent in seq_along(1:n_agents)){ # loop over agents
-
-      ## parameters to initiate trials with
+    for (agent in seq_along(1:n_agents)){
       
-      at <- NULL
+      # specify settings to initiate each choice trial
       
-      N_samples <- 0
-      N_samples_trace <- NULL
+      at <- NULL # attended option 
+      smp_total <- 0 # total number of sampled outcomes
+      out_r <- NULL # sampled outcome (risky option)
+      out_s <- NULL # sampled outcome (safe option)
+      round <- 1 # number of comparison rounds
+      round_smp_r_total <- 0 # number of risky samples (within a round) 
+      round_sum_r_total <- 0 # sum of risky samples (within a round)
+      diff <- 0 # accumulated evidence
+      boundary_reached <- FALSE # choice trial is stopped when TRUE
       
-      samples_r <- NULL
-      samples_s <- NULL
-      #N_samples_r <- 0
-      #N_samples_s <- 0
+      # specify vectors to store sampling & evidence history
       
-      round_N_samples_r <- 0
-      round_N_samples_r_trace <- NULL
-      
-      round_sum_r <- 0
-      round_sum_r_trace <- NULL
-      
-      round_winner_trace <- NULL
-      
+      smp <- NULL # total number of sampled outcomes 
+      D <- NULL # trajectory of decision variable
+      choice <- NULL # final choice (risky or safe or no choice)
+      win <- NULL # round win indicator
       all_rounds <- NULL
-      
-      DV <- 0
-      DV_trace <- NULL
-      
-      choice_trace <- NULL
-      
-
-      
-      boundary_reached <- FALSE
-      
-      
-      round <- 1
-      init <- sample(c("r", "s"), size=1) # option attended first; no attention bias
-      attend <- init
+      #round_smp_r <- NULL # number of risky samples (within a round)
+      #round_sum_r <- NULL # sum of risky samples (within a round)
   
+      # START SAMPLING AND ACCUMULATION PROCESS
       
-      ## sampling and accumulation process
-
+      init <- sample(c("r", "s"), size=1) # randomly choose option to initially sample from
+      attend <- init
       while(boundary_reached == FALSE) {
 
-        #initial option
+        # start new comparison round on the initially sampled option
         
         while(attend == init) { 
           
+          # update total number of samples
+          
           at <- c(at, attend)
-          N_samples <- N_samples + 1
-          N_samples_trace <- c(N_samples_trace, N_samples)
+          smp_total <- smp_total + 1
+          smp <- c(smp, smp_total)
           
-          #round_sample_n <- round_sample_n + 1
-          #round_sample_n_trace <- c(round_sample_n_trace, round_sample_n)
+          # sample outcome for the initially sampled option and update number and sum of sampled outcomes (round level)
           
-          ### draw sample and update evidence for respective option
-          
-          if(attend == "r") {
-            
-            #N_samples_r <- N_samples_r + 1
+          if(attend == "r") {# risky option
             
             sampled_outcome <- sample(x = c(r_1, r_2), size = 1, prob = c(p_r_1, p_r_2))
-            samples_r <- c(samples_r, sampled_outcome)
-            samples_s <- c(samples_s, NA)
+            out_r <- c(out_r, sampled_outcome)
+            out_s <- c(out_s, NA)
+            round_smp_r_total <- round_smp_r_total + 1
+            #round_smp_r <- c(round_smp_r, round_smp_r_total)
+            round_sum_r_total <- round_sum_r_total + sampled_outcome
+            #round_sum_r <- c(round_sum_r, round_sum_r_total)
+            p_attend_r <- 1-psi # probability of remaining on the risky option (for the next sample)
             
-            round_N_samples_r <- round_N_samples_r + 1
-            round_N_samples_r_trace <- c(round_N_samples_r_trace, round_N_samples_r)
-            
-            round_sum_r <- round_sum_r + sampled_outcome
-            round_sum_r_trace <- c(round_sum_r_trace, round_sum_r)
-            
-            p_attend_r <- 1-psi
-            
-            
-            } else {
+            } else {# safe option
               
-              #N_samples_s <- N_samples_s + 1
-              
-              samples_s <- c(samples_s, safe)
-              samples_r <- c(samples_r, NA)
-              
-              round_N_samples_r_trace <- c(round_N_samples_r_trace, round_N_samples_r)
-              
-              round_sum_r_trace <- c(round_sum_r_trace, round_sum_r)
-              
-              p_attend_r <- psi
+              out_s <- c(out_s, safe)
+              out_r <- c(out_r, NA)
+              #round_smp_r <- c(round_smp_r, round_smp_r_total)
+              #round_sum_r <- c(round_sum_r, round_sum_r_total)
+              p_attend_r <- psi # probability of switching to the safe option (for the next sample)
               
             }
           
+          # determine from which option to sample next
+          
           attend <- sample(c("r", "s"), size = 1, prob = c(p_attend_r, 1-p_attend_r)) # switching according to psi
-          round_winner_trace <- c(round_winner_trace, NA)
-          DV_trace <- c(DV_trace, DV)
-          choice_trace <- c(choice_trace, NA)
+          
+          # add an entry to the following vectors, indicating that round is not completed yet
+          win <- c(win, NA) # no round winner is determined 
+          D <- c(D, diff) # decision variable does not change
+          choice <- c(choice, NA) # no choice determined
+          
         } 
         
-        
-        # second option
+        # switch to the other option
         
         while(attend != init) {
           
+          # update total number of samples
+          
           at <- c(at, attend)
-          N_samples <- N_samples + 1
-          N_samples_trace <- c(N_samples_trace, N_samples)
+          smp_total <- smp_total + 1
+          smp <- c(smp, smp_total)
           
-          #round_sample_n <- round_sample_n + 1
-          #round_sample_n_trace <- c(round_sample_n_trace, round_sample_n)
+          # sample outcome for the other option and update number and sum of sampled outcomes (round level)
           
-          if(attend == "r") {
-            
-            #N_samples_r <- N_samples_r + 1
+          if(attend == "r") {# risky option
             
             sampled_outcome <- sample(x = c(r_1, r_2), size = 1, prob = c(p_r_1, p_r_2))
-            samples_r <- c(samples_r, sampled_outcome)
-            samples_s <- c(samples_s, NA)
+            out_r <- c(out_r, sampled_outcome)
+            out_s <- c(out_s, NA)
+            round_smp_r_total <- round_smp_r_total + 1
+            #round_smp_r <- c(round_smp_r, round_smp_r_total)
+            round_sum_r_total <- round_sum_r_total + sampled_outcome
+            #round_sum_r <- c(round_sum_r, round_sum_r_total)
+            p_attend_r <- 1-psi # probability of remaining on the risky option (for the next sample)
             
-            round_N_samples_r <- round_N_samples_r + 1
-            round_N_samples_r_trace <- c(round_N_samples_r_trace, round_N_samples_r)
-            
-            round_sum_r <- round_sum_r + sampled_outcome
-            round_sum_r_trace <- c(round_sum_r_trace, round_sum_r)
-            
-            p_attend_r <- 1-psi
-            
-            } else {
+            } else {# safe option
               
-              #N_samples_s <- N_samples_s + 1
-              
-              samples_s <- c(samples_s, safe)
-              samples_r <- c(samples_r, NA)
-              
-              round_N_samples_r_trace <- c(round_N_samples_r_trace, round_N_samples_r)
-              
-              round_sum_r_trace <- c(round_sum_r_trace, round_sum_r)
-              
-              p_attend_r <- psi
+              out_s <- c(out_s, safe)
+              out_r <- c(out_r, NA)
+              #round_smp_r <- c(round_smp_r, round_smp_r_total)
+              #round_sum_r <- c(round_sum_r, round_sum_r_total)
+              p_attend_r <- psi # probability of switching to the safe option (for the next sample)
               
             }
           
+          # determine from which option to sample next
+          
           attend <- sample(c("r", "s"), size = 1, prob = c(p_attend_r, 1-p_attend_r)) # switching according to psi
-          if(attend!=init){
-            round_winner_trace <- c(round_winner_trace, NA)
-            DV_trace <- c(DV_trace, DV)
-            choice_trace <- c(choice_trace, NA)
+          
+          # check for switch back to the initial option
+          
+          if(attend!=init){ # no switch to initial option (round incomplete)
+            
+            # add an entry to the following vectors, indicating that round is not completed yet
+            win <- c(win, NA)
+            D <- c(D, diff)
+            choice <- c(choice, NA)
+            
             }
         } 
         
+        # switch to initial option (round complete): determine round winner and update decision variable
         
-        ### after each sampling round, update evidence and check if threshold is reached
-        
-        round_mean_r <- round_sum_r/round_N_samples_r
+        round_mean_r <- round_sum_r_total/round_smp_r_total # average sampled outcome (risky option, round level)
         round_winner <- ifelse(round_mean_r > safe, 1, ifelse(round_mean_r < safe, -1, 0))
-        round_winner_trace <- c(round_winner_trace, round_winner)
-        DV <- DV + round_winner
-        DV_trace <- c(DV_trace, DV)
+        win <- c(win, round_winner)
+        diff <- diff + round_winner
+        D <- c(D, diff)
         
-        round_store <- data.frame(round, round_N_samples_r_trace, round_sum_r_trace, round_winner_trace)
+        #round_store <- data.frame(round, round_smp_r, round_sum_r, win)
+        round_store <- data.frame(round, win)
         all_rounds <- rbind(all_rounds, round_store)
         
-        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
-        choice_trace <- c(choice_trace, choice)
+        # check if decision threshold is reached: if true, make a choice and stop trial
         
+        boundary <- ifelse(diff >= theta, "r", ifelse(diff <= -1*theta, "s", NA))
+        choice <- c(choice, boundary)
         
-        ### if threshold isn't reached, start new comparison round
-        if(is.na(choice)) {
+        if(is.na(boundary)) { # if threshold isn't reached (no choice), start new comparison round
           
           round <- round + 1
-          
-          round_N_samples_r <- 0
-          round_N_samples_r_trace <- NULL
-          
-          round_sum_r <- 0
-          round_sum_r_trace <- NULL
-          
-          round_winner_trace <- NULL
-          
+          round_smp_r_total <- 0
+          #round_smp_r <- NULL
+          round_sum_r_total <- 0
+          #round_sum_r <- NULL
+          win <- NULL
           
         } else {
+          
           boundary_reached <- TRUE
+          
+          # STOP SAMPLING AND ACCUMULATION PROCESS
+          
         }
         
         } # close loop choice trial
-      
-      trial_data <- cbind(N_samples_trace, at, samples_s, samples_r, all_rounds, DV_trace, choice_trace)
-      agents_list[[agent]] <- expand_grid(agent, trial_data)
-      
+      agents_list[[agent]] <- data.frame(agent, smp, at, out_r, out_s, all_rounds, D, choice)
     } # close loop agents
     all_agents <- bind_rows(agents_list)
-    problem_list[[problem]] <- expand_grid(id=problems[problem,"id"], all_agents)
-  } # close loop problems
+    problem_list[[problem]] <- as.data.frame(expand_grid(id=problems[problem,"id"], all_agents))
+  } # close loop choice problems
   all_problems <- bind_rows(problem_list)
-  param_list[[set]] <- expand_grid(param[set, ], all_problems)
+  param_list[[set]] <- as.data.frame(expand_grid(param[set, ], all_problems))
   print(paste("\u2713 Parameter Set No. ", set, " finished!"))
-} # close loop parameters
+} # close loop strategies
 simulation_roundwise <- bind_rows(param_list)
 
-# save data
+# Storage -----------------------------------------------------------------
+
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
 write_rds(simulation_roundwise, "data/simulation_roundwise_balanced.rds.bz2", compress = "bz2")

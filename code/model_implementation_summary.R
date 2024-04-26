@@ -35,7 +35,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
 
       ## parameters to initiate trials with
       
-      attended <- NULL
+      at <- NULL
       sample_n <- 0
       samples_n_r <- 0
       samples_n_s <- 0
@@ -59,7 +59,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
       
       while(boundary_reached == FALSE) {
         
-        attended <- c(attended, attend)
+        at <- c(at, attend)
         sample_n <- sample_n + 1
         sample_trace <- c(sample_trace, sample_n)
         
@@ -102,7 +102,7 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
           DV_trace <- c(DV_trace, DV)
         }
         
-        choice <- ifelse(DV >= theta, "risky", ifelse(DV <= -1*theta, "safe", NA))
+        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
         choice_trace <- c(choice_trace, choice)
 
         ### if threshold isn't reached, draw new sample according to psi
@@ -114,10 +114,10 @@ for (set in seq_len(nrow(param))) { # loop over parameter combinations
         }
         
       } # close loop choice trial
-      agents_list[[agent]] <- data.frame(agent, sample_trace, attended, samples_r, samples_s, DV_risky_trace, DV_safe_trace,DV_trace, choice_trace)
+      agents_list[[agent]] <- data.frame(agent, sample_trace, at, samples_r, samples_s, DV_risky_trace, DV_safe_trace,DV_trace, choice_trace)
     } # close loop agents
     all_agents <- bind_rows(agents_list)
-    problem_list[[problem]] <- as.data.frame(expand_grid(problems[problem, ], all_agents))
+    problem_list[[problem]] <- as.data.frame(expand_grid(id=problems[problem,"id"], all_agents))
   } # close loop choice problems
   all_problems <- bind_rows(problem_list) 
   param_list[[set]] <- as.data.frame(expand_grid(param[set, ], all_problems))

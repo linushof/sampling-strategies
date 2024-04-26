@@ -33,7 +33,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
 
       ## parameters to initiate trials with
       
-      attended <- NULL
+      at <- NULL
       
       N_samples <- 0
       N_samples_trace <- NULL
@@ -76,7 +76,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
         
         while(attend == init) { 
           
-          attended <- c(attended, attend)
+          at <- c(at, attend)
           N_samples <- N_samples + 1
           N_samples_trace <- c(N_samples_trace, N_samples)
           
@@ -128,7 +128,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
         
         while(attend != init) {
           
-          attended <- c(attended, attend)
+          at <- c(at, attend)
           N_samples <- N_samples + 1
           N_samples_trace <- c(N_samples_trace, N_samples)
           
@@ -186,7 +186,7 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
         round_store <- data.frame(round, round_N_samples_r_trace, round_sum_r_trace, round_winner_trace)
         all_rounds <- rbind(all_rounds, round_store)
         
-        choice <- ifelse(DV >= theta, "risky", ifelse(DV <= -1*theta, "safe", NA))
+        choice <- ifelse(DV >= theta, "r", ifelse(DV <= -1*theta, "s", NA))
         choice_trace <- c(choice_trace, choice)
         
         
@@ -210,12 +210,12 @@ for (set in seq_len(nrow(param))) {  # loop over parameter combinations
         
         } # close loop choice trial
       
-      trial_data <- cbind(N_samples_trace, attended, samples_s, samples_r, all_rounds, DV_trace, choice_trace)
+      trial_data <- cbind(N_samples_trace, at, samples_s, samples_r, all_rounds, DV_trace, choice_trace)
       agents_list[[agent]] <- expand_grid(agent, trial_data)
       
     } # close loop agents
     all_agents <- bind_rows(agents_list)
-    problem_list[[problem]] <- expand_grid(problems[problem, ], all_agents)
+    problem_list[[problem]] <- expand_grid(id=problems[problem,"id"], all_agents)
   } # close loop problems
   all_problems <- bind_rows(problem_list)
   param_list[[set]] <- expand_grid(param[set, ], all_problems)

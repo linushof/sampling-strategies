@@ -1,6 +1,6 @@
 # preparation -------------------------------------------------------------
 
-# load pkgs 
+# load packages 
 pacman::p_load(tidyverse,
                scico, # for scientific color palettes
                latex2exp, # for LaTeX expressions in plots
@@ -10,10 +10,13 @@ pacman::p_load(tidyverse,
 
 
 # load data
-choices <- read_rds("data/choice_data_balanced.rds.bz2")
+choices <- read_rds("data/choice_data_balanced_refined.rds.bz2")
 cpt <- read_rds("data/cpt_estimates_balanced.rds") 
 #round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
 #summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
+
+
+choices <- left_join(choices, problems, by=join_by(id))
 
 # plot labels
 
@@ -218,10 +221,10 @@ ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, heig
 
 ## sampled average
 rates_EV_exp <- choices %>%
-  mutate(norm = case_when(mean_r/safe > 1 ~ "risky", 
-                          mean_r/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
+  mutate(norm = case_when(avg_r/safe > 1 ~ "r", 
+                          avg_r/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
   group_by(model, psi, theta, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
@@ -230,10 +233,10 @@ rates_EV_exp <- choices %>%
 
 ## expected values
 rates_EV <- choices %>%
-  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
-                          ev_risky/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "r", 
+                          ev_risky/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
   group_by(model, psi, theta, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
@@ -433,7 +436,7 @@ ggsave(file = "figures/undersampling_balanced.png", width = 14, height = 10)
 
 # prepare data 
 rates <- choices %>% 
-  mutate(safe_choice = ifelse(choice_trace == "safe", 1, 0)) %>% # risk averse choice
+  mutate(safe_choice = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
   group_by(model, psi, theta, safe_choice) %>% 
   summarise(n = n()) %>% 
   mutate(rate = n/sum(n)) %>% 
@@ -708,10 +711,10 @@ ggsave(file = "manuscript/figures/cpt_value_roundwise_balanced.png", width = 14,
 
 ## expected values
 rates_EV_rare <- choices %>%
-  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
-                          ev_risky/safe < 1 ~ "safe")) %>% # determine option with higher sampled mean 
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "r", 
+                          ev_risky/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
   filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
   group_by(model, psi, theta, rare, max) %>% 
   summarise(n = n()) %>% 
   mutate(rate = round(n/sum(n), 2)) %>% 
@@ -760,7 +763,7 @@ ggsave(file = "manuscript/figures/maximization_rare_balanced.png", width = 14, h
 
 # prepare data 
 rates_rare <- choices %>% 
-  mutate(safe_choice = ifelse(choice_trace == "safe", 1, 0)) %>% # risk averse choice
+  mutate(safe_choice = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
   group_by(model, psi, theta, rare, safe_choice) %>% 
   summarise(n = n()) %>% 
   mutate(rate = n/sum(n)) %>% 
@@ -807,9 +810,9 @@ ggsave(file = "manuscript/figures/rates_risk_aversion_rare_balanced.png", width 
 effort_summary <- choices %>% 
   filter(model == "summary") %>% 
   group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = theta)) + 
+  summarise(mean_smp = mean(smp), 
+            median_smp = median(smp)) %>% 
+  ggplot(aes(x=psi, y=median_smp, group=theta, color = theta)) + 
   scale_color_scico(palette = "imola") + 
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
@@ -822,9 +825,9 @@ effort_summary <- choices %>%
 effort_roundwise <- choices %>% 
   filter(model == "roundwise") %>% 
   group_by(psi, theta) %>% 
-  summarise(mean_n = mean(n_sample), 
-            median_n = median(n_sample)) %>% 
-  ggplot(aes(x=psi, y=median_n, group=theta, color = as.factor(theta))) + 
+  summarise(mean_smp= mean(smp), 
+            median_smp = median(smp)) %>% 
+  ggplot(aes(x=psi, y=median_smp, group=theta, color = as.factor(theta))) + 
   scale_color_scico_d(palette = "imola") + 
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",

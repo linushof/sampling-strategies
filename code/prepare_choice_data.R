@@ -1,49 +1,58 @@
-pacman::p_load(tidyverse, digest)
+# load packages
+pacman::p_load(tidyverse, digest, readxl)
 
-# summary model
-simulation_summary <- read_rds("data/simulation_summary.rds.bz2")
+# load data
+problems <- as.data.frame(read_xlsx("data/choice_problems_balanced_refined.xlsx"))
+simulation_summary <- read_rds("data/simulation_summary_balanced_refined.rds.bz2")
+simulation_roundwise <- read_rds("data/simulation_roundwise_balanced_refined.rds.bz2")
 
-## transform data to obtain trial summaries
+# summary comparison ------------------------------------------------------
+
+simulation_summary <- left_join(simulation_summary, problems, by=join_by(id)) # add problem features
+
+# compute summaries of choice trials
 choice_data_summary <- simulation_summary %>%
   group_by(psi, theta, id, agent) %>%
-  mutate(n_sample = n(), # total number of single samples
-         n_s = sum(is.na(samples_r)), # number of single samples drawn from safe option
-         n_r = n_sample - n_s, # number of single samples drawn from risky option
-         ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_r, 2), # experienced probability of higher risky outcome
-         ep_r_2 = round(1 - ep_r_1, 2), # experienced probability of lower risky outcome
-         mean_r = round(mean(samples_r, na.rm = TRUE), 2)) %>% # sampled mean risky prospect
+  mutate(n_smp = n(), # number of samples
+         smp_s = sum(is.na(out_r)), # number of samples safe option
+         smp_r = n_smp - smp_s, # number of samples risky option
+         sp_r_1 = round(sum(if_else(out_r == r_1, 1, 0), na.rm = TRUE)/smp_r, 2), # sampled probability risky outcome 1
+         sp_r_2 = round(1 - sp_r_1, 2), # sampled probability risky outcome 2
+         avg_r = round(mean(out_r, na.rm = TRUE), 2)) %>% # sampled average risky option
   ungroup() %>%
-  filter(!is.na(choice_trace)) # discard single samples
+  filter(!is.na(choice)) # discard samples without choice
 
-## tidy data 
+# tidy data 
 choice_data_summary <- choice_data_summary %>% 
-  mutate(model = "summary") %>% # to interpret psi as switching probability
-  select(model, psi, theta, id, agent, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
+  mutate(model = "summary") %>%
+  select(model, psi, theta, id, agent, n_smp, smp_s, smp_r, sp_r_1, sp_r_2, avg_r, choice) %>% 
+  rename(smp = "n_smp")
 
-# roundwise model
-#simulation_roundwise <- read_rds("data/simulation_roundwise.rds.bz2")
-simulation_roundwise <- read_rds("data/simulation_roundwise_balanced_test.rds.bz2")
 
-## transform data to obtain trial summaries
+# roundwise comparison ----------------------------------------------------
+
+simulation_roundwise <- left_join(simulation_roundwise, problems, by=join_by(id)) # add problem features
+
+# compute summaries of choice trials
 choice_data_roundwise <- simulation_roundwise %>% 
   group_by(psi, theta, id, agent) %>% 
-    mutate(n_sample = n(),
-           n_s = sum(is.na(samples_r)),
-           n_r = n_sample - n_s, 
-           ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_r, 2),
-           ep_r_2 = round(1 - ep_r_1, 2),
-           mean_r = round(mean(samples_r, na.rm = TRUE), 2)) %>%
+    mutate(n_smp = n(), # number of samples
+           smp_s = sum(is.na(out_r)), # number of samples safe option
+           smp_r = n_smp - smp_s, # number of samples risky option
+           sp_r_1 = round(sum(if_else(out_r == r_1, 1, 0), na.rm = TRUE)/smp_r, 2), # sampled probability risky outcome 1
+           sp_r_2 = round(1 - sp_r_1, 2), # sampled probability risky outcome 2
+           avg_r = round(mean(out_r, na.rm = TRUE), 2)) %>% # sampled average risky option
   ungroup() %>%
-  filter(!is.na(choice_trace))
+  filter(!is.na(choice)) # discard samples without choice
     
-## tidy data
+# tidy data
 choice_data_roundwise <- choice_data_roundwise %>% 
   mutate(model = "roundwise") %>%
-  select(model, psi, theta, id, agent, n_sample, n_s, n_r, ep_r_1, ep_r_2, mean_r, choice_trace)
+  select(model, psi, theta, id, agent, n_smp, smp_s, smp_r, sp_r_1, sp_r_2, avg_r, choice) %>% 
+  rename(smp = "n_smp")
 
-# join data sets and save as compressed data file
+# storage -----------------------------------------------------------------
 
-## full data set
-choice_data <- bind_rows(choice_data_summary, choice_data_roundwise)
-checksum_choice_data <- digest(choice_data, "sha256")
-write_rds(choice_data, "data/choice_data_balanced.rds.bz2", compress = "bz2")
+choices <- bind_rows(choice_data_summary, choice_data_roundwise) # merge data sets
+checksum_choices <- digest(choices, "sha256")
+write_rds(choices, "data/choice_data_balanced_refined.rds.bz2", compress = "bz2")

@@ -6,12 +6,14 @@ pacman::p_load(tidyverse,
                latex2exp, # for LaTeX expressions in plots
                papaja,
                ggpubr,
-               patchwork)
+               patchwork, 
+               readxl)
 
 
 # load data
+problems <- read_xlsx("data/choice_problems_balanced_refined.xlsx") 
 choices <- read_rds("data/choice_data_balanced_refined.rds.bz2")
-cpt <- read_rds("data/cpt_estimates_balanced.rds") 
+cpt <- read_rds("data/cpt_estimates_balanced_refined.rds") 
 #round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
 #summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
 
@@ -755,7 +757,7 @@ max_EV_rare_roundwise <- rates_EV_rare %>%
   geom_point(size = 3) +
   theme_minimal(base_size = 20)
 
-max_EV <- ggarrange(max_EV_rare_summary, max_EV_rare_roundwise, nrow = 1)
+ggarrange(max_EV_rare_summary, max_EV_rare_roundwise, nrow = 1)
 ggsave(file = "manuscript/figures/maximization_rare_balanced.png", width = 14, height = 10)
 
 

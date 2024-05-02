@@ -1,4 +1,4 @@
-inits_MCMC <- function(){list("alpha.pre" = .5,
-                              "gamma.pre" = .5,
-                              "delta.pre" = .5,
-                              "rho.pre" = 0)}
+inits_MCMC <- function(){list("alpha.pre" = rbeta(1, 10, 10),
+                              "gamma.pre" = rbeta(1, 10, 10),
+                              "delta.pre" = rbeta(1, 10, 10),
+                              "rho.pre" = rbeta(1, 10,10))}

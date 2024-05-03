@@ -15,7 +15,7 @@ param <- expand.grid(psi = seq(.1, 1, .1) ,
 
 n_agents <- 1000 # specify number of agents (iterations per strategy and problem)
 
-set.seed(195135) # seed random number generator to make simulations reproducible
+set.seed(77816535) # seed random number generator to make simulations reproducible
 
 # loop over strategies
 param_list <- vector("list", nrow(param))

@@ -16,6 +16,8 @@ choices <- read_rds("data/choice_data_balanced_refined.rds.bz2")
 cpt <- read_rds("data/cpt_estimates_balanced_refined.rds") 
 #round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
 #summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
+round <- read_rds("data/simulation_roundwise_none.rds.bz2") 
+summary <- read_rds("data/simulation_summary_none.rds.bz2")
 
 
 choices <- left_join(choices, problems, by=join_by(id))
@@ -42,64 +44,48 @@ label_rare <- function(string) {
 
 # prepare data
 
-## compute evidence conditional on number of sampled outcomes
+## compute median evidence conditional on number of sampled outcomes
 
 ### summary
-summary <- summary %>% 
-  group_by(psi, threshold, theta, problem, agent) %>% # group by trial
-  mutate(smp_no = row_number(), # assign sample numbers
-         diff = if_else(smp_no == 1, 0, diff)) %>% 
-  fill(diff) # fill missing values
 
-####  median evidence
 summary_median <- summary %>% 
-  group_by(psi, threshold, theta, problem, smp_no) %>% 
-  summarise(count = n(), 
-            median = median(diff)) %>% 
-  slice(seq_len(min(which(median <= -theta | median >= theta), n())))
+  group_by(psi, theta, id, smp) %>% 
+  summarise(count = n(), # number of sampling agents
+            median = median(D)) %>% # median evidence across sampling agents
+  slice(seq_len(min(which(median <= -theta | median >= theta), n()))) # remove samples after median hit the threshold
 
-### round
-round <- round %>% 
-  group_by(psi, threshold, theta, problem, agent) %>% # group by trial
-  mutate(smp_no = row_number(), # assign sample numbers
-         diff = if_else(smp_no == 1, 0, diff)) %>% # fill missing values
-  fill(diff)
+  
+### roundwise 
 
-#### median evidence
 round_median <- round %>% 
-  group_by(psi, threshold, theta, problem, smp_no) %>% 
-  summarise(count = n(), 
-            median = median(diff)) %>% 
-  slice(seq_len(min(which(median %in% c(-theta, theta)), n())))
-
-## find illustrative problems where option with higher EV is not the option that returns the higher outcome most of the time 
-choice_problems %>% mutate(id = row_number()) %>% filter(r_ev > safe & p_r_low > p_r_high) # 7, 35 
-choice_problems %>% mutate(id = row_number()) %>% filter(r_ev < safe & p_r_low < p_r_high) # 43 , 47
-
+  group_by(psi, theta, id, smp) %>% 
+  summarise(count = n(), # number of sampling agents
+            median = median(D)) %>% # median evidence across sampling agents
+  slice(seq_len(min(which(median %in% c(-theta, theta)), n()))) # remove samples after median hit the threshold
 
 # plot problem 43
-problem_number <- 43
+problem_number <- 1
 
 ## summary
 
-summary_boundary <- 75  
+summary_boundary <- 300  
 summary_sub <- summary %>% 
-  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>% 
-  mutate(diff = case_when(diff < -summary_boundary ~ -summary_boundary, 
-                          diff > summary_boundary ~ summary_boundary, 
-                          diff >= -summary_boundary & diff <= summary_boundary ~ diff))
+  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>% 
+  mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
+                          D > summary_boundary ~ summary_boundary , 
+                          D >= -summary_boundary & D <= summary_boundary ~ D))
 
 summary_median_sub <- summary_median %>%  
-  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>%
+  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>%
   mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 8.6 (19%) or 17.36 (81%)")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 15.70 (100%)")
+#ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 8.6 (19%) or 17.36 (81%)")
+#ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 15.70 (100%)")
 
 summary_trajectories <- summary_sub %>% 
-  ggplot(aes(x = smp_no, y = diff)) + 
+  ggplot(aes(x = smp, y = D)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
                      breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
@@ -109,8 +95,8 @@ summary_trajectories <- summary_sub %>%
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
-  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
+  #geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
+  #geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
   geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .5, color = "gray") + 
   geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
   theme_minimal(base_size = 20) + 
@@ -120,15 +106,15 @@ summary_trajectories <- summary_sub %>%
 
 round_boundary <- 5
 round_sub <- round %>%
-  filter(psi %in% c((1-.9), .5, 1), theta == round_boundary, problem == problem_number)
+  filter(psi %in% c(.1, .5, 1), theta == round_boundary, id == problem_number)
 
 round_median_sub <- round_median %>% 
-  filter(psi %in% c((1-.9), .5, 1),
+  filter(psi %in% c(.1, .5, 1),
          theta == round_boundary, 
-         problem == problem_number)
+         id == problem_number)
 
 round_trajectories <- round_sub %>%
-  ggplot(aes(x = smp_no, y = diff)) + 
+  ggplot(aes(x = smp, y = D)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-round_boundary, round_boundary), 
                      breaks = seq(-round_boundary, round_boundary, round_boundary)) +
@@ -147,75 +133,6 @@ round_trajectories <- round_sub %>%
 summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
 ggsave(file = "manuscript/figures/accumulation_problem_43.png", width = 14, height = 14)
 
-# plot problem 35
-problem_number <- 35
-
-## summary
-summary_boundary <- 75  
-summary_sub <- summary %>% 
-  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>% 
-  mutate(diff = case_when(diff < -summary_boundary ~ -summary_boundary, 
-                          diff > summary_boundary ~ summary_boundary, 
-                          diff >= -summary_boundary & diff <= summary_boundary ~ diff))
-
-summary_median_sub <- summary_median %>%  
-  filter(psi %in% c((1-.9), .5, 1), theta == summary_boundary, problem == problem_number) %>%
-  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
-                            median > summary_boundary ~ summary_boundary, 
-                            median >= -summary_boundary & median <= summary_boundary ~ median))
-
-ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 10.44 (84%) or 12.33 (16%)")
-ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 10.51 (100%)")
-
-summary_trajectories <- summary_sub %>% 
-  ggplot(aes(x = smp_no, y = diff)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
-                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Difference in Cumulative Sums",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
-  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
-  geom_line(data = summary_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_minimal(base_size = 20) + 
-  theme(panel.grid = element_blank())
-
-## round-wise
-round_boundary <- 5
-round_sub <- round %>%
-  filter(psi %in% c((1-.9), .5, 1),
-         theta == round_boundary, 
-         problem == problem_number)
-
-round_median_sub <- round_median %>% 
-  filter(psi %in% c((1-.9), .5, 1),
-         theta == round_boundary, 
-         problem == problem_number)
-
-round_trajectories <- round_sub %>%
-  ggplot(aes(x = smp_no, y = diff)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
-                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Difference in Round Wins",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), size = .3, alpha = .5, color = "gray") + 
-  geom_line(data = round_median_sub, aes(y = median, alpha = count), size = 1, color = "#9c179e") +
-  theme_minimal(base_size = 20) + 
-  theme(panel.grid = element_blank())
-
-### merge and save plots
-summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
-ggsave(file = "manuscript/figures/accumulation_problem_35.png", width = 14, height = 14)
 
 ## Maximization  ------------------------------------------------------
 

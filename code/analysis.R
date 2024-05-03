@@ -11,11 +11,11 @@ pacman::p_load(tidyverse,
 
 
 # load data
-problems <- read_xlsx("data/choice_problems_balanced_refined.xlsx") 
-choices <- read_rds("data/choice_data_balanced_refined.rds.bz2")
-cpt <- read_rds("data/cpt_estimates_balanced_refined.rds") 
-#round <- read_rds("data/simulation_roundwise_balanced.rds.bz2") 
-#summary <- read_rds("data/simulation_summary_balanced.rds.bz2")
+problems <- read_xlsx("data/choice_problems.xlsx") 
+choices <- read_rds("data/choice_data.rds.bz2")
+cpt <- read_rds("data/cpt_estimates.rds") 
+#round <- read_rds("data/simulation_roundwise.rds.bz2") 
+#summary <- read_rds("data/simulation_summary.rds.bz2")
 round <- read_rds("data/simulation_roundwise_none.rds.bz2") 
 summary <- read_rds("data/simulation_summary_none.rds.bz2")
 
@@ -54,21 +54,19 @@ summary_median <- summary %>%
             median = median(D)) %>% # median evidence across sampling agents
   slice(seq_len(min(which(median <= -theta | median >= theta), n()))) # remove samples after median hit the threshold
 
-  
-### roundwise 
-
 round_median <- round %>% 
   group_by(psi, theta, id, smp) %>% 
   summarise(count = n(), # number of sampling agents
             median = median(D)) %>% # median evidence across sampling agents
   slice(seq_len(min(which(median %in% c(-theta, theta)), n()))) # remove samples after median hit the threshold
 
-# plot problem 43
-problem_number <- 1
 
-## summary
+## select data
+ problem_number <- 19
+ann_risky <- data.frame(psi=.1, smp = 60, D=115, label="Risky Threshold \n EV = 39")
+ann_safe <- data.frame(psi=.1, smp = 60, D=-115, label="Safe Threshold \n EV = 36")
 
-summary_boundary <- 300  
+summary_boundary <- 150  
 summary_sub <- summary %>% 
   filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>% 
   mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
@@ -81,8 +79,77 @@ summary_median_sub <- summary_median %>%
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-#ann_risky <- data.frame(psi=(1-.9), smp_no = 35, diff=60, label="Risky Threshold \n 8.6 (19%) or 17.36 (81%)")
-#ann_safe <- data.frame(psi=(1-.9), smp_no = 35, diff=-60, label="Safe Threshold \n 15.70 (100%)")
+summary_trajectories <- summary_sub %>% 
+  ggplot(aes(x = smp, y = D)) + 
+  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
+                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
+  labs(title = "Summary Comparison", 
+       x = "Number of Sampled Outcomes",
+       y = "Decision Variable",
+       color = expression(psi),
+       alpha = "Agent\nCount") +
+  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
+  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
+  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
+  geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
+
+## round-wise
+
+round_boundary <- 3
+round_sub <- round %>%
+  filter(psi %in% c(.1, .5, 1), 
+         theta == round_boundary, 
+         id == problem_number)
+
+round_median_sub <- round_median %>% 
+  filter(psi %in% c(.1, .5, 1),
+         theta == round_boundary, 
+         id == problem_number)
+
+round_trajectories <- round_sub %>%
+  ggplot(aes(x = smp, y = D)) + 
+  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
+                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Number of Sampled Outcomes",
+       y = "Decision Variable",
+       color = expression(psi),
+       alpha = "Agent\nCount") +
+  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
+  geom_line(data = round_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
+
+### merge and save plots
+summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
+ggsave(file = "manuscript/figures/accumulation_problem_19.png", width = 14, height = 14)
+
+
+
+
+## select data
+problem_number <- 5
+ann_risky <- data.frame(psi=.1, smp = 50, D=115, label="Risky Threshold \n EV = 40")
+ann_safe <- data.frame(psi=.1, smp = 50, D=-115, label="Safe Threshold \n EV = 43")
+
+summary_boundary <- 150  
+summary_sub <- summary %>% 
+  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>% 
+  mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
+                       D > summary_boundary ~ summary_boundary , 
+                       D >= -summary_boundary & D <= summary_boundary ~ D))
+
+summary_median_sub <- summary_median %>%  
+  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>%
+  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
+                            median > summary_boundary ~ summary_boundary, 
+                            median >= -summary_boundary & median <= summary_boundary ~ median))
 
 summary_trajectories <- summary_sub %>% 
   ggplot(aes(x = smp, y = D)) + 
@@ -91,20 +158,20 @@ summary_trajectories <- summary_sub %>%
                      breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
   labs(title = "Summary Comparison", 
        x = "Number of Sampled Outcomes",
-       y = "Difference in Cumulative Sums",
+       y = "Decision Variable",
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  #geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
-  #geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .5, color = "gray") + 
+  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
+  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
   geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
   theme_minimal(base_size = 20) + 
   theme(panel.grid = element_blank())
 
 ## round-wise
 
-round_boundary <- 5
+round_boundary <- 3
 round_sub <- round %>%
   filter(psi %in% c(.1, .5, 1), theta == round_boundary, id == problem_number)
 
@@ -120,18 +187,23 @@ round_trajectories <- round_sub %>%
                      breaks = seq(-round_boundary, round_boundary, round_boundary)) +
   labs(title = "Roundwise Comparison", 
        x = "Number of Sampled Outcomes",
-       y = "Difference in Round Wins",
+       y = "Decision Variable",
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .5, color = "gray") + 
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
   geom_line(data = round_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
   theme_minimal(base_size = 20) + 
   theme(panel.grid = element_blank())
 
 ### merge and save plots
 summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
-ggsave(file = "manuscript/figures/accumulation_problem_43.png", width = 14, height = 14)
+ggsave(file = "manuscript/figures/accumulation_problem_5.png", width = 14, height = 14)
+
+
+
+
+
 
 
 ## Maximization  ------------------------------------------------------

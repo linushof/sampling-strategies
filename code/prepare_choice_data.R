@@ -2,9 +2,9 @@
 pacman::p_load(tidyverse, digest, readxl)
 
 # load data
-problems <- as.data.frame(read_xlsx("data/choice_problems_balanced_refined.xlsx"))
-simulation_summary <- read_rds("data/simulation_summary_balanced_refined.rds.bz2")
-simulation_roundwise <- read_rds("data/simulation_roundwise_balanced_refined.rds.bz2")
+problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
+simulation_summary <- read_rds("data/simulation_summary.rds.bz2")
+simulation_roundwise <- read_rds("data/simulation_roundwise.rds.bz2")
 
 # summary comparison ------------------------------------------------------
 
@@ -55,4 +55,4 @@ choice_data_roundwise <- choice_data_roundwise %>%
 
 choices <- bind_rows(choice_data_summary, choice_data_roundwise) # merge data sets
 checksum_choices <- digest(choices, "sha256")
-write_rds(choices, "data/choice_data_balanced_refined.rds.bz2", compress = "bz2")
+write_rds(choices, "data/choice_data.rds.bz2", compress = "bz2")

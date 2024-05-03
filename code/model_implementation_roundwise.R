@@ -4,7 +4,7 @@
 pacman::p_load(tidyverse, digest, crayon, readxl)
 
 # load choice problems
-problems <- as.data.frame(read_xlsx("data/choice_problems_balanced_refined.xlsx"))
+problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
 
 # Simulation --------------------------------------------------------------
 # for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
@@ -210,4 +210,4 @@ simulation_roundwise <- bind_rows(param_list)
 # Storage -----------------------------------------------------------------
 
 checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
-write_rds(simulation_roundwise, "data/simulation_roundwise_balanced_refined.rds.bz2", compress = "bz2")
+write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")

@@ -14,13 +14,12 @@ pacman::p_load(tidyverse,
 problems <- read_xlsx("data/choice_problems.xlsx") 
 choices <- read_rds("data/choice_data.rds.bz2")
 cpt <- read_rds("data/cpt_estimates.rds") 
-#round <- read_rds("data/simulation_roundwise.rds.bz2") 
-#summary <- read_rds("data/simulation_summary.rds.bz2")
-round <- read_rds("data/simulation_roundwise_none.rds.bz2") 
-summary <- read_rds("data/simulation_summary_none.rds.bz2")
+round <- read_rds("data/simulation_roundwise.rds.bz2") 
+summary <- read_rds("data/simulation_summary.rds.bz2")
 
-
+# merge data
 choices <- left_join(choices, problems, by=join_by(id))
+round <- left_join(round, problems, by=join_by(id))
 
 # plot labels
 
@@ -201,11 +200,6 @@ summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + 
 ggsave(file = "manuscript/figures/accumulation_problem_5.png", width = 14, height = 14)
 
 
-
-
-
-
-
 ## Maximization  ------------------------------------------------------
 
 # compute maximization rates
@@ -313,7 +307,7 @@ max_EV + max_EV_exp +
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/maximization_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
 
 
 ## Undersampling -----------------------------------------------------
@@ -326,18 +320,18 @@ ggsave(file = "manuscript/figures/maximization_balanced.png", width = 14, height
 freq  <- round %>% 
   filter(psi %in% c(.1, .5, 1)) %>% 
   group_by(psi, theta, id, agent) %>%
-  mutate(n_sample = n(), # total number of single samples
-         n_s = sum(is.na(samples_r)), # number of single samples drawn from safe option
-         n_r = n_sample - n_s, # number of single samples drawn from risky option
-         ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_r, 2), # experienced probability of higher risky outcome
-         ep_r_2 = round(1 - ep_r_1, 2)) %>% 
+  mutate(n_smp = n() , # number of samples
+         smp_s = sum(is.na(out_r)) , # number of samples safe option
+         smp_r = n_smp - smp_s , # number of samples risky option
+         sp_r_1 = round(sum(if_else(out_r == r_1, 1, 0), na.rm = TRUE)/smp_r, 2) , # sampled probability risky outcome 1
+         sp_r_2 = round(1 - sp_r_1, 2)) %>% 
   ungroup() %>%
   group_by(psi, theta, id, agent, round) %>% 
-  mutate(n_round = n(), 
-         n_round_s = sum(is.na(samples_r)),
-         n_round_r = n_round - n_round_s,
-         round_ep_r_1 = round(sum(if_else(samples_r == r_1, 1, 0), na.rm = TRUE)/n_round_r, 2),
-         round_ep_r_2 = round(1 - round_ep_r_1, 2)
+  mutate(n_smp_round = n() , 
+         smp_round_s = sum(is.na(out_r)) ,
+         smp_round_r = n_smp_round - smp_round_s ,
+         round_sp_r_1 = round(sum(if_else(out_r == r_1, 1, 0), na.rm = TRUE)/smp_round_r, 2),
+         round_sp_r_2 = round(1 - round_sp_r_1, 2)
   ) 
 
 
@@ -346,50 +340,39 @@ freq  <- round %>%
 ### ... for each sampled frequency on the trial level
 
 freq_trial_1 <- freq %>% 
-  distinct(psi, theta, id, agent, round, ep_r_1, round_ep_r_1) %>% # drop redundant row
-  select(psi, theta, id, agent, round, ep_r_1, round_ep_r_1) %>% 
-  rename(ep = "ep_r_1", round_ep = "round_ep_r_1")
+  distinct(psi, theta, id, agent, round, sp_r_1, round_sp_r_1) %>% # drop redundant row
+  select(psi, theta, id, agent, round, sp_r_1, round_sp_r_1) %>% 
+  rename(sp = "sp_r_1", round_sp = "round_sp_r_1")
 
 freq_trial_2 <- freq %>% 
-  distinct(psi, theta, id, agent, round, ep_r_2, round_ep_r_2) %>% # drop redundant row
-  select(psi, theta, id, agent, round, ep_r_2, round_ep_r_2) %>% 
-  rename(ep = "ep_r_2", round_ep = "round_ep_r_2")
+  distinct(psi, theta, id, agent, round, sp_r_2, round_sp_r_2) %>% # drop redundant row
+  select(psi, theta, id, agent, round, sp_r_2, round_sp_r_2) %>% 
+  rename(sp = "sp_r_2", round_sp = "round_sp_r_2")
 
-freq_trial <- bind_rows(freq_trial_1, freq_trial_2) %>% 
-  mutate(diff = abs(ep - round_ep))
-
-freq_trial_median <- freq_trial %>% 
-  group_by(psi, theta, ep) %>%
-  summarise(median_round_ep = median(round_ep, na.rm = TRUE), 
-            mean_diff = mean(diff, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
+freq_trial_median <- bind_rows(freq_trial_1, freq_trial_2) %>% 
+  group_by(psi, theta, sp) %>%
+  summarise(median_round_sp = median(round_sp, na.rm = TRUE)) # compute median round-level frequencies for each parameter combination and trial-level frequency
 
 ### ... for each latent probability
 
-freq_latent_1 <- freq %>% distinct(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
-  select(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
-  rename(p = "p_r_1", round_ep = "round_ep_r_1")
+freq_latent_1 <- freq %>% distinct(psi, theta, id, agent, round, p_r_1, round_sp_r_1) %>% 
+  select(psi, theta, id, agent, round, p_r_1, round_sp_r_1) %>% 
+  rename(p = "p_r_1", round_sp = "round_sp_r_1")
 
-freq_latent_1 <- freq %>% distinct(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
-  select(psi, theta, id, agent, round, p_r_1, round_ep_r_1) %>% 
-  rename(p = "p_r_1", round_ep = "round_ep_r_1")
+freq_latent_2 <- freq %>% distinct(psi, theta, id, agent, round, p_r_2, round_sp_r_2) %>% 
+  select(psi, theta, id, agent, round, p_r_2, round_sp_r_2) %>% 
+  rename(p = "p_r_2", round_sp = "round_sp_r_2")
 
-freq_latent_2 <- freq %>% distinct(psi, theta, id, agent, round, p_r_2, round_ep_r_2) %>% 
-  select(psi, theta, id, agent, round, p_r_2, round_ep_r_2) %>% 
-  rename(p = "p_r_2", round_ep = "round_ep_r_2")
-
-freq_latent <- bind_rows(freq_latent_1, freq_latent_2) %>% 
-  mutate(diff = abs(p - round_ep))
-
-freq_latent_median <- freq_latent %>% 
+freq_latent_median <- bind_rows(freq_latent_1, freq_latent_2) %>% 
   group_by(psi, theta, p) %>%
-  summarise(median_round_ep = median(round_ep, na.rm = TRUE), 
-            mean_diff = mean(diff, na.rm = TRUE)) 
+  summarise(median_round_sp = median(round_sp, na.rm = TRUE)) 
+
 
 # plot data
 
 ## median for trial level frequencies
 undersampling_trial <- freq_trial_median %>% 
-  ggplot(aes(x = ep, y = median_round_ep, color = as.factor(theta))) +
+  ggplot(aes(x = sp, y = median_round_sp, color = as.factor(theta))) +
   geom_jitter(size = 2) + 
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
@@ -398,12 +381,12 @@ undersampling_trial <- freq_trial_median %>%
        y = "Sampled Probability\nWithin Comparison Round", 
        color = "Threshold\n(Stopping Rule)") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
-  scale_color_scico_d(palette = "imola", alpha = .3) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
   theme_minimal(base_size = 20)
 
 ## median for latent probabilities
 undersampling_latent <- freq_latent_median %>% 
-  ggplot(aes(x = p, y = median_round_ep, color = as.factor(theta))) +
+  ggplot(aes(x = p, y = median_round_sp, color = as.factor(theta))) +
   geom_jitter(size = 2) + 
   facet_wrap(~psi, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
@@ -412,7 +395,7 @@ undersampling_latent <- freq_latent_median %>%
        y = "Sampled Probability\nWithin Comparison Round", 
        color = "Threshold\n(Stopping Rule)") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
-  scale_color_scico_d(palette = "imola", alpha = .3) + 
+  scale_color_scico_d(palette = "imola", alpha = .7) + 
   theme_minimal(base_size = 20)
 
 # merge and save plot
@@ -420,7 +403,7 @@ undersampling_latent + undersampling_trial +
   plot_layout(ncol = 1, guides = "collect") + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "figures/undersampling_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/undersampling.png", width = 14, height = 10)
 
 
 ## Risk  -----------------------------------------------------------
@@ -463,7 +446,7 @@ r_averse_roundwise <- rates %>%
   theme_minimal(base_size = 20)
 
 r_averse_summary + r_averse_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/rates_risk_aversion_balanced.png", width = 14, height = 6)
+ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height = 6)
 
 
 
@@ -721,7 +704,7 @@ max_EV_rare_summary <- rates_EV_rare %>%
   facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_color_scico(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% EV Maximization",
@@ -737,7 +720,7 @@ max_EV_rare_roundwise <- rates_EV_rare %>%
   facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
   scale_color_scico_d(palette = "imola", alpha = .7) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  # scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
        y = "% EV Maximization",
@@ -747,7 +730,7 @@ max_EV_rare_roundwise <- rates_EV_rare %>%
   theme_minimal(base_size = 20)
 
 ggarrange(max_EV_rare_summary, max_EV_rare_roundwise, nrow = 1)
-ggsave(file = "manuscript/figures/maximization_rare_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/maximization_rare.png", width = 14, height = 10)
 
 
 ## Risk -----------------------------------------------------
@@ -792,7 +775,9 @@ r_averse_rare_roundwise <- rates_rare %>%
   theme_minimal(base_size = 20)
 
 r_averse_rare_summary + r_averse_rare_roundwise + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/rates_risk_aversion_rare_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/rates_risk_aversion_rare.png", width = 14, height = 10)
+
+
 
 # Efficiency --------------------------------------------------------------
 
@@ -804,6 +789,7 @@ effort_summary <- choices %>%
   summarise(mean_smp = mean(smp), 
             median_smp = median(smp)) %>% 
   ggplot(aes(x=psi, y=median_smp, group=theta, color = theta)) + 
+  scale_y_continuous(limits = c(0,200), breaks = seq(0,200, length.out = 5)) +
   scale_color_scico(palette = "imola") + 
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
@@ -819,6 +805,7 @@ effort_roundwise <- choices %>%
   summarise(mean_smp= mean(smp), 
             median_smp = median(smp)) %>% 
   ggplot(aes(x=psi, y=median_smp, group=theta, color = as.factor(theta))) + 
+  scale_y_continuous(limits = c(0,200), breaks = seq(0,200, length.out = 5)) +
   scale_color_scico_d(palette = "imola") + 
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
@@ -829,7 +816,7 @@ effort_roundwise <- choices %>%
   theme_minimal(base_size = 20)
 
 effort_summary + effort_roundwise + plot_layout(ncol = 2) + plot_annotation(tag_levels = "A")
-ggsave("manuscript/figures/sample_size_balanced.png", width = 14, height = 6)
+ggsave("manuscript/figures/sample_size.png", width = 14, height = 6)
 
 ## Reward Rate --------------------------------------------
 
@@ -837,21 +824,18 @@ ggsave("manuscript/figures/sample_size_balanced.png", width = 14, height = 6)
 
 ## Maximization as a function of comparison strategies and sample size
 max_n <- choices %>% 
-  mutate(norm = case_when(ev_risky/safe > 1 ~ "risky", 
-                          ev_risky/safe < 1 ~ "safe")) %>%
-  mutate(max = ifelse(norm == choice_trace, 1, 0)) %>% 
+  mutate(norm = case_when(ev_risky/safe > 1 ~ "r", 
+                          ev_risky/safe < 1 ~ "s")) %>%
+  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
   group_by(model, psi, theta) %>% 
   summarise(n = n(), 
-            median_n = median(n_sample) , 
-            mean_n = mean(n_sample) , 
+            median_n = median(smp) , 
             max_prop = sum(max)/n)
 
 ## reward rate
 reward_rates <- choices %>%  
-  mutate(higher_EV_option = ifelse(ev_risky/safe > 1, "risky", ifelse(ev_risky/safe < 1 , "safe", NA)) ,
-         higher_EV_choice = choice_trace == higher_EV_option , 
-         chosen_option_EV = ifelse(choice_trace == "safe", safe, ifelse(choice_trace == "risky", ev_risky, NA)) ,
-         rr_EV = chosen_option_EV/n_sample) %>% 
+  mutate(chosen_option_EV = ifelse(choice == "s", safe, ev_risky) ,
+         rr_EV = chosen_option_EV/smp) %>% 
   select(model, psi, theta, rr_EV)
 
 
@@ -868,10 +852,9 @@ max_n_summary <- max_n %>%
        x = "Median Sample Size",
        y = "% EV Maximization",
        color = "Switching\nProbability\n(Search Rule)") +
-  geom_point(size = 3) + 
+  geom_point(size = 2) + 
   geom_line(linewidth = 1) + 
-  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
-  #scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4,1), breaks = seq(.4,1, length.out = 6)) +
   theme_minimal(base_size = 20)
 
 ### roundwise
@@ -883,10 +866,9 @@ max_n_roundwise <- max_n %>%
        x = "Median Sample Size",
        y = "% EV Maximization", 
        color = "Switching\nProbability\n(Search Rule)") +
-  geom_point(size = 3) + 
-  geom_line(linewidth = 1) + 
-  #scale_x_continuous(limits = c(0, 130), breaks = seq(0, 130, length.out = 3)) + 
-  #scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1, length.out = 3)) +
+  geom_point(size = 2) + 
+  geom_line(linewidth = 1) +
+  scale_y_continuous(limits = c(.4,1), breaks = seq(.4,1, length.out = 6)) +
   theme_minimal(base_size = 20)
 
 ### merge
@@ -903,11 +885,10 @@ rr_summary <- reward_rates %>%
   scale_color_scico(palette = "imola") + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  labs(title = "Summary Comparison", 
-       x = "Switching Probability\n(Search Rule)", 
+  labs(x = "Switching Probability\n(Search Rule)", 
        y = "Mean Reward Rate",
        color = "Threshold\n(Stopping Rule)") + 
-  #scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  scale_y_continuous(limits = c(0, 23), breaks = seq(0,23,length.out = 6)) + 
   theme_minimal(base_size = 20)
 
 #### roundwise
@@ -919,11 +900,10 @@ rr_roundwise <- reward_rates %>%
   scale_color_scico_d(palette = "imola") + 
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switching Probability\n(Search Rule)", 
+  labs(x = "Switching Probability\n(Search Rule)", 
        y = "Mean Reward Rate",
        color = "Threshold\n(Stopping Rule)") + 
-  #scale_y_continuous(limits = c(0, 6), breaks = seq(0,6,length.out = 3)) + 
+  scale_y_continuous(limits = c(0, 23), breaks = seq(0,23,length.out = 6)) + 
   theme_minimal(base_size = 20)
 
 #### merge and save
@@ -932,4 +912,4 @@ max_n_EV + rrates +
   plot_layout(ncol = 1, guides = "auto", ) + 
   plot_annotation(tag_levels = "A") & 
   theme(plot.tag = element_text(size = 24, face = "plain"))
-ggsave(file = "manuscript/figures/efficiency_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/efficiency.png", width = 16, height = 10)

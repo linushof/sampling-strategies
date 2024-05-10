@@ -17,10 +17,6 @@ cpt <- read_rds("data/cpt_estimates.rds")
 round <- read_rds("data/simulation_roundwise.rds.bz2") 
 summary <- read_rds("data/simulation_summary.rds.bz2")
 
-# merge data
-choices <- left_join(choices, problems, by=join_by(id))
-round <- left_join(round, problems, by=join_by(id))
-
 # plot labels
 
 label_theta <- function(string) {
@@ -38,119 +34,105 @@ label_rare <- function(string) {
 
 # Behavioral --------------------------------------------------------------
 
+choices <- left_join(choices, problems, by=join_by(id))
 
 ## Trajectories -----------------------------------------------
 
-# prepare data
+# select and prepare data
 
-## compute median evidence conditional on number of sampled outcomes
+## problems 5 and 19 for illustration
+round_sub <- round %>% filter(id %in% c(5, 19))
+summary_sub <- summary %>% filter(id %in% c(5, 19))
 
-### summary
+##  medium thresholds for illustration
+summary_boundary <- 150
+round_boundary <- 3
 
-summary_median <- summary %>% 
+## compute median trajectory for each sampling strategy
+summary_median <- summary_sub %>% 
   group_by(psi, theta, id, smp) %>% 
   summarise(count = n(), # number of sampling agents
             median = median(D)) %>% # median evidence across sampling agents
   slice(seq_len(min(which(median <= -theta | median >= theta), n()))) # remove samples after median hit the threshold
 
-round_median <- round %>% 
+round_median <- round_sub %>% 
   group_by(psi, theta, id, smp) %>% 
   summarise(count = n(), # number of sampling agents
             median = median(D)) %>% # median evidence across sampling agents
   slice(seq_len(min(which(median %in% c(-theta, theta)), n()))) # remove samples after median hit the threshold
 
 
-## select data
- problem_number <- 19
-ann_risky <- data.frame(psi=.1, smp = 60, D=115, label="Risky Threshold \n EV = 39")
-ann_safe <- data.frame(psi=.1, smp = 60, D=-115, label="Safe Threshold \n EV = 36")
-
-summary_boundary <- 150  
-summary_sub <- summary %>% 
-  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>% 
-  mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
-                          D > summary_boundary ~ summary_boundary , 
-                          D >= -summary_boundary & D <= summary_boundary ~ D))
-
-summary_median_sub <- summary_median %>%  
-  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>%
-  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
-                            median > summary_boundary ~ summary_boundary, 
-                            median >= -summary_boundary & median <= summary_boundary ~ median))
-
-summary_trajectories <- summary_sub %>% 
-  ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
-                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Decision Variable",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
-  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
-  theme_minimal(base_size = 20) + 
-  theme(panel.grid = element_blank())
-
-## round-wise
-
-round_boundary <- 3
-round_sub <- round %>%
-  filter(psi %in% c(.1, .5, 1), 
-         theta == round_boundary, 
-         id == problem_number)
-
-round_median_sub <- round_median %>% 
-  filter(psi %in% c(.1, .5, 1),
-         theta == round_boundary, 
-         id == problem_number)
-
-round_trajectories <- round_sub %>%
-  ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
-                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Decision Variable",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = round_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
-  theme_minimal(base_size = 20) + 
-  theme(panel.grid = element_blank())
-
-### merge and save plots
-summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
-ggsave(file = "manuscript/figures/accumulation_problem_19.png", width = 14, height = 14)
-
-
-
-
-## select data
+## data for problem 5
 problem_number <- 5
-ann_risky <- data.frame(psi=.1, smp = 50, D=115, label="Risky Threshold \n EV = 40")
-ann_safe <- data.frame(psi=.1, smp = 50, D=-115, label="Safe Threshold \n EV = 43")
 
-summary_boundary <- 150  
-summary_sub <- summary %>% 
-  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>% 
+summary_sub_5 <- summary_sub %>% 
+  filter(psi %in% c(.1, .5, 1), 
+         theta == summary_boundary, 
+         id == problem_number) %>% 
   mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
                        D > summary_boundary ~ summary_boundary , 
                        D >= -summary_boundary & D <= summary_boundary ~ D))
 
-summary_median_sub <- summary_median %>%  
-  filter(psi %in% c(.1, .5, 1), theta == summary_boundary, id == problem_number) %>%
+round_sub_5 <- round_sub %>%
+  filter(psi %in% c(.1, .5, 1), 
+         theta == round_boundary, 
+         id == problem_number)
+
+summary_median_sub_5 <- summary_median %>%  
+  filter(psi %in% c(.1, .5, 1), 
+         theta == summary_boundary, 
+         id == problem_number) %>%
   mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-summary_trajectories <- summary_sub %>% 
+round_median_sub_5 <- round_median %>% 
+  filter(psi %in% c(.1, .5, 1),
+         theta == round_boundary, 
+         id == problem_number)
+
+## data for problem 19
+problem_number <- 19
+
+summary_sub_19 <- summary_sub %>% 
+  filter(psi %in% c(.1, .5, 1), 
+         theta == summary_boundary, 
+         id == problem_number) %>% 
+  mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
+                          D > summary_boundary ~ summary_boundary , 
+                          D >= -summary_boundary & D <= summary_boundary ~ D))
+
+round_sub_19 <- round_sub %>%
+  filter(psi %in% c(.1, .5, 1), 
+         theta == round_boundary, 
+         id == problem_number)
+
+
+summary_median_sub_19 <- summary_median %>%  
+  filter(psi %in% c(.1, .5, 1), 
+         theta == summary_boundary, 
+         id == problem_number) %>%
+  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
+                            median > summary_boundary ~ summary_boundary, 
+                            median >= -summary_boundary & median <= summary_boundary ~ median))
+
+
+round_median_sub_19 <- round_median %>% 
+  filter(psi %in% c(.1, .5, 1),
+         theta == round_boundary, 
+         id == problem_number)
+
+
+# plot data 
+
+## problem 5
+
+# create EV labels
+ann_risky_5 <- data.frame(psi=.1, smp = 50, D=115, label="Risky Threshold \n EV = 40")
+ann_safe_5 <- data.frame(psi=.1, smp = 50, D=-115, label="Safe Threshold \n EV = 43")
+
+# summary comparison
+summary_trajectories_5 <- summary_sub_5 %>% 
   ggplot(aes(x = smp, y = D)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
@@ -161,25 +143,15 @@ summary_trajectories <- summary_sub %>%
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky, label=ann_risky$label, size = 5) + 
-  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
+  geom_text(data = ann_risky_5, label=ann_risky_5$label, size = 5) + 
+  geom_text(data = ann_safe_5, label=ann_safe_5$label, size = 5) +
   geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = summary_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  geom_line(data = summary_median_sub_5, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
   theme_minimal(base_size = 20) + 
   theme(panel.grid = element_blank())
 
-## round-wise
-
-round_boundary <- 3
-round_sub <- round %>%
-  filter(psi %in% c(.1, .5, 1), theta == round_boundary, id == problem_number)
-
-round_median_sub <- round_median %>% 
-  filter(psi %in% c(.1, .5, 1),
-         theta == round_boundary, 
-         id == problem_number)
-
-round_trajectories <- round_sub %>%
+# roundwise comparison
+round_trajectories_5 <- round_sub_5 %>%
   ggplot(aes(x = smp, y = D)) + 
   facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-round_boundary, round_boundary), 
@@ -191,14 +163,60 @@ round_trajectories <- round_sub %>%
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
   geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = round_median_sub, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  geom_line(data = round_median_sub_5, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
   theme_minimal(base_size = 20) + 
   theme(panel.grid = element_blank())
 
-### merge and save plots
-summary_trajectories + round_trajectories + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
+# merge and save plot
+summary_trajectories_5 + round_trajectories_5 + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
 ggsave(file = "manuscript/figures/accumulation_problem_5.png", width = 14, height = 14)
 
+
+##  problem 19
+
+# create EV labels
+ann_risky_19 <- data.frame(psi=.1, smp = 50, D=115, label="Risky Threshold \n EV = 39")
+ann_safe_19 <- data.frame(psi=.1, smp = 50, D=-115, label="Safe Threshold \n EV = 36")
+
+# summary comparison
+summary_trajectories_19 <- summary_sub_19 %>% 
+  ggplot(aes(x = smp, y = D)) + 
+  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
+                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
+  labs(title = "Summary Comparison", 
+       x = "Number of Sampled Outcomes",
+       y = "Decision Variable",
+       color = expression(psi),
+       alpha = "Agent\nCount") +
+  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
+  geom_text(data = ann_risky_19, label=ann_risky_19$label, size = 5) + 
+  geom_text(data = ann_safe_19, label=ann_safe_19$label, size = 5) +
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
+  geom_line(data = summary_median_sub_19, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
+
+# roundwise comparison
+round_trajectories_19 <- round_sub_19 %>%
+  ggplot(aes(x = smp, y = D)) + 
+  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
+                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
+  labs(title = "Roundwise Comparison", 
+       x = "Number of Sampled Outcomes",
+       y = "Decision Variable",
+       color = expression(psi),
+       alpha = "Agent\nCount") +
+  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
+  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
+  geom_line(data = round_median_sub_19, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  theme_minimal(base_size = 20) + 
+  theme(panel.grid = element_blank())
+
+# merge and save
+summary_trajectories_19 + round_trajectories_19 + plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
+ggsave(file = "manuscript/figures/accumulation_problem_19.png", width = 14, height = 14)
 
 ## Maximization  ------------------------------------------------------
 
@@ -313,6 +331,7 @@ ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
 ## Undersampling -----------------------------------------------------
 
 # prepare data 
+round <- left_join(round, problems, by=join_by(id))
 
 ## compute trial-level and round-level frequencies
 

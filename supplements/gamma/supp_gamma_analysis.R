@@ -98,6 +98,12 @@ label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
 }
 
+
+label_psi <- function(string) {
+  TeX(paste("$\\psi=$", string, sep = ""))
+}
+
+
 ## convergence --------------------------------------------------------------
 
 max(cpt_gamma$Rhat)
@@ -212,3 +218,177 @@ vf_roundwise <- values %>%
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
 #ggsave(file = "supplements/gamma/figures/supp_gamma_value", width = 14, height = 7)
+
+
+## posterior predictive checks ---------------------------------------------
+
+
+# pre-processing
+
+cpt_clean <- cpt_gamma %>%  
+  select(model:mean) %>%
+  filter(parameter != "deviance") %>% 
+  pivot_wider(names_from = parameter, values_from = mean) %>% 
+  mutate(across(alpha:rho, ~round(., 2)))
+
+ppset <- choices %>%
+  left_join(cpt_clean, by = c("model", "psi", "theta")) %>% 
+  filter(!c(smp_s == 0 | smp_r == 0)) %>% 
+  mutate(choice_obs = if_else(choice == "s", 1,0) ,
+         r_low = if_else(r_1 < r_2, r_1, r_2) ,
+         r_high = if_else(r_1 > r_2, r_1, r_2) ,
+         sp_r_low = if_else(r_low == r_1, sp_r_1, sp_r_2) ,
+         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2))
+
+# make  predictions
+
+set.seed(54321)
+postpred <- ppset %>% mutate(
+  w_high = round( (delta * sp_r_high^gamma) / ( (delta*sp_r_high^gamma)+(1-sp_r_high)^gamma ), 2) , 
+  w_low = 1 - w_high , 
+  v_high = r_high^alpha , 
+  v_low = r_low^alpha , 
+  v_safe = safe^alpha , 
+  V_safe = v_safe , 
+  V_risky = (w_high * v_high) + (w_low * v_low) ,
+  V_safe_scaled = V_safe^(1/alpha) , 
+  V_risky_scaled = V_risky^(1/alpha) ,
+  V_diff = V_safe_scaled-V_risky_scaled , 
+  p_safe_risky = round(1 / ( 1 + exp(-rho*V_diff) ) , 2) ,
+  choice_pp = rbinom(n=nrow(ppset), size=1, prob=p_safe_risky))
+
+# post-processing
+
+## compute observed choice rates 
+
+### risky choice proportions
+
+riskprop_obs <- choices %>% 
+  mutate(choice_cmp = ifelse(choice == "r", 0, 1), 
+         r_low = if_else(r_1 < r_2, r_1, r_2) ,
+         r_high = if_else(r_1 > r_2, r_1, r_2) ,
+         sp_r_low = if_else(r_low == r_1, sp_r_1, sp_r_2) ,
+         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2)) %>% 
+  group_by(model, psi, theta, sp_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n),2) , 
+         bias = if_else(sp_r_high == 1, "p=0 or p=1", if_else(sp_r_high == 0, "p=0 or p=1", "0 < p < 1")) , 
+         type = "Sampling Strategy") %>% 
+  filter(choice_cmp == 0)
+
+riskprop_pp <- postpred %>% 
+  mutate(choice_cmp = choice_pp) %>% 
+  group_by(model, psi, theta, sp_r_high, choice_cmp) %>% 
+  summarize(n = n()) %>% 
+  mutate(prop = round(n/sum(n), 2), 
+         bias = if_else(sp_r_high == 1, "p=0 or p=1", if_else(sp_r_high == 0, "p=0 or p=1", "0 < p < 1")) , 
+         type = "Posterior Predictive") %>% 
+  filter(choice_cmp == 0)
+
+riskprop <- bind_rows(riskprop_obs, riskprop_pp)
+
+### maximization rates
+
+max_rates_obs <- choices %>% 
+  mutate(norm = case_when(avg_r/safe > 1 ~ "r", avg_r/safe < 1 ~ "s"), 
+         norm_choice = ifelse(choice == norm, 1, 0)) %>% 
+  filter(!is.na(norm)) %>% 
+  mutate(norm = ifelse(norm == "r", "Risky Option", "Safe Option")) %>% 
+  group_by(model, psi, theta, norm, norm_choice) %>% 
+  summarise(n_norm = n()) %>% 
+  mutate(prop = round(n_norm/sum(n_norm),2)) %>% 
+  filter(norm_choice == 1) %>% 
+  mutate(type = "Sampling Strategy")
+
+max_rates_pp <- postpred %>% 
+  mutate(norm = case_when(avg_r/safe > 1 ~ "r", avg_r/safe < 1 ~ "s") , 
+         choice_pp = ifelse(choice_pp == 0, "r", "s"), 
+         norm_choice = ifelse(choice_pp == norm, 1, 0)) %>% 
+  filter(!is.na(norm)) %>% 
+  mutate(norm = ifelse(norm == "r", "Risky Option", "Safe Option")) %>% 
+  group_by(model, psi, theta, norm, norm_choice) %>% 
+  summarise(n_norm = n()) %>% 
+  mutate(prop = round(n_norm/sum(n_norm),2)) %>% 
+  filter(norm_choice == 1) %>% 
+  mutate(type = "CPT Posterior Predictive")
+
+max_rates <- bind_rows(max_rates_obs, max_rates_pp)
+
+## compute predictive accuracy
+
+pp_acc <- postpred %>% 
+  select(model, psi, theta, alpha, gamma, delta, rho, id, agent, choice_obs, choice_pp) %>% 
+  mutate(match = if_else(choice_obs == choice_pp, 1, 0)) %>% 
+  group_by(model, psi, theta, alpha, gamma, delta, rho, match) %>% 
+  summarise(count = n()) %>% 
+  mutate(perc = round(count/sum(count), 3)) %>% 
+  filter(match != 0) %>% 
+  ungroup()
+
+## compute DIC
+
+dic <- cpt_gamma %>% 
+  filter(parameter == "deviance") %>% 
+  select(model:sd) %>% 
+  mutate(var = sd^2 ,
+         pD = var/2 , 
+         DIC = round(pD + mean, 1))
+
+# plot data 
+
+riskprop %>% 
+  ggplot(aes(x=sp_r_high, y = prop)) +
+  geom_point(aes(shape = type, color = bias, alpha = bias), size = 3) +
+  scale_shape_manual(values = c(4, 16)) + 
+  scale_color_manual(values = c("gray", "black")) + 
+  scale_alpha_manual(values = c(.5, 1)) + 
+  facet_grid(psi~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed), 
+                                            psi = as_labeller(label_psi, default = label_parsed))) + 
+  labs(x = TeX("$\\p_{high}$"), 
+       y = "Proportion of Risky Choices", 
+       shape = "", 
+       color = "", 
+       alpha = "") +
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
+  theme_minimal(base_size = 20) + 
+  theme(legend.position='top') + 
+  geom_text(data = dic, aes(label=paste("DIC=", as.character(DIC)), x = .7, y = -.1)) 
+# ggsave("manuscript/figures/appendix/ppc_roundwise_riskprop.png", width = 14, height = 16)
+
+max_rates_p <- max_rates %>% 
+  ggplot(aes(x=psi, y=prop, group = norm, color = norm)) + 
+  facet_grid(type~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  geom_point(aes(shape = type), size = 3) + 
+  geom_line() + 
+  scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,length.out = 3)) + 
+  scale_y_continuous(limits = c(.4, 1.1), breaks = seq(.5, 1, length.out = 3)) +
+  scale_shape_manual(values = c(4, 19)) + 
+  labs(x = "Switching Probability (Search Rule)" ,
+       y = "Proportion of\nMaximizing Choices" ,
+       color = "Better Average",
+       shape = "") + 
+  theme_minimal(base_size = 20) + 
+  theme(strip.text.y = element_blank()) + 
+  guides(shape = "none")
+
+pp_acc_p <- pp_acc %>%  
+  filter(model == "roundwise") %>% 
+  ggplot(aes(x = psi, y = perc)) + 
+  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+  scale_y_continuous(limits = c(.4, 1.1), breaks = seq(.5, 1, length.out = 3)) +
+  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+  geom_point(size = 3, shape = 4) + 
+  labs(x = "Switching Probability (Search Rule)" , 
+       y = "Proportion of\nCorrect Predictions", 
+       color = "Choice Consistency") + 
+  scale_color_viridis(option = "C") + 
+  theme_minimal(base_size = 20)
+
+max_rates_p + pp_acc_p + 
+  plot_layout(nrow = 2, guides = "collect") + 
+  plot_annotation(tag_levels = "A") & 
+  theme(legend.position='top')
+#ggsave(file = "manuscript/figures/appendix/ppc_roundwise_max_acc.png", width = 14, height = 10)
+
+

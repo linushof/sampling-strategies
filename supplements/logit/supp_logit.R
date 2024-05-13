@@ -16,7 +16,7 @@ label_theta <- function(string) {
 }
 
 rho_summary <- cpt %>%
-  filter(model == "summary", threshold == "relative", parameter == "rho") %>% 
+  filter(model == "summary", parameter == "rho") %>% 
   ggplot(aes(psi, mean)) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
   scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,length.out = 3)) + 

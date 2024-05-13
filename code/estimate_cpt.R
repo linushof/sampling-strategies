@@ -4,8 +4,8 @@
 pacman::p_load(tidyverse, R2jags, digest, readxl)
 
 # load data
-problems <- as.data.frame(read_xlsx("data/choice_problems_balanced_refined.xlsx"))
-choices <- read_rds("data/choice_data_balanced_refined.rds.bz2")
+problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
+choices <- read_rds("data/choice_data.rds.bz2") 
 
 # prepare data for CPT model (requires rank-ordered outcomes and probabilities)
 choices <- left_join(choices, problems, by=join_by(id)) %>% 
@@ -13,7 +13,8 @@ choices <- left_join(choices, problems, by=join_by(id)) %>%
          r_low = if_else(r_1 < r_2, r_1, r_2) ,
          r_high = if_else(r_1 > r_2, r_1, r_2) ,         
          sp_r_low = if_else(r_low == r_1, sp_r_1, sp_r_2) , 
-         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2))
+         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2)) %>% 
+  filter(model == "roundwise")
 
 # to model choices of each strategy separately, group choices
 params_sim <- choices %>% distinct(model, psi, theta) # retrieve all strategies
@@ -54,7 +55,7 @@ for(set in seq_len(nrow(params_sim))){
                                   parameters.to.save = params_cpt ,
                                   model.file = "code/CPT_model.txt" ,
                                   n.chains = 20 ,
-                                  n.iter = 60000 ,
+                                  n.iter = 40000 ,
                                   n.burnin = 10000 ,
                                   n.thin = 20 ,
                                   n.cluster = 20 , # compute MCMC chains in parallel
@@ -82,5 +83,5 @@ posterior_cpt <- posterior_cpt %>% bind_rows()
 checksum_estimates_cpt <- digest(estimates_cpt, "sha256")
 checksum_posterior_cpt <- digest(posterior_cpt, "sha256")
 
-write_rds(estimates_cpt, "data/cpt_estimates_balanced_refined.rds")
-write_rds(posterior_cpt, "data/cpt_posteriors_balanced_refined.rds.bz2", compress = "bz2") 
+write_rds(estimates_cpt, "data/cpt_estimates.rds")
+write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2") 

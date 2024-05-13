@@ -473,8 +473,8 @@ ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height =
 
 # check convergence 
 
-max(cpt$Rhat) # 1.009
-min(cpt$n.eff) # 17,000
+max(cpt$Rhat) # 1.04
+min(cpt$n.eff) # 1
 
 # only consider strategies/models that converged (Rhat <= 1.01)
 
@@ -552,7 +552,7 @@ wf_summary <- weights_summary %>%
 # merge and save plots
 
 wf_summary + gamma_summary + delta_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_weighting_summary_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
 
 ## roundwise
 
@@ -566,7 +566,7 @@ gamma_roundwise <- cpt_roundwise %>%
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
+  scale_y_continuous(limits =c(-.1,2.1), breaks = seq(0,2, length.out = 3)) +
   labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Curvature  ", gamma)),
        color = "Switching\nProbability") +
@@ -607,7 +607,7 @@ wf_roundwise <- weights_roundwise %>%
 # merge and save plots
 
 wf_roundwise + gamma_roundwise + delta_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_weighting_roundwise_balanced.png", width = 14, height = 10)
+ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
 
 
 ## Outcome Sensitivity ---------------------------------------------------------
@@ -649,7 +649,7 @@ vf_summary <- values_summary %>%
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
-  scale_y_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, 100), breaks = seq(0, 100, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
        color = "Switching\nProbability") +
@@ -658,7 +658,7 @@ vf_summary <- values_summary %>%
 
 # merge and save plots
 vf_summary + alpha_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_value_summary_balanced.png", width = 14, height = 7)
+ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
 
 ## round-wise
 
@@ -686,7 +686,7 @@ vf_roundwise <- values_roundwise %>%
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
-  scale_y_continuous(limits = c(-1, 51), breaks = seq(0, 50, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, 100), breaks = seq(0, 100, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
        color = "Switching\nProbability") +
@@ -695,7 +695,7 @@ vf_roundwise <- values_roundwise %>%
 
 # merge and save plots
 vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
-ggsave(file = "manuscript/figures/cpt_value_roundwise_balanced.png", width = 14, height = 7)
+ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
 
 
 # Ecological  ----------------------------------------------------------
@@ -1454,8 +1454,3 @@ max_2_roundwise <- obs_max_2 %>%
   scale_color_scico(palette = "imola") +
   theme_minimal() + 
   theme_apa(base_size = 20)
-
-
-
-
-

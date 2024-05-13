@@ -13,8 +13,7 @@ choices <- left_join(choices, problems, by=join_by(id)) %>%
          r_low = if_else(r_1 < r_2, r_1, r_2) ,
          r_high = if_else(r_1 > r_2, r_1, r_2) ,         
          sp_r_low = if_else(r_low == r_1, sp_r_1, sp_r_2) , 
-         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2)) %>% 
-  filter(model == "roundwise")
+         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2))
 
 # to model choices of each strategy separately, group choices
 params_sim <- choices %>% distinct(model, psi, theta) # retrieve all strategies

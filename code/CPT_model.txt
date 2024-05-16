@@ -11,7 +11,7 @@ model
 	## extend scales to a reasonable range (cf. Scheibehenne & Pachur, 2015)
 
 	alpha <- 2 * (alpha.pre)
-	gamma <- 2 * (gamma.pre)
+	gamma <- 10 * (gamma.pre)
 	delta <- 10 * (delta.pre)
 	rho   <- 5 * (rho.pre)
 

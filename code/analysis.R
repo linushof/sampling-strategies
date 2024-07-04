@@ -475,19 +475,11 @@ ggsave(file = "manuscript/figures/rates_risk_aversion.png", width = 14, height =
 # Computational ---------------------------------------------------------------------
 
 # check convergence 
-
-max(cpt$Rhat) # 1.04
-min(cpt$n.eff) # 1
-
-# only consider strategies/models that converged (Rhat <= 1.01)
-
-converged <- cpt %>% 
-  filter(parameter!="deviance", !(Rhat > 1.01)) %>% 
-  group_by(model, psi, theta) %>% 
-  summarise(count = n())
-
-cpt <- left_join(cpt, converged, by=join_by(model, psi, theta)) %>% 
-  filter(count == 4)
+cpt <- cpt %>% filter(parameter != "deviance") 
+max(cpt$Rhat) # 1.005 --> < 1.01
+mean(cpt$Rhat) # 1.001267 --> 1.001
+min(cpt$n.eff) # 2200
+mean(cpt$n.eff) # 27198
 
 
 ## Probability Weighting ---------------------------------------------------------
@@ -554,12 +546,11 @@ wf_summary <- weights_summary %>%
 
 # merge and save plots
 
-wf_summary + gamma_summary + delta_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
+ggarrange(wf_summary, gamma_summary, delta_summary, nrow = 3, legend = "right", common.legend = T, labels = "AUTO")
 ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
 
 ## roundwise
-
-cpt_roundwise <- cpt %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
+cpt_roundwise <- cpt %>%  filter(model == "roundwise", !(psi == 1 & theta == 1))
 weights_roundwise <- weights %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
 
 #### gamma
@@ -569,7 +560,7 @@ gamma_roundwise <- cpt_roundwise %>%
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits =c(-.1,2.1), breaks = seq(0,2, length.out = 3)) +
+  scale_y_continuous(limits =c(-.1,10.1), breaks = seq(0,10, length.out = 3)) +
   labs(x = "Switching Probability (Search Rule)", 
        y = expression(paste("Curvature  ", gamma)),
        color = "Switching\nProbability") +
@@ -609,7 +600,7 @@ wf_roundwise <- weights_roundwise %>%
 
 # merge and save plots
 
-wf_roundwise + gamma_roundwise + delta_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
+ggarrange(wf_roundwise, gamma_roundwise, delta_roundwise, nrow = 3, legend = "right", common.legend = T, labels = "AUTO")
 ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
 
 
@@ -660,7 +651,7 @@ vf_summary <- values_summary %>%
   theme_minimal(base_size = 20)
 
 # merge and save plots
-vf_summary + alpha_summary + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
+ggarrange(vf_summary, alpha_summary, nrow = 2, legend = "right", common.legend = T, labels = "AUTO")
 ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
 
 ## round-wise
@@ -697,9 +688,8 @@ vf_roundwise <- values_roundwise %>%
   theme_minimal(base_size = 20)
 
 # merge and save plots
-vf_roundwise + alpha_roundwise + plot_layout(ncol = 1, guides = "collect") + plot_annotation(tag_levels = "A")
+ggarrange(vf_roundwise, alpha_roundwise, nrow = 2, legend = "right", common.legend = T, labels = "AUTO")
 ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
-
 
 # Ecological  ----------------------------------------------------------
 
@@ -939,7 +929,6 @@ ggsave(file = "manuscript/figures/efficiency.png", width = 16, height = 10)
 
 
 # Appendix ----------------------------------------------------------------
-
 ## Initial Bias ------------------------------------------------------------
 
 summary <- left_join(summary, problems, by=join_by(id)) # add problem features
@@ -1324,3 +1313,5 @@ max_rates_roundwise_p + pp_acc_roundwise +
   plot_annotation(tag_levels = "A") & 
   theme(legend.position='top')
 ggsave(file = "manuscript/figures/appendix/ppc_roundwise_max_acc.png", width = 14, height = 10)
+
+

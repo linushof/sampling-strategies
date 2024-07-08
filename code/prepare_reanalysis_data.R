@@ -12,7 +12,7 @@ source("code/helper_functions/fun_compute_cumulative_stats.R")
 dat <- 
   data %>% 
   filter(
-    dom == "Gain", cert == TRUE ,  
+    dom == "Gain", cert = TRUE ,
     probA3 == 0 & probA4 == 0 & probA5 == 0 ,
     probB3 == 0 & probB4 == 0 & probB5 == 0
     ) %>%
@@ -94,6 +94,7 @@ dat %>%
         roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
         choose_roundwise_winner = choice == roundwise_winner
         ) %>%
+      ungroup() %>% 
       filter(round == n_round) %>% 
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
@@ -121,6 +122,7 @@ dat %>%
         roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
         choose_roundwise_winner = choice == roundwise_winner
         ) %>% 
+      ungroup() %>% 
       filter(round == n_round) %>% 
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)

@@ -37,7 +37,6 @@ label_rare <- function(string) {
 
 # Behavioral --------------------------------------------------------------
 
-choices <- left_join(choices, problems, by=join_by(id))
 
 ## Trajectories -----------------------------------------------
 
@@ -263,7 +262,7 @@ max_EV_exp_summary <- rates_EV_exp %>%
   scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Summary Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "% Average Maximization",
+       y = "% SM Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -279,7 +278,7 @@ max_EV_exp_roundwise <- rates_EV_exp %>%
   scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
   labs(title = "Roundwise Comparison", 
        x = "Switching Probability\n(Search Rule)",
-       y = "% Average Maximization",
+       y = "% SM Maximization",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
@@ -324,12 +323,8 @@ max_EV_roundwise <- rates_EV %>%
 max_EV <- ggarrange(max_EV_summary, max_EV_roundwise, nrow = 1)
 
 ### merge and save plots
-max_EV + max_EV_exp + 
-  plot_layout(ncol = 1, guides = "collect") + 
-  plot_annotation(tag_levels = "A") & 
-  theme(plot.tag = element_text(size = 24, face = "plain"))
+ggarrange(max_EV, max_EV_exp, nrow = 2, labels = "AUTO")
 ggsave(file = "manuscript/figures/maximization.png", width = 14, height = 10)
-
 
 ## Undersampling -----------------------------------------------------
 

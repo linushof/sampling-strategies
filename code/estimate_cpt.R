@@ -53,13 +53,13 @@ for(set in seq_len(nrow(params_sim))){
                                   inits = inits_MCMC ,
                                   parameters.to.save = params_cpt ,
                                   model.file = "code/CPT_model.txt" ,
-                                  n.chains = 20 ,
-                                  n.iter = 40000 ,
+                                  n.chains = 24,
+                                  n.iter = 30000 ,
                                   n.burnin = 10000 ,
-                                  n.thin = 20 ,
-                                  n.cluster = 20 , # compute MCMC chains in parallel
+                                  n.thin = 10 ,
+                                  n.cluster = 24 , # compute MCMC chains in parallel
                                   DIC = TRUE ,
-                                  jags.seed = 83176)
+                                  jags.seed = 5615317)
   
   ## posterior summary and MCMC diagnostics
   current_summary <- current_sample$BUGSoutput$summary %>% as_tibble(rownames = "parameter")

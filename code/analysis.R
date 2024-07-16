@@ -922,7 +922,6 @@ max_n_EV + rrates +
 ggsave(file = "manuscript/figures/efficiency.png", width = 16, height = 10)
 
 
-
 # Appendix ----------------------------------------------------------------
 ## Initial Bias ------------------------------------------------------------
 
@@ -1240,10 +1239,7 @@ pp_acc_summary <- pp_acc %>%
   scale_color_viridis(option = "C") + 
   theme_minimal(base_size = 20)
 
-max_rates_summary_p + pp_acc_summary + 
-  plot_layout(nrow = 2, guides = "collect") + 
-  plot_annotation(tag_levels = "A") & 
-  theme(legend.position='top')
+ggarrange(max_rates_summary_p, pp_acc_summary, nrow = 2, common.legend = TRUE)
 ggsave(file = "manuscript/figures/appendix/ppc_summary_max_acc.png", width = 14, height = 10)
 
 
@@ -1303,10 +1299,7 @@ pp_acc_roundwise <- pp_acc %>%
   scale_color_viridis(option = "C") + 
   theme_minimal(base_size = 20)
 
-max_rates_roundwise_p + pp_acc_roundwise + 
-  plot_layout(nrow = 2, guides = "collect") + 
-  plot_annotation(tag_levels = "A") & 
-  theme(legend.position='top')
+ggarrange(max_rates_roundwise_p, pp_acc_roundwise, nrow = 2, common.legend = TRUE)
 ggsave(file = "manuscript/figures/appendix/ppc_roundwise_max_acc.png", width = 14, height = 10)
 
 

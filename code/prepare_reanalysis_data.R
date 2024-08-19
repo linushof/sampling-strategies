@@ -90,7 +90,7 @@ dat %>%
       distinct(paper, id, subject, problem, subject, choice, n_sample, n_sample_0, n_sample_1, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round, r_mean_0, r_mean_1, r_winner) %>% 
       group_by(paper, id, subject, problem) %>% 
       mutate(
-        round_tally = sum(r_winner) ,
+        round_tally = sum(r_winner, na.rm = TRUE) ,
         roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
         choose_roundwise_winner = choice == roundwise_winner
         ) %>%
@@ -118,7 +118,7 @@ dat %>%
       distinct(paper, id, subject, problem, subject, choice, n_sample, n_sample_0, n_sample_1, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round, r_mean_0, r_mean_1, r_winner) %>% 
       group_by(paper, id, subject, problem) %>% 
       mutate(
-        round_tally = sum(r_winner) ,
+        round_tally = sum(r_winner, na.rm = TRUE) ,
         roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
         choose_roundwise_winner = choice == roundwise_winner
         ) %>% 

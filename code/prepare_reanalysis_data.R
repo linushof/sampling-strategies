@@ -1,10 +1,10 @@
 # load packages 
 pacman::p_load(tidyverse)
 
-# read sampling paradigm data from Wulff et al. (2018)
+# load data from Wulff et al. (2018, retrieved from: https://www.dirkwulff.org/#data)
 data <- read.table("data/exp.txt") %>% as_tibble()
 
-# helper functions'
+# helper functions
 source("code/helper_functions/fun_compute_cumulative_stats.R")
 
 # preprocessing -----------------------------------------------------------
@@ -12,8 +12,8 @@ source("code/helper_functions/fun_compute_cumulative_stats.R")
 dat <- 
   data %>% 
   filter(
-    dom == "Gain", cert = TRUE ,
-    probA3 == 0 & probA4 == 0 & probA5 == 0 ,
+    dom == "Gain", cert = TRUE , # filter gain problems with safe option
+    probA3 == 0 & probA4 == 0 & probA5 == 0 , # filter problems with maximum two outcomes
     probB3 == 0 & probB4 == 0 & probB5 == 0
     ) %>%
   select(paper:choice) %>% 
@@ -45,7 +45,7 @@ dat %>%
   mutate(
     sum_0 = round(sum(out_0, na.rm = TRUE), 2) ,
     sum_1 = round(sum(out_1, na.rm = TRUE), 2) , 
-    summary_winner = if_else(sum_0 > sum_1, 0, 1), 
+    summary_winner = if_else(sum_0 > sum_1, 0, if_else(sum_0 < sum_1, 1, NA)), 
     choose_summary_winner = choice == summary_winner
          ) %>% 
   
@@ -58,10 +58,10 @@ dat %>%
     start_o = ifelse(is.na(start), first(start), start) ,
     stop = ifelse(sample == max(sample), TRUE, NA) ,
     new_round = case_when(switch == 0 | is.na(switch) ~ 0 , 
-                               switch == 1 & start_o == 1 & is.na(out_1) ~ 0 ,
-                               switch == 1 & start_o == 0 & is.na(out_0) ~ 0 ,
-                               switch == 1 & start_o == 0 & is.na(out_1) ~ 1 ,
-                               switch == 1 & start_o == 1 & is.na(out_0) ~ 1
+                          switch == 1 & start_o == 1 & is.na(out_1) ~ 0 ,
+                          switch == 1 & start_o == 0 & is.na(out_0) ~ 0 ,
+                          switch == 1 & start_o == 0 & is.na(out_1) ~ 1 ,
+                          switch == 1 & start_o == 1 & is.na(out_0) ~ 1
                                ) ,
     round = 1 + cumsum2(new_round) , 
     complete = case_when(stop == TRUE & start_o == 1 & is.na(out_0) ~ 0 ,
@@ -71,34 +71,6 @@ dat %>%
                          ) , 
     complete = if_else(is.na(complete), last(complete), complete)
     ) 
-
-    # incomplete rounds are dropped
-
-    predictions_drop <- 
-      predictions %>% 
-      mutate(drop = if_else(complete == 0 & round == max(round), 1, 0)) %>% 
-      filter(drop == 0) %>% 
-      mutate(n_round = max(round)) %>% 
-      group_by(paper, id, subject, problem, round) %>%
-      mutate(
-        r_mean_0 = round(mean(out_0, na.rm = TRUE), 2) ,
-        r_mean_1 = round(mean(out_1, na.rm = TRUE), 2) , 
-        r_winner = case_when(r_mean_0 > r_mean_1 ~ -1 , 
-                             r_mean_0 < r_mean_1 ~ 1) # better option 0 - negative increment, better option 1 - positive increment
-        ) %>% 
-      ungroup() %>% 
-      distinct(paper, id, subject, problem, subject, choice, n_sample, n_sample_0, n_sample_1, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round, r_mean_0, r_mean_1, r_winner) %>% 
-      group_by(paper, id, subject, problem) %>% 
-      mutate(
-        round_tally = sum(r_winner, na.rm = TRUE) ,
-        roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
-        choose_roundwise_winner = choice == roundwise_winner
-        ) %>%
-      ungroup() %>% 
-      filter(round == n_round) %>% 
-      filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
-      select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
-
 
     # sampled option in incomplete rounds wins
     
@@ -112,7 +84,8 @@ dat %>%
         r_winner = case_when(is.na(r_mean_0) ~ 1 , 
                              is.na(r_mean_1) ~ -1 , 
                              r_mean_0 > r_mean_1 ~ -1 , 
-                             r_mean_0 < r_mean_1 ~ 1)
+                             r_mean_0 < r_mean_1 ~ 1,
+                             r_mean_0 == r_mean_1 ~ 0)
         ) %>% 
       ungroup() %>% 
       distinct(paper, id, subject, problem, subject, choice, n_sample, n_sample_0, n_sample_1, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round, r_mean_0, r_mean_1, r_winner) %>% 
@@ -126,16 +99,33 @@ dat %>%
       filter(round == n_round) %>% 
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
-
-
-## sanity checks
-
-dat %>% distinct(paper, id, subject, problem) %>% nrow() # 8490
-dat %>% filter(n_sample_1 == 0 | n_sample_0 == 0) %>% distinct(paper, id, subject, problem) %>% nrow() # 82
-dat %>% filter(n_sample_1 != 0 & n_sample_0 != 0) %>% distinct(paper, id, subject, problem) %>% nrow() # 8408
-nrow(predictions_win) # 8408
-nrow(predictions_drop) # 8408 
-
-## merge data frames
-
-predictions_win %>% names()
+    
+    # incomplete rounds are dropped
+    
+    predictions_drop <- 
+      predictions %>% 
+      mutate(drop = if_else(complete == 0 & round == max(round), 1, 0)) %>% 
+      filter(drop == 0) %>% 
+      mutate(n_round = max(round)) %>% 
+      group_by(paper, id, subject, problem, round) %>%
+      mutate(
+        r_mean_0 = round(mean(out_0, na.rm = TRUE), 2) ,
+        r_mean_1 = round(mean(out_1, na.rm = TRUE), 2) , 
+        r_winner = case_when(r_mean_0 > r_mean_1 ~ -1 , 
+                             r_mean_0 < r_mean_1 ~ 1 ,
+                             r_mean_0 == r_mean_1 ~ 0) # better option 0 - negative increment, better option 1 - positive increment
+      ) %>% 
+      ungroup() %>% 
+      distinct(paper, id, subject, problem, subject, choice, n_sample, n_sample_0, n_sample_1, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round, r_mean_0, r_mean_1, r_winner) %>% 
+      group_by(paper, id, subject, problem) %>% 
+      mutate(
+        round_tally = sum(r_winner, na.rm = TRUE) ,
+        roundwise_winner = if_else(round_tally > 0, 1, if_else(round_tally < 0, 0, NA)) , 
+        choose_roundwise_winner = choice == roundwise_winner
+      ) %>%
+      ungroup() %>% 
+      filter(round == n_round) %>% 
+      filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
+      select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
+    
+    

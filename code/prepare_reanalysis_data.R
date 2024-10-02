@@ -100,6 +100,8 @@ dat %>%
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
     
+    write_rds(predictions_win, "data/Wulff_et_al_2018_predictions", compress = "bz2")
+    
     # incomplete rounds are dropped
     
     predictions_drop <- 
@@ -127,5 +129,7 @@ dat %>%
       filter(round == n_round) %>% 
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
+  
     
+
     

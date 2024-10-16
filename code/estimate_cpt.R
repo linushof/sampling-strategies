@@ -4,7 +4,7 @@
 pacman::p_load(tidyverse, R2jags, digest, readxl)
 
 # load data
-problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
+problems <- read_rds("data/choice_problems.rds")
 choices <- read_rds("data/choice_data.rds.bz2") 
 
 # prepare data for CPT model (requires rank-ordered outcomes and probabilities)

@@ -2,7 +2,7 @@
 pacman::p_load(tidyverse, digest, readxl)
 
 # load data
-problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
+problems <- as.data.frame(read_rds("data/choice_problems.rds"))
 simulation_summary <- read_rds("data/simulation_summary.rds.bz2")
 simulation_roundwise <- read_rds("data/simulation_roundwise.rds.bz2")
 

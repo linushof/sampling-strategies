@@ -13,7 +13,7 @@ pacman::p_load(tidyverse,
 
 
 # load data
-problems <- read_xlsx("data/choice_problems.xlsx") 
+problems <- read_rds("data/choice_problems.rds")
 choices <- read_rds("data/choice_data.rds.bz2")
 choices <- left_join(choices, problems, by=join_by(id))
 cpt <- read_rds("data/cpt_estimates.rds") 

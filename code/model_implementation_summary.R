@@ -4,7 +4,7 @@
 pacman::p_load(tidyverse, digest, crayon, readxl)
 
 # load choice problems
-problems <- as.data.frame(read_xlsx("data/choice_problems.xlsx"))
+problems <- as.data.frame(read_rds("data/choice_problems.rds"))
 
 # Simulation --------------------------------------------------------------
 # for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents

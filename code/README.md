@@ -15,7 +15,5 @@
 +-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | `analysis.R`                        | Source code underlying all simulation-based analyses and figures reported in the manuscript                                                                                                                                       |
 +-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `reanalysis.R`                      | Source code underlying the predictions and analyses of the summary and the roundwise comparison rule for the data compiled by [Wulff et al. (2018)](https://www.dirkwulff.org/#data), reported in the manuscript discussion       |
+| `reanalysis.R`                      | Source code underlying the predictions and analyses of the summary and the roundwise comparison rule for the data compiled by [Wulff et al. (2018)](https://www.dirkwulff.org/#data), reported in the manuscript                  |
 +-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-

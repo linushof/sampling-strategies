@@ -1,5 +1,9 @@
-# NOTE: In the paper, a scaling of outcomes by d=.01 is assumed in the specification of the summary comparison rule. 
-# In the implementation below, scaling is omitted without any effect on the results of the simulation and their interpretation.
+
+# NOTE --------------------------------------------------------------------
+
+'In the paper, a scaling of outcomes by d=.01 is assumed in the specification of the summary comparison rule.
+In the implementation below, scaling is omitted without any effect on the results of the simulation and their interpretation.
+'
 
 # Preparation -------------------------------------------------------------
 

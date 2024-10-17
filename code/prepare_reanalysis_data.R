@@ -1,7 +1,14 @@
+
+# NOTE --------------------------------------------------------------------
+
+'The dataset of Wulff et al. (2018) can be retrieved from: https://www.dirkwulff.org/#data)'
+
+# preparation -------------------------------------------------------------
+
 # load packages 
 pacman::p_load(tidyverse)
 
-# load data from Wulff et al. (2018, retrieved from: https://www.dirkwulff.org/#data)
+# load data
 data <- read.table("data/exp.txt") %>% as_tibble()
 
 # helper functions
@@ -100,7 +107,6 @@ dat %>%
       filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
       select(paper, id, subject, problem, choice, n_sample, r_switch, sum_0, sum_1, summary_winner, choose_summary_winner, n_round, round_tally, roundwise_winner, choose_roundwise_winner)
     
-    write_rds(predictions_win, "data/Wulff_et_al_2018_predictions", compress = "bz2")
     
     # incomplete rounds are dropped
     

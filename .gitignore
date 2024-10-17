@@ -15,6 +15,7 @@ code/README.Rmd
 *.docx
 *.ppt
 *.xlsx
+*.txt
 data/csv/
 data/rds/
 # posteriors

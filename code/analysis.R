@@ -1062,7 +1062,7 @@ rates %>%
   scale_color_scico(palette = "imola", alpha = .7) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switching Probability\n(Search Rule)",
+  labs(x = "Switch Rate\n(Search Rule)",
        y = "% Safe Choices",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 

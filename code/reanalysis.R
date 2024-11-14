@@ -1,165 +1,50 @@
-# README --------------------------------------------------------------------
-
-'The dataset of Wulff et al. (2018) can be retrieved from: https://www.dirkwulff.org/#data)'
 
 # Preparation -------------------------------------------------------------
 
-# load packages 
-pacman::p_load(tidyverse, brms, posterior, scico, ggExtra, gridExtra, knitr)
+source("code/prepare_reanalysis.R") 
+source("code/helper_functions/fun_logistic.R")
 
-# load data
-data <- read.table("data/exp.txt") %>% as_tibble()
+# Main Analysis ----------------------------------------------------------------
 
-# helper functions
-source("code/helper_functions/fun_compute_cumulative_stats.R")
-
-# Preprocessing -----------------------------------------------------------
-
-# compute search data
-
-dat <- 
-  data %>% 
-  select(paper, id, subject, problem, # unique combinations = single trial
-         dom, cert, type, outA1:probB5, und, # features of choice task
-         choice, # choice
-         trial, option, outcome ) %>% # search data
-  rename(sample = trial, # sample number
-         attended = option) %>% # option from which sample was drawn (0/A, 1/B)
-  group_by(paper, id, subject, problem) %>% # to compute search data separately for each trial
-  mutate(
-    n_sample = max(sample) , # total sample size
-    n_sample_1 = sum(attended) , # sample size option 1/B
-    n_sample_0 = n_sample - n_sample_1 , # sample size option 0/A
-    switch = ifelse(attended != lag(attended), 1, 0) , # identify switches
-    n_switch = sum(switch, na.rm = TRUE) , # number of switches
-    r_switch = round(n_switch/(n_sample - 1), 2)  # switching frequency
-    ) %>% 
-  ungroup()
-
-
-# compute predictions of summary and roundwise comparison rule
-
-predictions <- 
-  
-  dat %>%
-  mutate(attendedc = attended) %>% # copy to track attended option after pivot_wider()
-  pivot_wider(names_from = attended, values_from = outcome, names_prefix = "out_") %>% # split samples for option 0/A and 1/B
-  rename(attended = attendedc) %>% 
-  group_by(paper, id, subject, problem) %>% 
-  
-  ## predictions for summary strategy
-  
-  mutate(
-    
-    # integrate sampled outcomes by summing (as assumed by sampling strategies)
-    
-    sum_0 = round(sum(out_0, na.rm = TRUE), 2) , # evidence for option 0/A
-    sum_1 = round(sum(out_1, na.rm = TRUE), 2) , # evidence for option 1/B
-    summary_winner = case_when(sum_0 > sum_1 ~ 0 , # predict choice
-                               sum_0 < sum_1 ~ 1, 
-                               sum_0 == sum_1 ~ NA) , 
-    choose_summary_winner = case_when(summary_winner == choice ~ 1 , # compare predicted and observed choice
-                                      summary_winner != choice ~ 0 ,
-                                      is.na(summary_winner) ~ .5) , 
-    
-    # integrate sampled outcomes by averaging (as assumed by Hills & Hertwig)
-    
-    mean_0 = round(mean(out_0, na.rm = TRUE), 2) ,
-    mean_1 = round(mean(out_1, na.rm = TRUE), 2) , 
-    summary_winner_mean = case_when(mean_0 > mean_1 ~ 0 , 
-                                    mean_0 < mean_1 ~ 1) , 
-    choose_summary_winner_mean = case_when(summary_winner_mean == choice ~ 1 ,
-                                           summary_winner_mean != choice ~ 0 ,
-                                           is.na(summary_winner_mean) ~ .5) 
-    
-    ) %>% 
-  
-  
-  ## predictions for roundwise strategy 
-  
-  ### identify sampling rounds
-  
-  mutate(
-    start = ifelse(sample == 1 & attended == 0, 0, ifelse(sample == 1 & attended == 1, 1, NA)) , # identify start option
-    start_o = ifelse(is.na(start), first(start), start) , 
-    stop = ifelse(sample == max(sample), TRUE, NA) ,
-    new_round = case_when(switch == 0 | is.na(switch) ~ 0 , # no switch = no new round
-                          switch == 1 & start_o == 1 & is.na(out_1) ~ 0 , # switch from starting option: no new round  
-                          switch == 1 & start_o == 0 & is.na(out_0) ~ 0 , 
-                          switch == 1 & start_o == 0 & is.na(out_1) ~ 1 , # switch to starting option: new round
-                          switch == 1 & start_o == 1 & is.na(out_0) ~ 1) ,
-    round = 1 + cumsum2(new_round) , # assign round number
-    complete = case_when(stop == TRUE & start_o == 1 & is.na(out_0) ~ 0 , # incomplete round: first and last sample from same option
-                         stop == TRUE & start_o == 0 & is.na(out_1) ~ 0 ,
-                         stop == TRUE & start_o == 0 & is.na(out_0) ~ 1 , # complete round: first and last sample from different options
-                         stop == TRUE & start_o == 1 & is.na(out_1) ~ 1) , 
-    complete = if_else(is.na(complete), last(complete), complete)
-    )
-
-### compute roundwise comparison and predict choices
-### if the final round is incomplete, the sampled option wins the round as long as the sampled evidence is non-negative
-### see Appendix for predictions when incomplete rounds are not considered 
-
-predictions_win <- 
-  predictions %>%
-  mutate(n_round = max(round)) %>% 
-  group_by(paper, id, subject, problem, round) %>%
-  mutate(
-    r_mean_0 = round(mean(out_0, na.rm = TRUE), 2) , # compute roundwise mean of option A/0
-    r_mean_1 = round(mean(out_1, na.rm = TRUE), 2) , 
-    r_winner = case_when(r_mean_0 > r_mean_1 ~ -1 , # option A/0 approaches negative threshold
-                         r_mean_0 < r_mean_1 ~ 1 , # option B/1 approaches positive threshold
-                         r_mean_0 == r_mean_1 ~ 0 ,
-                         is.na(r_mean_0) & r_mean_1 >= 0 ~ 1 , # assign round wins for incomplete rounds
-                         is.na(r_mean_0) & r_mean_1 < 0 ~ -1 ,
-                         is.na(r_mean_1) & r_mean_0 >= 0 ~ -1 ,
-                         is.na(r_mean_1) & r_mean_0 < 0 ~ 1 
-                         )
-    ) %>% 
-  ungroup() %>% 
-  distinct(paper, id, subject, problem, round, .keep_all = TRUE) %>% # keep only one row for each round that summarizes the comparison
-  group_by(paper, id, subject, problem) %>% 
-  mutate(
-    round_tally = sum(r_winner, na.rm = TRUE) , # compute accumulated evidence over rounds
-    roundwise_winner = case_when(round_tally > 0 ~ 1 , # predict choice
-                                 round_tally < 0 ~ 0 ,
-                                 round_tally == 0 ~ NA) , 
-    choose_roundwise_winner = case_when(roundwise_winner == choice ~ 1 , # compare predicted and observed choice
-                                        roundwise_winner != choice ~ 0 ,
-                                        is.na(roundwise_winner) ~ .5) 
-    ) %>%
-  ungroup() %>%
-  filter(round == n_round) %>% # keep only one row for each trial that summarizes all comparison rounds
-  select(!c(sample, switch, attended, out_0, out_1, # drop uninformative sampling and round data
-            complete, start, start_o, stop, new_round, round, r_mean_0, r_mean_1, r_winner))
-  
-
-# Analysis ----------------------------------------------------------------
-
-predictions_win %>% 
+d1 <- 
+  predictions_win %>%
   filter(
-    dom == "Gain", cert = TRUE , # filter gain problems with safe option
-    probA3 == 0 & probA4 == 0 & probA5 == 0 , # filter problems with maximum two outcomes
+    dom == "Gain" , # gains only 
+    cert == TRUE , # includes safe option
+    type == "free" ,  # free sampling conditions with gains only and a safe option
+    probA3 == 0 & probA4 == 0 & probA5 == 0 , # problems with maximum two outcomes per option
     probB3 == 0 & probB4 == 0 & probB5 == 0
    ) %>% 
-  filter(n_sample_0 != 0 & n_sample_1 != 0) %>% # delete trials where only one option was sampled
-  nrow()
+  filter(n_sample_0 != 0 & n_sample_1 != 0) # delete trials where only one option was sampled
 
-predictions_win %>% distinct(paper, id, subject) %>% nrow()  # N = 3598
-Ntrial <- predictions_win %>% distinct(paper, id, subject, problem) %>% nrow()  
-Ntrial # N = 23057
-    
 ## Description -----------------------------------------------------
 
-consistency <- predictions_win %>% 
-  group_by(choose_summary_winner, choose_roundwise_winner) %>% 
-  summarise(N = n()) %>% 
-  mutate(perc = round(N/Ntrial, 3)) %>% 
-  ungroup()
-sum(consistency$perc)
+Ntrial1 <- d1 %>% nrow()
+Ntrial1 # 5627 trials
 
-consistency %>% 
-  select(!N) %>% 
+Npart1 <- d1 %>% distinct(paper, id, subject) %>% nrow()
+Npart1 # 1877 participants
+
+# switching frequency
+prop_d1 %>% 
+  #filter(n_sample_0 != 0 & n_sample_1 != 0) %>% 
+  ggplot(aes(x=mSwitch)) +
+  geom_histogram(alpha = .5, color = "black", bins = 40) +
+  theme_minimal(base_size = 16)
+
+
+d1$r_switch
+
+consistency1 <- d1 %>% 
+  group_by(choose_summary_winner, choose_roundwise_winner) %>% 
+  summarise(N = n() ,
+            mSwitch = mean(r_switch)) %>% 
+  mutate(perc = round(N/Ntrial1, 3)) %>% 
+  ungroup() %>% 
+  select(choose_summary_winner, choose_roundwise_winner, N, perc, mSwitch)
+
+consistency1 %>% 
+  select(!c(N, mSwitch)) %>% 
   rename(Summary = choose_summary_winner, 
          Roundwise = choose_roundwise_winner,
          Proporion = perc) %>% 
@@ -175,70 +60,56 @@ consistency %>%
   ) %>% 
   select(Prediction, everything()) %>% 
   arrange(Prediction, Summary) %>% 
-  kable(format = "latex")
+  kable()
 
 
 # correct
-consistency %>% 
-  filter(choose_summary_winner == TRUE | choose_roundwise_winner == TRUE) %>% 
-  summarise(N = sum(N), 
-            prop = sum(perc)) # 79.2%
+consistency1 %>% 
+  filter(choose_summary_winner == 1 | choose_roundwise_winner == 1) %>%
+  summarise(N = sum(N), prop = sum(perc)) # 82.5%
 
 # false
-consistency %>% 
+consistency1 %>% 
   filter(choose_summary_winner == FALSE & choose_roundwise_winner == FALSE) %>% 
-  summarise(N = sum(N), prop = sum(perc)) # 13.6%
+  summarise(N = sum(N), prop = sum(perc)) # 12.2%
 
 # indifference
 
-consistency %>% 
+consistency1 %>% 
   filter( (choose_summary_winner == .5 & choose_roundwise_winner == 0)  | (choose_summary_winner == 0 & choose_roundwise_winner == .5)  | (choose_summary_winner == .5 & choose_roundwise_winner == .5)   ) %>% 
   summarise(N = sum(N),
-    prop = sum(perc)) # 7.2%
+    prop = sum(perc)) # 5.4%
 
 
 ## Regression -------------------------------------------
 
-# remove trials where both comparison rules made a false predictions
-sub <- predictions_win %>% 
-  filter(!(choose_summary_winner == FALSE & choose_roundwise_winner == FALSE))
-
-set.seed(16381)
-sub <- sub %>% 
-  
-  # for trials where strategies are indifferent, predict choice 
-  mutate(
-    choose_summary_winner_pred = case_when(summary_winner == choice ~ 1 ,
-                                           summary_winner != choice ~ 0 ,
-                                           is.na(summary_winner) ~ rbinom(n=1,size=1,p=.5)) , 
-    choose_roundwise_winner_pred = case_when(roundwise_winner == choice ~ 1 ,
-                                             roundwise_winner != choice ~ 0 ,
-                                             is.na(roundwise_winner) ~ rbinom(n=1,size=1,p=.5))
-    ) %>% 
-  
-  # consider only trials in which both strategies make different predictions
-  filter(choose_summary_winner_pred != choose_roundwise_winner_pred) %>% 
-  mutate(choiceRoundwise = as.numeric(choose_roundwise_winner_pred))
+reg_d1 <- d1 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) )
 
 
-sub %>% distinct(paper, id, subject) %>% nrow() # 2120
-sub %>% distinct(paper, id, subject, problem) %>% nrow() #5745
+Ntrial_reg_d1 <- nrow(reg_d1)
+Ntrial_reg_d1 # 1010 trials
 
-## logistic regression of roundwise (vs. summary) choice on switch rate
+Npart_reg_d1 <- reg_d1 %>% distinct(paper, id, subject) %>% nrow()
+Npart_reg_d1 # 631
 
-mfit <- brm(choiceRoundwise ~ 1 + r_switch + (1 + r_switch|paper) , 
-                    data = sub , 
-                    family = bernoulli() , 
-                    chains = 4 , 
-                    cores = 4)
+
+## regression of roundwise (vs. summary) choice on switch rate
+
+mean_switch <- mean(reg_d1$r_switch)
+fit_d1 <- brm(choose_roundwise_winner ~ 1 + (r_switch-mean_switch) + (1 | paper) , 
+              data = reg_d1 , 
+              family = bernoulli() , 
+              chains = 6 , 
+              cores = 6,
+              iter = 4000)
     
-summary(mfit)
-
+summary(fit_d1)
 
 ## plot results  
     
-mfit_post <- as_draws_array(mfit_NA_false)
-m_summary <- summarise_draws(mfit_post, default_summary_measures()) %>% 
+fit_d1_post <- as_draws_array(fit_d1)
+m_summary_d1 <- summarise_draws(fit_d1_post, default_summary_measures()) %>% 
   mutate(paper = if_else(grepl("r_paper", variable) ,
                          sub("r_paper\\[(.*),.*\\]", "\\1", variable) ,
                          NA_character_) ,
@@ -247,124 +118,130 @@ m_summary <- summarise_draws(mfit_post, default_summary_measures()) %>%
                             variable)) %>%
   select(variable, paper, everything()) %>%
   filter(! variable %in% c("sd_paper__Intercept", "sd_paper__r_switch", "cor_paper__Intercept__r_switch", "sigma", "lprior", "lp__"))
-    
-    
+
 # obtain regression lines
 
-logistic <- function (x) {
-      p <- 1/(1 + exp(-x))
-      p <- ifelse(x == Inf, 1, p)
-      p
-}
-
-regline_mean <- m_summary[1:2, "mean"] %>% 
+regline_mean <- m_summary_d1[1:2, "mean"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = mean) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
-  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3)) 
-    
-regline_5 <- m_summary[1:2, "q5"] %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+regline_5 <- m_summary_d1[1:2, "q5"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = q5) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
   mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
-    
-regline_95 <- m_summary[1:2, "q95"] %>% 
+   
+ 
+regline_95 <- m_summary_d1[1:2, "q95"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = q95) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
   mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
-    
-props <- sub %>% 
-  #filter(summary_winner != roundwise_winner) %>% 
-  mutate(better_model = if_else(choose_roundwise_winner_pred == T, 1, 0)) %>% 
+
+
+prop_d1 <- d1 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) ) %>%  # keep trials with different predictions of comparison rules
   group_by(paper, id, subject) %>%
   mutate(nChoices = n() , 
-         nRoundwise = sum(better_model, na.rm = TRUE) , 
-         propRoundwise = round(nRoundwise/nChoices, 3) , 
-         mSwitch = mean(r_switch, na.rm = TRUE)
-         ) %>%
+         mSwitch = mean(r_switch) ,
+         propRoundwise = sum(choose_roundwise_winner)/nChoices) %>% 
   ungroup() %>% 
-  distinct(paper, subject, nChoices, mSwitch, propRoundwise)
+  distinct(paper, id, subject, nChoices, mSwitch, propRoundwise)
 
     
-p_win <- props %>%
+p_d1 <- prop_d1 %>%
   ggplot() +
-  geom_point(aes(x=mSwitch, y=propRoundwise, size = nChoices), alpha = .1) +
-  #geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
-  #geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
-  #geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  geom_point(aes(x=mSwitch, y=propRoundwise, size=nChoices), alpha = .1) +
+  geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
+  geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
   scale_color_scico_d(palette = "managua") + 
   labs(x = "Average Switching Frequency",
        y = "Proportion of Roundwise Choices",
-       size = "nChoices",
+       size = "Choices",
        color = "Paper",
        fill = "Paper") +
   theme_minimal(base_size = 16) +
   theme(legend.position = "bottom", 
-        legend.box = "vertical") +
-  guides(shape = guide_legend(order = 2, nrow = 1) , 
-         color = guide_legend(order = 1, nrow = 3)
-         )
+        legend.box = "vertical") 
     
-pmarginal_win <- ggMarginal(p_win, type="density", fill = "gray")
-ggsave(pmarginal_win, file = "manuscript/figures/reanalysis_win.png", width = 6, height = 6)
-
+p_d1_marginal <- ggMarginal(p_d1, type="density", fill = "gray")
+p_d1_marginal
+ggsave(p_d1_marginal, file = "manuscript/figures/reanalysis.png", width = 6, height = 6)
 
 
 # Appendix ----------------------------------------------------------------
 
-## Drop incomplete rounds ----------------------------------------------------------------
-
-predictions_drop <- 
-  predictions %>% 
-  mutate(drop = if_else(complete == 0 & round == max(round), 1, 0)) %>% # indicate samples in incomplete last round
-  filter(drop == 0) %>% # drop incomplete last round
-  mutate(n_round = max(round)) %>%  # determine number of remaining rounds
-  group_by(paper, id, subject, problem, round) %>%
-  mutate(
-    r_mean_0 = round(mean(out_0, na.rm = TRUE), 2) , # compute roundwise mean of option A/0
-    r_mean_1 = round(mean(out_1, na.rm = TRUE), 2) , 
-    r_winner = case_when(r_mean_0 > r_mean_1 ~ -1 , # option A/0 approaches negative threshold
-                         r_mean_0 < r_mean_1 ~ 1 , # option B/1 approaches positive threshold
-                         r_mean_0 == r_mean_1 ~ 0)
-  ) %>% 
-  ungroup() %>% 
-  distinct(paper, id, subject, problem, round, .keep_all = TRUE) %>% # keep only one row for each round that summarizes the comparison
-  group_by(paper, id, subject, problem) %>% 
-  mutate(
-    round_tally = sum(r_winner, na.rm = TRUE) , # compute accumulated evidence over rounds
-    roundwise_winner = case_when(round_tally > 0 ~ 1 , # predict choice
-                                 round_tally < 0 ~ 0 ,
-                                 round_tally == 0 ~ NA) , 
-    choose_roundwise_winner = case_when(roundwise_winner == choice ~ 1 , # compare predicted and observed choice
-                                        roundwise_winner != choice ~ 0 ,
-                                        is.na(roundwise_winner) ~ .5) 
-  ) %>%
-  ungroup() %>%
-  filter(round == n_round) %>% # keep only one row for each trial that summarizes all comparison rounds
-  select(!c(sample, switch, attended, out_0, out_1, # drop uninformative sampling and round data
-            complete, start, start_o, stop, new_round, round, r_mean_0, r_mean_1, r_winner))
-
+## A1) Drop incomplete rounds ----------------------------------------------------------------
 
 # sampled option in incomplete rounds wins 
-    
+
 ## logistic regression of roundwise (vs. summary) choice on switch rate 
-    
-reg_data <- predictions_drop %>% 
-  filter(summary_winner != roundwise_winner) %>% 
-  mutate(choiceRoundwise = as.numeric(choose_roundwise_winner))
-  
-mfit <- brm(choiceRoundwise ~ 1 + r_switch + (1 + r_switch|paper) , 
-            data = reg_data , 
+
+d2 <- 
+  predictions_drop %>%
+  filter(
+    dom == "Gain" , # gains only 
+    cert == TRUE , # includes safe option
+    type == "free" ,  # free sampling conditions with gains only and a safe option
+    probA3 == 0 & probA4 == 0 & probA5 == 0 , # problems with maximum two outcomes per option
+    probB3 == 0 & probB4 == 0 & probB5 == 0
+  ) %>% 
+  filter(n_sample_0 != 0 & n_sample_1 != 0) # delete trials where only one option was sampled
+
+consistency2 <- d2 %>% 
+  group_by(choose_summary_winner_mean, choose_roundwise_winner) %>% 
+  summarise(N = n() ,
+            mSwitch = mean(r_switch)) %>% 
+  mutate(perc = round(N/Ntrial1, 3)) %>% 
+  ungroup() %>% 
+  select(choose_summary_winner_mean, choose_roundwise_winner, N, perc, mSwitch)
+
+consistency2 %>% 
+  select(!c(N, mSwitch)) %>% 
+  rename(Summary = choose_summary_winner_mean, 
+         Roundwise = choose_roundwise_winner,
+         Proporion = perc) %>% 
+  mutate(Summary = case_when(Summary == 0 ~ "F",
+                             Summary == 1 ~ "C",
+                             Summary == .5 ~ "In") ,
+         Roundwise = case_when(Roundwise == 0 ~ "F",
+                               Roundwise == 1 ~ "C",
+                               Roundwise == .5 ~ "In")) %>% 
+  mutate(Prediction = case_when(Summary == "C" | Roundwise == "C" ~ "Correct" , 
+                                Summary == "F" & Roundwise == "F" ~ "False" , 
+                                (Summary == "In" & Roundwise == "F")  | (Summary == "F" & Roundwise == "In")  | (Summary == "In" & Roundwise == "In") ~ "Indifferent")
+  ) %>% 
+  select(Prediction, everything()) %>% 
+  arrange(Prediction, Summary) %>% 
+  kable()
+
+
+
+reg_d2 <- d2 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) )
+
+Ntrial_reg_d2 <- nrow(reg_d2)
+Ntrial_reg_d2 # 1170 trials
+
+Npart_reg_d2 <- reg_d2 %>% distinct(paper, id, subject) %>% nrow()
+Npart_reg_d2 # 710
+
+fit_d2 <- brm(choose_roundwise_winner ~ 1 + r_switch + (1 | paper)  , 
+            data = reg_d2 , 
             family = bernoulli() , 
-            chains = 4 , 
-            cores = 4)
-    
+            chains = 6 , 
+            cores = 6, 
+            iter = 4000)
+summary(fit_d2)
+
+
 # plot results  
-    
-mfit_post <- as_draws_array(mfit)
-m_summary <- summarise_draws(mfit_post, default_summary_measures()) %>% 
+
+fit_d2_post <- as_draws_array(fit_d2)
+m_summary_d2 <- summarise_draws(fit_d2_post, default_summary_measures()) %>% 
   mutate(paper = if_else(grepl("r_paper", variable) ,
                          sub("r_paper\\[(.*),.*\\]", "\\1", variable) ,
                          NA_character_) ,
@@ -373,107 +250,338 @@ m_summary <- summarise_draws(mfit_post, default_summary_measures()) %>%
                             variable)) %>%
   select(variable, paper, everything()) %>% 
   filter(! variable %in% c("sd_paper__Intercept", "sd_paper__r_switch", "cor_paper__Intercept__r_switch", "sigma", "lprior", "lp__"))
-    
-    
+
+
 # obtain regression lines
-    
-regline_mean <- m_summary[1:2, "mean"] %>% 
+
+regline_mean <- m_summary_d2[1:2, "mean"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = mean) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
   mutate(probRoundwise = round(logistic(intercept + slope * rate), 3)) 
-    
-regline_5 <- m_summary[1:2, "q5"] %>% 
+
+regline_5 <- m_summary_d2[1:2, "q5"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = q5) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
   mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
-    
-regline_95 <- m_summary[1:2, "q95"] %>% 
+
+regline_95 <- m_summary_d2[1:2, "q95"] %>% 
   mutate(variable=c("intercept", "slope")) %>% 
   pivot_wider(names_from = variable, values_from = q95) %>% 
   expand_grid(rate = seq(0,1,.01)) %>% 
   mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
-    
-    
-shortnames <- data %>% distinct(paper, short) 
 
-props <- predictions_drop %>% 
-  filter(summary_winner != roundwise_winner) %>% 
-  mutate(better_model = if_else(choose_roundwise_winner == T, 1, 0)) %>% 
-  group_by(paper, subject) %>%
+
+
+prop_d2 <- d2 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) ) %>%  # keep trials with different predictions of comparison rules
+  group_by(paper, id, subject) %>%
   mutate(nChoices = n() , 
-         nRoundwise = sum(better_model, na.rm = TRUE) , 
-         propRoundwise = round(nRoundwise/nChoices, 3) , 
-         mSwitch = mean(r_switch, na.rm = TRUE)
-         ) %>%
+         mSwitch = mean(r_switch) ,
+         propRoundwise = sum(choose_roundwise_winner)/nChoices) %>% 
   ungroup() %>% 
-  distinct(paper, subject, nChoices, mSwitch, propRoundwise) %>% 
-  left_join(shortnames, by = join_by(paper))
-    
-p_drop <- props %>% 
-  ggplot() + 
-  geom_point(aes(x=mSwitch, y=propRoundwise, size = nChoices), alpha = .1) +
+  distinct(paper, id, subject, nChoices, mSwitch, propRoundwise)
+
+
+p_d2 <- prop_d2 %>%
+  
+  ggplot() +
+  geom_point(aes(x=mSwitch, y=propRoundwise, size=nChoices), alpha = .1) +
   geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
   geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
   geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
   scale_color_scico_d(palette = "managua") + 
-  labs(x = "Average Switch Rate" ,
+  labs(x = "Average Switching Frequency" ,
        y = "Proportion of Roundwise Choices" ,
-       size = "nChoices" ,
-       color = "Paper" ,
-       fill = "Paper") + 
-  theme_minimal(base_size = 16) + 
-  theme(legend.position = "bottom" ,
-        legend.box = "vertical") + 
-  guides(shape = guide_legend(order = 2, nrow = 1) ,
+       size = "Choices",
+       color = "Paper",
+       fill = "Paper") +
+  theme_minimal(base_size = 16) +
+  theme(legend.position = "bottom", 
+        legend.box = "vertical") +
+  guides(shape = guide_legend(order = 2, nrow = 1) , 
          color = guide_legend(order = 1, nrow = 3)
-         )
+  )
+p_d2_marginal <- ggMarginal(p_d2, type="density", fill = "gray")
+p_d2_marginal
 
-pmarginal_drop <- ggMarginal(p_drop, type="density", fill = "gray")
-ggsave(pmarginal_win, file = "manuscript/figures/reanalysis_win.png", width = 6, height = 6)
-
-
-## Hills and Hertwig (2010) data -------------------------------------------------------
-
-data %>% filter(paper %in% c("Hertwig04", "Hau08", "Ungemach09", "Hertwig10"))
+ggsave(p_d2_marginal, file = "manuscript/figures/appendix/reanalysis_dropped.png", width = 6, height = 6)
 
 
-## Hills and Hertwig (2010) approach ---------------------------------------------------------
+## A2) All data ------------------------------------------------------------
 
-# remove trials where both comparison rules made a false predictions
-sub2 <- predictions_win %>% 
-  filter(!(choose_summary_winner_mean == FALSE & choose_roundwise_winner == FALSE))
+d3 <- 
+  predictions_win %>%
+  filter(type == "free") %>%   # free sampling conditions with gains only and a safe option
+  filter(n_sample_0 != 0 & n_sample_1 != 0) # delete trials where only one option was sampled
 
-
-set.seed(1656381)
-sub2 <- sub2 %>% 
-  
-  # for trials where strategies are indifferent, predict choice 
-  mutate(
-    choose_summary_winner_mean_pred = case_when(summary_winner_mean == choice ~ 1 ,
-                                                summary_winner_mean != choice ~ 0 ,
-                                                is.na(summary_winner_mean) ~ rbinom(n=1,size=1,p=.5)) , 
-    choose_roundwise_winner_pred = case_when(roundwise_winner == choice ~ 1 ,
-                                             roundwise_winner != choice ~ 0 ,
-                                             is.na(roundwise_winner) ~ rbinom(n=1,size=1,p=.5))
-  ) %>% 
-  
-  # consider only trials in which both strategies make different predictions
-  filter(choose_summary_winner_mean_pred != choose_roundwise_winner_pred) %>% 
-  mutate(choiceRoundwise = as.numeric(choose_roundwise_winner_pred))
+reg_d3 <- d3 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) )
 
 
-## logistic regression of roundwise (vs. summary) choice on switch rate
+Ntrial_reg_d3 <- nrow(reg_d3)
+Ntrial_reg_d3 # 6532 trials
 
-mfit2 <- brm(choiceRoundwise ~ 1 + r_switch + (1 + r_switch|paper) , 
-             data = sub2 , 
-             family = bernoulli() , 
-             chains = 4 , 
-             cores = 4)
-
-summary(mfit2)
+Npart_reg_d3 <- reg_d3 %>% distinct(paper, id, subject) %>% nrow()
+Npart_reg_d3 # 1569
 
 
+## regression of roundwise (vs. summary) choice on switch rate
 
-    
+fit_d3 <- brm(choose_roundwise_winner ~ 1 + r_switch + (1 | paper) , 
+              data = reg_d3 , 
+              family = bernoulli() , 
+              chains = 6 , 
+              cores = 6,
+              iter = 4000)
+
+summary(fit_d3)
+
+## plot results  
+
+fit_d3_post <- as_draws_array(fit_d3)
+m_summary_d3 <- summarise_draws(fit_d3_post, default_summary_measures()) %>% 
+  mutate(paper = if_else(grepl("r_paper", variable) ,
+                         sub("r_paper\\[(.*),.*\\]", "\\1", variable) ,
+                         NA_character_) ,
+         variable = if_else(grepl("r_paper", variable) ,
+                            sub("r_paper\\[.*,([^]]*)\\]", "\\1", variable) ,
+                            variable)) %>%
+  select(variable, paper, everything()) %>%
+  filter(! variable %in% c("sd_paper__Intercept", "sd_paper__r_switch", "cor_paper__Intercept__r_switch", "sigma", "lprior", "lp__"))
+
+# obtain regression lines
+
+regline_mean <- m_summary_d3[1:2, "mean"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = mean) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+regline_5 <- m_summary_d3[1:2, "q5"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q5) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+regline_95 <- m_summary_d3[1:2, "q95"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q95) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+prop_d3 <- d3 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) ) %>%  # keep trials with different predictions of comparison rules
+  group_by(paper, id, subject) %>%
+  mutate(nChoices = n() , 
+         mSwitch = mean(r_switch) ,
+         propRoundwise = sum(choose_roundwise_winner)/nChoices) %>% 
+  ungroup() %>% 
+  distinct(paper, id, subject, nChoices, mSwitch, propRoundwise)
+
+p_d3 <- prop_d3 %>%
+  mutate(trials = if_else(nChoices >= 10, "N >= 10", "N < 10")) %>% 
+  ggplot() +
+  geom_point(aes(x=mSwitch, y=propRoundwise, size=nChoices, color = trials), alpha = .5) +
+  geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
+  geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  scale_color_scico_d(palette = "managua", labels = c("N < 10", "N \u2265 10")) + 
+  labs(x = "Average Switching Frequency",
+       y = "Proportion of Roundwise Choices",
+       size = "Choices",
+       color = "Trials",
+       fill = "Paper") +
+  theme_minimal(base_size = 16) +
+  theme(legend.position = "bottom", 
+        legend.box = "vertical") +
+  guides(shape = guide_legend(order = 2, nrow = 1) , 
+         color = guide_legend(order = 1, nrow = 1)
+  )
+
+
+p_d3_marginal <- ggMarginal(p_d3, type="density", groupFill = TRUE)
+p_d3_marginal
+ggsave(p_d3_marginal, file = "manuscript/figures/appendix/reanalysis_large.png", width = 6, height = 6)
+
+
+## A3) Hills and Hertwig (2010) -------------------------------------------------------
+
+
+### Mean --------------------------------------------------------------------
+
+d4 <- d1
+
+reg_d4 <- d4 %>% 
+  filter( (choose_summary_winner_mean == 1 & choose_roundwise_winner == 0) | (choose_summary_winner_mean == 0 & choose_roundwise_winner == 1) )
+
+
+Ntrial_reg_d4 <- nrow(reg_d4)
+Ntrial_reg_d4 # 591 trials
+
+Npart_reg_d4 <- reg_d4 %>% distinct(paper, id, subject) %>% nrow()
+Npart_reg_d4 # 367
+
+
+## regression of roundwise (vs. summary) choice on switch rate
+
+fit_d4 <- brm(choose_roundwise_winner ~ 1 + r_switch + (1 | paper) , 
+              data = reg_d4 , 
+              family = bernoulli() , 
+              chains = 6 , 
+              cores = 6,
+              iter = 4000)
+
+summary(fit_d4)
+
+## plot results  
+
+fit_d4_post <- as_draws_array(fit_d4)
+m_summary_d4 <- summarise_draws(fit_d4_post, default_summary_measures()) %>% 
+  mutate(paper = if_else(grepl("r_paper", variable) ,
+                         sub("r_paper\\[(.*),.*\\]", "\\1", variable) ,
+                         NA_character_) ,
+         variable = if_else(grepl("r_paper", variable) ,
+                            sub("r_paper\\[.*,([^]]*)\\]", "\\1", variable) ,
+                            variable)) %>%
+  select(variable, paper, everything()) %>%
+  filter(! variable %in% c("sd_paper__Intercept", "sd_paper__r_switch", "cor_paper__Intercept__r_switch", "sigma", "lprior", "lp__"))
+
+# obtain regression lines
+
+regline_mean <- m_summary_d4[1:2, "mean"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = mean) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+regline_5 <- m_summary_d4[1:2, "q5"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q5) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+regline_95 <- m_summary_d4[1:2, "q95"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q95) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+prop_d4 <- d4 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) ) %>%  # keep trials with different predictions of comparison rules
+  group_by(paper, id, subject) %>%
+  mutate(nChoices = n() , 
+         mSwitch = mean(r_switch) ,
+         propRoundwise = sum(choose_roundwise_winner)/nChoices) %>% 
+  ungroup() %>% 
+  distinct(paper, id, subject, nChoices, mSwitch, propRoundwise)
+
+
+p_d4 <- prop_d4 %>%
+  ggplot() +
+  geom_point(aes(x=mSwitch, y=propRoundwise, size=nChoices), alpha = .1) +
+  geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
+  geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  scale_color_scico_d(palette = "managua") + 
+  labs(x = "Average Switching Frequency",
+       y = "Proportion of Roundwise Choices",
+       size = "Choices") +
+  theme_minimal(base_size = 16) +
+  theme(legend.position = "bottom", 
+        legend.box = "vertical")
+
+p_d4_marginal <- ggMarginal(p_d4, type="density", fill = "gray")
+p_d4_marginal
+
+
+### Data ----------------------------------------------------------------------
+
+d5 <- d3 %>% filter(paper %in% c("Hertwig04", "Hau08", "Ungemach09", "Hertwig10"))
+
+
+reg_d5 <- d5 %>% 
+  filter( (choose_summary_winner_mean == 1 & choose_roundwise_winner == 0) | (choose_summary_winner_mean == 0 & choose_roundwise_winner == 1) )
+
+nrow(reg_d5)
+fit_d5 <- brm(choose_roundwise_winner ~ 1 + r_switch , 
+              data = reg_d5 , 
+              family = bernoulli() , 
+              chains = 6 , 
+              cores = 6,
+              iter = 4000)
+
+summary(fit_d5)
+
+
+## plot results  
+
+fit_d5_post <- as_draws_array(fit_d5)
+m_summary_d5 <- summarise_draws(fit_d5_post, default_summary_measures()) %>% 
+  mutate(paper = if_else(grepl("r_paper", variable) ,
+                         sub("r_paper\\[(.*),.*\\]", "\\1", variable) ,
+                         NA_character_) ,
+         variable = if_else(grepl("r_paper", variable) ,
+                            sub("r_paper\\[.*,([^]]*)\\]", "\\1", variable) ,
+                            variable)) %>%
+  select(variable, paper, everything()) %>%
+  filter(! variable %in% c("sd_paper__Intercept", "sd_paper__r_switch", "cor_paper__Intercept__r_switch", "sigma", "lprior", "lp__"))
+
+# obtain regression lines
+
+regline_mean <- m_summary_d5[1:2, "mean"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = mean) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+regline_5 <- m_summary_d5[1:2, "q5"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q5) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+regline_95 <- m_summary_d5[1:2, "q95"] %>% 
+  mutate(variable=c("intercept", "slope")) %>% 
+  pivot_wider(names_from = variable, values_from = q95) %>% 
+  expand_grid(rate = seq(0,1,.01)) %>% 
+  mutate(probRoundwise = round(logistic(intercept + slope * rate), 3))
+
+
+prop_d5 <- d5 %>% 
+  filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) ) %>%  # keep trials with different predictions of comparison rules
+  group_by(paper, id, subject) %>%
+  mutate(nChoices = n() , 
+         mSwitch = mean(r_switch) ,
+         propRoundwise = sum(choose_roundwise_winner)/nChoices) %>% 
+  ungroup() %>% 
+  distinct(paper, id, subject, nChoices, mSwitch, propRoundwise)
+
+
+p_d5 <- prop_d5 %>%
+  ggplot() +
+  geom_point(aes(x=mSwitch, y=propRoundwise, size=nChoices), alpha = .1) +
+  geom_line(data = regline_mean, aes(x=rate, y=probRoundwise), linewidth = 1) +
+  geom_line(data = regline_5, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  geom_line(data = regline_95, aes(x=rate, y=probRoundwise), linewidth = .8, linetype = "dotdash") +
+  scale_color_scico_d(palette = "managua") + 
+  labs(x = "Average Switching Frequency",
+       y = "Proportion of Roundwise Choices",
+       size = "Choices",
+       color = "Paper",
+       fill = "Paper") +
+  theme_minimal(base_size = 16) +
+  theme(legend.position = "bottom", 
+        legend.box = "vertical")
+
+p_d5_marginal <- ggMarginal(p_d5, type="density", fill = "gray")
+p_d5_marginal
+
+p_d5_d4_marginal <- ggarrange(p_d5_marginal, p_d4_marginal, nrow = 1, labels = "AUTO") 
+ggsave(p_d5_d4_marginal, file = "manuscript/figures/appendix/reanalysis_comparison.png", width = 14, height = 8)

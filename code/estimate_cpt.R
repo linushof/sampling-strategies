@@ -52,7 +52,7 @@ for(set in seq_len(nrow(params_sim))){
   current_sample <- jags.parallel(data = current_trials ,
                                   inits = inits_MCMC ,
                                   parameters.to.save = params_cpt ,
-                                  model.file = "code/CPT_model.txt" ,
+                                  model.file = "code/cpt_model.txt" ,
                                   n.chains = 24,
                                   n.iter = 30000 ,
                                   n.burnin = 10000 ,

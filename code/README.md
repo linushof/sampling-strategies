@@ -1,7 +1,7 @@
 ### File Descriptions
 
 | File                   | Description                                                                                                                                       |
-|-------------------------|-----------------------------------------------|
+|------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | `simulate_roundwise.R` | Simulates sampling strategies with a roundwise comparison rule; generates `simulation_roundwise.rds.bz2`                                          |
 | `simulate_summary.R`   | Simulates sampling strategies with a summary comparison rule; generates `simulation_summary.rds.bz2`                                              |
 | `prepare_analysis.R`   | Summarizes all 6,000,000 simulated trials (from `simulation_roundwise.rds.bz2` and `simulation_summary.rds.bz2)`; generates `choice_data.rds.bz2` |

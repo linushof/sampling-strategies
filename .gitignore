@@ -17,6 +17,7 @@ data/cpt_posteriors.rds.bz2
 data/simulation_roundwise.rds.bz2
 data/simulation_summary.rds.bz2
 data/csv/
-# figure files and other
+# other folders and files
 housekeeping/
 talks/
+documentation/zip_data.R

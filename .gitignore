@@ -3,34 +3,20 @@
 .Rhistory
 .RData
 .Ruserdata
-# redundant derived files
+# file formats
+*.zip
 *.html
 *.pdf
-# redundant source files
-data/README.Rmd
-code/README.Rmd
-# additional data formats
-*.zip
-*.qmd
 *.docx
-*.ppt
+*.pptx
 *.xlsx
-data/csv/
-data/rds/
-# posteriors
+# secondary data
+data/exp.txt
+# large data
 data/cpt_posteriors.rds.bz2
-supplements/parameter recovery/recovery_posteriors.rds
-supplements/gamma/cpt_posteriors_ext_gamma.rds.bz2
-supplements/figures/
+data/simulation_roundwise.rds.bz2
+data/simulation_summary.rds.bz2
+data/csv/
 # figure files and other
-thesis/
 housekeeping/
 talks/
-manuscript/
-supplements/starting option bias/figures/
-supplements/posterior predictives/figures/
-supplements/gamma/figures/
-supplements/parameter recovery/figures/
-supplements/logit choice rule/figures/
-supplements/absolute thresholds/figures/
-data/old/

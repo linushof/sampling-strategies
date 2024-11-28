@@ -1,4 +1,4 @@
-Download the complete date from the [latest release](https://github.com/linushof/sampling-strategies/releases).
+Download the complete data from the [latest release](https://github.com/linushof/sampling-strategies/releases).
 
 ### Data sets
 

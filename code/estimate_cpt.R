@@ -53,11 +53,11 @@ for(set in seq_len(nrow(params_sim))){
                                   inits = inits_MCMC ,
                                   parameters.to.save = params_cpt ,
                                   model.file = "code/cpt_model.txt" ,
-                                  n.chains = 24,
+                                  n.chains = 20,
                                   n.iter = 30000 ,
                                   n.burnin = 10000 ,
                                   n.thin = 10 ,
-                                  n.cluster = 24 , # compute MCMC chains in parallel
+                                  n.cluster = 20 , # compute MCMC chains in parallel
                                   DIC = TRUE ,
                                   jags.seed = 5615317)
   

@@ -1,4 +1,3 @@
-
 # NOTE --------------------------------------------------------------------
 
 'In the paper, a scaling of outcomes by d=.01 is assumed in the specification of the summary comparison rule.
@@ -16,7 +15,7 @@ problems <- as.data.frame(read_rds("data/choice_problems.rds"))
 # Simulation --------------------------------------------------------------
 # for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
 
-# specify parameters for search rule (psi; switching probability) and stopping rule (theta; threshold)
+# specify parameters for search rule (psi; switch rate) and stopping rule (theta; threshold)
 param <- expand.grid(psi = seq(.1, 1, .1) , 
                      theta = seq(100, 300, 50))
 

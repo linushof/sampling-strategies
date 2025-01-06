@@ -1,4 +1,4 @@
-Copyright (c) 2022 The Authors
+Copyright (c) 2025 The Authors
 
 Attribution 4.0 International
 

@@ -1,4 +1,3 @@
-
 # Preparation -------------------------------------------------------------
 
 source("code/prepare_reanalysis.R") 
@@ -17,7 +16,7 @@ d1 <-
    ) %>% 
   filter(n_sample_0 != 0 & n_sample_1 != 0) # delete trials where only one option was sampled
 
-## Description -----------------------------------------------------
+## Description (Table 2) -----------------------------------------------------
 
 Ntrial1 <- d1 %>% nrow()
 Ntrial1 # 5627 trials
@@ -25,54 +24,35 @@ Ntrial1 # 5627 trials
 Npart1 <- d1 %>% distinct(paper, id, subject) %>% nrow()
 Npart1 # 1877 participants
 
-
+# compute proportion of trials where predictions were correct, false, and indifferent
 consistency1 <- d1 %>% 
   group_by(choose_summary_winner, choose_roundwise_winner) %>% 
   summarise(N = n() ,
             mSwitch = mean(r_switch)) %>% 
-  mutate(perc = round(N/Ntrial1, 3)) %>% 
+  mutate(perc = round(N/Ntrial1, 4)) %>% 
   ungroup() %>% 
   select(choose_summary_winner, choose_roundwise_winner, N, perc, mSwitch)
 
-consistency1 %>% 
-  select(!c(N, mSwitch)) %>% 
-  rename(Summary = choose_summary_winner, 
-         Roundwise = choose_roundwise_winner,
-         Proporion = perc) %>% 
-  mutate(Summary = case_when(Summary == 0 ~ "F",
-                             Summary == 1 ~ "C",
-                             Summary == .5 ~ "In") ,
-         Roundwise = case_when(Roundwise == 0 ~ "F",
-                               Roundwise == 1 ~ "C",
-                               Roundwise == .5 ~ "In")) %>% 
-  mutate(Prediction = case_when(Summary == "C" | Roundwise == "C" ~ "Correct" , 
-                                Summary == "F" & Roundwise == "F" ~ "False" , 
-                                (Summary == "In" & Roundwise == "F")  | (Summary == "F" & Roundwise == "In")  | (Summary == "In" & Roundwise == "In") ~ "Indifferent")
-  ) %>% 
-  select(Prediction, everything()) %>% 
-  arrange(Prediction, Summary) %>% 
-  kable()
-
-
-# correct
+# proportion correct
 consistency1 %>% 
   filter(choose_summary_winner == 1 | choose_roundwise_winner == 1) %>%
   summarise(N = sum(N), prop = sum(perc)) # 82.5%
 
-# false
+# proportion false
 consistency1 %>% 
   filter(choose_summary_winner == FALSE & choose_roundwise_winner == FALSE) %>% 
   summarise(N = sum(N), prop = sum(perc)) # 12.2%
 
-# indifference
-
+# proportion indifferent
 consistency1 %>% 
   filter( (choose_summary_winner == .5 & choose_roundwise_winner == 0)  | (choose_summary_winner == 0 & choose_roundwise_winner == .5)  | (choose_summary_winner == .5 & choose_roundwise_winner == .5)   ) %>% 
   summarise(N = sum(N),
     prop = sum(perc)) # 5.4%
 
 
-## Regression -------------------------------------------
+## Regression (Figure 12) -------------------------------------------
+
+# only analyse trials where one comparison rule makes a correct prediction and the other a false prediction
 
 reg_d1 <- d1 %>% 
   filter( (choose_summary_winner == 1 & choose_roundwise_winner == 0) | (choose_summary_winner == 0 & choose_roundwise_winner == 1) )
@@ -169,9 +149,9 @@ p_d1_marginal
 ggsave(p_d1_marginal, file = "manuscript/figures/reanalysis.png", width = 6, height = 6)
 
 
-# Appendix ----------------------------------------------------------------
+# Appendix (Figure F1) ----------------------------------------------------------------
 
-## A1) Drop incomplete rounds ----------------------------------------------------------------
+## F1A) Drop incomplete rounds ----------------------------------------------------------------
 
 # sampled option in incomplete rounds wins 
 
@@ -309,7 +289,7 @@ p_d2_marginal
 #ggsave(p_d2_marginal, file = "manuscript/figures/appendix/reanalysis_dropped.png", width = 6, height = 6)
 
 
-## A2) All data ------------------------------------------------------------
+## F1B) All data ------------------------------------------------------------
 
 d3 <- 
   predictions_win %>%
@@ -412,10 +392,10 @@ p_d3_marginal
 ggsave(p_d3_marginal, file = "manuscript/figures/appendix/reanalysis_large.png", width = 6, height = 6)
 
 
-## A3) Hills and Hertwig (2010) -------------------------------------------------------
+## Hills and Hertwig (2010) -------------------------------------------------------
 
 
-### Data ----------------------------------------------------------------------
+### F1C) Data ----------------------------------------------------------------------
 
 d5 <- d3 %>% filter(paper %in% c("Hertwig04", "Hau08", "Ungemach09", "Hertwig10"))
 
@@ -504,7 +484,7 @@ p_d5_marginal <- ggMarginal(p_d5, type="density", fill = "gray")
 p_d5_marginal
 
 
-### Mean --------------------------------------------------------------------
+### F1D) Mean --------------------------------------------------------------------
 
 d4 <- d1
 
@@ -601,9 +581,7 @@ p_d4_marginal <- ggMarginal(p_d4, type="density", fill = "gray")
 p_d4_marginal
 
 
-# Merge -------------------------------------------------------------------
-
-
+# Merge
 
 reanalyis_app <- ggarrange(p_d2_marginal, p_d3_marginal, 
                            p_d5_marginal, p_d4_marginal,

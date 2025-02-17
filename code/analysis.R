@@ -131,8 +131,8 @@ round_median_sub_19 <- round_median %>%
 ## problem 5
 
 # create EV labels
-ann_risky_5 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 40")
-ann_safe_5 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 43")
+ann_risky_5 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 44 \n (32, 40%; 52, 60%)")
+ann_safe_5 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 47")
 
 # summary comparison
 summary_trajectories_5 <- summary_sub_5 %>% 
@@ -146,7 +146,7 @@ summary_trajectories_5 <- summary_sub_5 %>%
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky_5, label=ann_risky_5$label, size = 5) + 
+  geom_text(data = ann_risky_5, label=ann_risky_5$label, size = 5, vjust = .6) + 
   geom_text(data = ann_safe_5, label=ann_safe_5$label, size = 5) +
   geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
   geom_line(data = summary_median_sub_5, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
@@ -179,8 +179,8 @@ ggsave(file = "manuscript/figures/accumulation_problem_5.jpg", width = 14, heigh
 ##  problem 19
 
 # create EV labels
-ann_risky_19 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 39")
-ann_safe_19 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 36")
+ann_risky_19 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 31 \n (23, 60%; 43, 40%)")
+ann_safe_19 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 28")
 
 # summary comparison
 summary_trajectories_19 <- summary_sub_19 %>% 
@@ -194,7 +194,7 @@ summary_trajectories_19 <- summary_sub_19 %>%
        color = expression(psi),
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky_19, label=ann_risky_19$label, size = 5) + 
+  geom_text(data = ann_risky_19, label=ann_risky_19$label, size = 5, vjust = .6) + 
   geom_text(data = ann_safe_19, label=ann_safe_19$label, size = 5) +
   geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
   geom_line(data = summary_median_sub_19, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
@@ -1045,7 +1045,8 @@ dic <- cpt %>%
 # plot results 
 
 dic %>% 
-  mutate(label= if_else(model=="roundwise", "Roundwise", "Summary")) %>% 
+  mutate(theta = if_else(model == "roundwise", theta, .01*theta) , 
+         label= if_else(model=="roundwise", "Roundwise", "Summary")) %>% 
   ggplot(aes(x=as.factor(theta), y=as.factor(psi), fill = DIC)) + 
   geom_tile() + 
   geom_text(aes(label=format(round(DIC), big.mark = ",")), color = "black") +

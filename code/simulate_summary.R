@@ -19,7 +19,7 @@ problems <- as.data.frame(read_rds("data/choice_problems.rds"))
 param <- expand.grid(psi = seq(.1, 1, .1) , 
                      theta = seq(100, 300, 50))
 
-n_agents <- 1000 # specify number of agents (iterations per strategy and problem)
+n_agents <- 2 # specify number of agents (iterations per strategy and problem)
 
 set.seed(36151) # seed random number generator to make simulations reproducible
 
@@ -36,26 +36,33 @@ for (set in seq_len(nrow(param))) {
   for (problem in seq_len(nrow(problems))) {
     
     # retrieve problem features
-    p_r_1 <- problems[[problem, "p_r_1"]] # probability risky outcome 1
-    p_r_2 <- problems[[problem, "p_r_2"]] # probability risky outcome 2
-    r_1 <- problems[[problem, "r_1"]] # risky outcome 1
-    r_2 <- problems[[problem, "r_2"]] # risky outcome 2
-    safe <- problems[[problem, "safe"]] # safe outcome
+    
+    # option 1 (for SR gambles: risky option)
+    o1_1 <- problems[[problem, "o1_1"]] # (smaller) outcome 1 
+    o1_2 <- problems[[problem, "o1_2"]] # (larger) outcome 2 
+    o1_p1 <- problems[[problem, "o1_p1"]] # probability outcome 1  
+    o1_p2 <- problems[[problem, "o1_p2"]] # probability outcome 2 
+    
+    # option 2 (for SR gambles: safe option)
+    o2_1 <- problems[[problem, "o2_1"]] # (smaller/safe) outcome 1
+    o2_2 <- problems[[problem, "o2_2"]] # (larger/missing) outcome 2
+    o2_p1 <- problems[[problem, "o2_p1"]] # probability outcome 1 (for SR gambles: 1) 
+    o2_p2 <- problems[[problem, "o2_p2"]] # probability outcome 2 (for SR gambles: 0)
     
     # loop over agents
     agents_list <- vector("list", n_agents)
     for (agent in seq_along(1:n_agents)){
-
+      
       # specify settings to initiate each choice trial
       
       at <- NULL # attended option
       smp_total <- 0 # total number of sampled outcomes
-      smp_total_r <- 0 # total number of sampled outcomes (risky option)
-      smp_total_s <- 0 # total number of sampled outcomes (safe option)
-      out_r <- NULL # sampled outcome (risky option)
-      out_s <- NULL # sampled outcome (safe option)
-      D_r <- 0 # accumulated evidence (risky option) 
-      D_s <- 0 # accumulated evidence (safe option)
+      smp_total_1 <- 0 # total number of sampled outcomes (option 1)
+      smp_total_2 <- 0 # total number of sampled outcomes (option 2)
+      out_1 <- NULL # sampled outcome (option 1)
+      out_2 <- NULL # sampled outcome (option 2)
+      D_1 <- 0 # accumulated evidence (option 1) 
+      D_2 <- 0 # accumulated evidence (option 2)
       boundary_reached <- FALSE # choice trial is stopped when TRUE
       
       # specify vectors to store sampling & evidence history
@@ -63,10 +70,10 @@ for (set in seq_len(nrow(param))) {
       smp <- NULL # total number of sampled outcomes
       D <- NULL # trajectory of decision variable
       choice <- NULL # final choice (risky or safe or no choice)
-
+      
       # START SAMPLING AND ACCUMULATION PROCESS
       
-      init <- sample(c("r", "s"), size=1) # randomly choose option to initially sample from
+      init <- sample(c("o1", "o2"), size=1) # randomly choose option to initially sample from
       attend <- init
       while(boundary_reached == FALSE) {
         
@@ -78,30 +85,31 @@ for (set in seq_len(nrow(param))) {
         
         # sample outcome and update evidence for respective option
         
-        if(attend == "r") {# risky option
+        if(attend == "o1") {# option 1
           
-          smp_total_r <- smp_total_r + 1
-          sampled_outcome <- sample(x = c(r_1, r_2), size = 1, prob = c(p_r_1, p_r_2))
-          out_r <- c(out_r, sampled_outcome)
-          out_s <- c(out_s, NA)
-          D_r <- D_r + sampled_outcome
-          p_attend_r <- 1-psi # probability of remaining on the risky option (for the next sample)
-        
-          } else {# safe option
-            
-            smp_total_s <- smp_total_s + 1
-            out_s <- c(out_s, safe)
-            out_r <- c(out_r, NA)
-            D_s <- D_s + safe
-            p_attend_r <- psi # probability of switching to the safe option (for the next sample)
-            
-          }
+          smp_total_1 <- smp_total_1 + 1
+          sampled_outcome <- sample(x = c(o1_1, o1_2), size = 1, prob = c(o1_p1, o1_p2))
+          out_1 <- c(out_1, sampled_outcome)
+          out_2 <- c(out_2, NA)
+          D_1 <- D_1 + sampled_outcome
+          p_attend_1 <- 1-psi # probability of remaining on option 1 (for the next sample)
+          
+        } else {# safe option
+          
+          smp_total_2 <- smp_total_2 + 1
+          sampled_outcome <- sample(x = c(o2_1, o2_2), size = 1, prob = c(o2_p1, o2_p2)) 
+          out_2 <- c(out_2, sampled_outcome)
+          out_1 <- c(out_1, NA)
+          D_2 <- D_2 + sampled_outcome
+          p_attend_1 <- psi # probability of switching to option 1 (for the next sample)
+          
+        }
         
         # update decision variable
         
-        if(smp_total_s > 0 & smp_total_r > 0){ # choice is only possible after both options were sampled
-        diff <- D_r - D_s
-        D <- c(D, diff)
+        if(smp_total_1 > 0 & smp_total_2 > 0){ # choice is only possible after both options were sampled
+          diff <- D_1 - D_2
+          D <- c(D, diff)
         } else { 
           diff <- 0
           D <- c(D, diff)
@@ -109,12 +117,12 @@ for (set in seq_len(nrow(param))) {
         
         # check if the decision threshold is reached: if true, make a choice and stop trial
         
-        boundary <- ifelse(diff >= theta, "r", ifelse(diff <= -1*theta, "s", NA))
+        boundary <- ifelse(diff >= theta, "o1", ifelse(diff <= -1*theta, "o2", NA))
         choice <- c(choice, boundary)
         
         if(is.na(boundary)) { # if threshold isn't reached (no choice), determine from which option to sample next and continue
           
-          attend <- sample(c("r", "s"), size=1, prob=c(p_attend_r, 1-p_attend_r))
+          attend <- sample(c("o1", "o2"), size=1, prob=c(p_attend_1, 1-p_attend_1))
           
         } else {
           
@@ -125,7 +133,7 @@ for (set in seq_len(nrow(param))) {
         }
         
       } # close loop choice trial
-      agents_list[[agent]] <- data.frame(agent, smp, at, out_r, out_s, D, choice)
+      agents_list[[agent]] <- data.frame(agent, smp, at, out_1, out_2, D, choice)
     } # close loop agents
     all_agents <- bind_rows(agents_list)
     problem_list[[problem]] <- as.data.frame(expand_grid(id=problems[problem,"id"], all_agents))

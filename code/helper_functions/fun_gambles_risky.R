@@ -1,6 +1,6 @@
-library(gtools)
-
 RR_gambles <- function(N, lower, upper, pmin=0){ 
+  
+  require(gtools)
   
   outcomes <- matrix( round( runif( N*4, min=lower, max=upper ), 2 ), nrow=N, ncol=4 ) # draw 4 outcomes 
   

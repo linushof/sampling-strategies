@@ -1,9 +1,4 @@
 # Function for generating choice problems consisting of a risky and a safe option
-N <- 10
-lower <- 0
-upper <- 100
-
-
 SR_gambles <- function(N, lower, upper, pmin=0) {
   
   # draw outcomes
@@ -15,14 +10,6 @@ SR_gambles <- function(N, lower, upper, pmin=0) {
   
   p1 <- round(runif(N, min = pmin, max = (1-pmin)), 2) # draw probability of r_low
 
-  
-  # # expectation 
-  # 
-  # r_ev <- round(p_r_low * r_low + p_r_high * r_high, 2)
-  # ev_diff <- round(r_ev - safe, 2)
-  # ev_ratio <- round(r_ev / safe, 2)
-  # 
-  
   # store
   
   data.frame(
@@ -36,6 +23,3 @@ SR_gambles <- function(N, lower, upper, pmin=0) {
     o2_p2 = rep(0, N)
     )
 }
-
-problems <- SR_gambles(10, 0, 100)
-

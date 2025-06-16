@@ -8,17 +8,16 @@ p_load(tidyverse, magrittr)
 source("code/helper_functions/fun_gambles_safe.R") # call function for generating choice problems
 source("code/helper_functions/fun_gambles_risky.R")
 
-
 # initial problem settings ------------------------------------------------
 
-N <- 1e5
+N <- 1e7
 lower <- 0 # lowest possible outcome 
 upper <- 100 # highest possible outcome
 pmin <- .1 # lowest possible probability 
 pmin_com <- .4 # lowest probability for non-rare events
 pmax_rare <- .2 # highest probability for rare events
 N_trials <- 60 # number of trials per agent
-diffs <- seq(.1,.3,.1) # magnitude of EV differences
+diffs <- seq(.05,.25,.1) # magnitude of EV differences
 
 # generate problems -------------------------------------------------------
 
@@ -116,26 +115,16 @@ SR_o2_o2_A <- SR_o2_o2 %>% filter(o1_plarge <= pmax_rare)
 ### 4) EV magnitude ------------------------------------------------------------
 
 # small (<= 20% outcome range)
-SR_o1_o1_N_S <- SR_o1_o1_N %>% filter(ev_diff_sc <= diffs[1])
-SR_o1_o2_N_S <- SR_o1_o2_N %>% filter(ev_diff_sc <= diffs[1])
-SR_o2_o1_N_S <- SR_o2_o1_N %>% filter(ev_diff_sc <= diffs[1])
-SR_o2_o2_N_S <- SR_o2_o2_N %>% filter(ev_diff_sc <= diffs[1])
-SR_o1_o1_U_S <- SR_o1_o1_U %>% filter(ev_diff_sc <= diffs[1])
-SR_o2_o1_U_S <- SR_o2_o1_U %>% filter(ev_diff_sc <= diffs[1])
-SR_o1_o2_A_S <- SR_o1_o2_A %>% filter(ev_diff_sc <= diffs[1])   
-SR_o2_o2_A_S <- SR_o2_o2_A %>% filter(ev_diff_sc <= diffs[1])
+SR_o1_o1_N_S <- SR_o1_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o1_o2_N_S <- SR_o1_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o2_o1_N_S <- SR_o2_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o2_o2_N_S <- SR_o2_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o1_o1_U_S <- SR_o1_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o2_o1_U_S <- SR_o2_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+SR_o1_o2_A_S <- SR_o1_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])   
+SR_o2_o2_A_S <- SR_o2_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
 
-# medium (> 20% & < 40% outcome range)
-SR_o1_o1_N_M <- SR_o1_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o1_o2_N_M <- SR_o1_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o2_o1_N_M <- SR_o2_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o2_o2_N_M <- SR_o2_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o1_o1_U_M <- SR_o1_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o2_o1_U_M <- SR_o2_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-SR_o1_o2_A_M <- SR_o1_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])   
-SR_o2_o2_A_M <- SR_o2_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-
-# large (> 40% & <= 60% outcome range)
+# large (> 20% & < 40% outcome range)
 SR_o1_o1_N_L <- SR_o1_o1_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 SR_o1_o2_N_L <- SR_o1_o2_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 SR_o2_o1_N_L <- SR_o2_o1_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
@@ -144,6 +133,7 @@ SR_o1_o1_U_L <- SR_o1_o1_U %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diff
 SR_o2_o1_U_L <- SR_o2_o1_U %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 SR_o1_o2_A_L <- SR_o1_o2_A %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])   
 SR_o2_o2_A_L <- SR_o2_o2_A %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
+
 
 ## risky-risky -------------------------------------------------------------
 
@@ -179,26 +169,16 @@ RR_o2_o2_A <- SR_o2_o2 %>% filter(  (o1_plarge <= pmax_rare | o2_plarge <= pmax_
 ### 4) EV magnitude ------------------------------------------------------------
 
 # small (<= 20% outcome range)
-RR_o1_o1_N_S <- SR_o1_o1_N %>% filter(ev_diff_sc <= diffs[1])
-RR_o1_o2_N_S <- SR_o1_o2_N %>% filter(ev_diff_sc <= diffs[1])
-RR_o2_o1_N_S <- SR_o2_o1_N %>% filter(ev_diff_sc <= diffs[1])
-RR_o2_o2_N_S <- SR_o2_o2_N %>% filter(ev_diff_sc <= diffs[1])
-RR_o1_o1_U_S <- SR_o1_o1_U %>% filter(ev_diff_sc <= diffs[1])
-RR_o2_o1_U_S <- SR_o2_o1_U %>% filter(ev_diff_sc <= diffs[1])
-RR_o1_o2_A_S <- SR_o1_o2_A %>% filter(ev_diff_sc <= diffs[1])   
-RR_o2_o2_A_S <- SR_o2_o2_A %>% filter(ev_diff_sc <= diffs[1])
+RR_o1_o1_N_S <- SR_o1_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o1_o2_N_S <- SR_o1_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o2_o1_N_S <- SR_o2_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o2_o2_N_S <- SR_o2_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o1_o1_U_S <- SR_o1_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o2_o1_U_S <- SR_o2_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
+RR_o1_o2_A_S <- SR_o1_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])   
+RR_o2_o2_A_S <- SR_o2_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
 
-# medium (> 20% & < 40% outcome range)
-RR_o1_o1_N_M <- RR_o1_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o1_o2_N_M <- RR_o1_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o2_o1_N_M <- RR_o2_o1_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o2_o2_N_M <- RR_o2_o2_N %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o1_o1_U_M <- RR_o1_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o2_o1_U_M <- RR_o2_o1_U %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-RR_o1_o2_A_M <- RR_o1_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])   
-RR_o2_o2_A_M <- RR_o2_o2_A %>% filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])
-
-# large (> 40% & <= 60% outcome range)
+# large (> 20% & < 40% outcome range)
 RR_o1_o1_N_L <- RR_o1_o1_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 RR_o1_o2_N_L <- RR_o1_o2_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 RR_o2_o1_N_L <- RR_o2_o1_N %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
@@ -207,7 +187,6 @@ RR_o1_o1_U_L <- RR_o1_o1_U %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diff
 RR_o2_o1_U_L <- RR_o2_o1_U %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
 RR_o1_o2_A_L <- RR_o1_o2_A %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])   
 RR_o2_o2_A_L <- RR_o2_o2_A %>% filter(ev_diff_sc > diffs[2] & ev_diff_sc <= diffs[3])
-
 
 # sample problems ---------------------------------------------------------
 
@@ -236,31 +215,7 @@ SR_S <- bind_rows(
   mutate(id = row_number())
 
 
-# medium
-
-SR_o1_o1_N_M_S <- SR_o1_o1_N_M[ sample(1:nrow(SR_o1_o1_N_M), N_trials/12, replace=F) , ] 
-SR_o1_o2_N_M_S <- SR_o1_o2_N_M[ sample(1:nrow(SR_o1_o2_N_M), N_trials/12, replace=F) , ]  
-SR_o2_o1_N_M_S <- SR_o2_o1_N_M[ sample(1:nrow(SR_o2_o1_N_M), N_trials/12, replace=F) , ] 
-SR_o2_o2_N_M_S <- SR_o2_o2_N_M[ sample(1:nrow(SR_o2_o2_N_M), N_trials/12, replace=F) , ] 
-SR_o1_o1_U_M_S <- SR_o1_o1_U_M[ sample(1:nrow(SR_o1_o1_U_M), N_trials/6, replace=F) , ] 
-SR_o2_o1_U_M_S <- SR_o2_o1_U_M[ sample(1:nrow(SR_o2_o1_U_M), N_trials/6, replace=F) , ] 
-SR_o1_o2_A_M_S <- SR_o1_o2_A_M[ sample(1:nrow(SR_o1_o2_A_M), N_trials/6, replace=F) , ]    
-SR_o2_o2_A_M_S <- SR_o2_o2_A_M[ sample(1:nrow(SR_o2_o2_A_M), N_trials/6, replace=F) , ]
-
-SR_M <- bind_rows(
-  SR_o1_o1_N_M_S ,
-  SR_o1_o2_N_M_S ,  
-  SR_o2_o1_N_M_S , 
-  SR_o2_o2_N_M_S , 
-  SR_o1_o1_U_M_S , 
-  SR_o2_o1_U_M_S , 
-  SR_o1_o2_A_M_S ,    
-  SR_o2_o2_A_M_S
-) %>% 
-  mutate(id = row_number())
-
 # large
-
 SR_o1_o1_N_L_S <- SR_o1_o1_N_L[ sample(1:nrow(SR_o1_o1_N_L), N_trials/12, replace=F) , ] 
 SR_o1_o2_N_L_S <- SR_o1_o2_N_L[ sample(1:nrow(SR_o1_o2_N_L), N_trials/12, replace=F) , ]  
 SR_o2_o1_N_L_S <- SR_o2_o1_N_L[ sample(1:nrow(SR_o2_o1_N_L), N_trials/12, replace=F) , ] 
@@ -308,31 +263,7 @@ RR_S <- bind_rows(
   mutate(id = row_number())
 
 
-# medium
-
-RR_o1_o1_N_M_S <- RR_o1_o1_N_M[ sample(1:nrow(RR_o1_o1_N_M), N_trials/12, replace=F) , ] 
-RR_o1_o2_N_M_S <- RR_o1_o2_N_M[ sample(1:nrow(RR_o1_o2_N_M), N_trials/12, replace=F) , ]  
-RR_o2_o1_N_M_S <- RR_o2_o1_N_M[ sample(1:nrow(RR_o2_o1_N_M), N_trials/12, replace=F) , ] 
-RR_o2_o2_N_M_S <- RR_o2_o2_N_M[ sample(1:nrow(RR_o2_o2_N_M), N_trials/12, replace=F) , ] 
-RR_o1_o1_U_M_S <- RR_o1_o1_U_M[ sample(1:nrow(RR_o1_o1_U_M), N_trials/6, replace=F) , ] 
-RR_o2_o1_U_M_S <- RR_o2_o1_U_M[ sample(1:nrow(RR_o2_o1_U_M), N_trials/6, replace=F) , ] 
-RR_o1_o2_A_M_S <- RR_o1_o2_A_M[ sample(1:nrow(RR_o1_o2_A_M), N_trials/6, replace=F) , ]    
-RR_o2_o2_A_M_S <- RR_o2_o2_A_M[ sample(1:nrow(RR_o2_o2_A_M), N_trials/6, replace=F) , ]
-
-RR_M <- bind_rows(
-  RR_o1_o1_N_M_S ,
-  RR_o1_o2_N_M_S ,  
-  RR_o2_o1_N_M_S , 
-  RR_o2_o2_N_M_S , 
-  RR_o1_o1_U_M_S , 
-  RR_o2_o1_U_M_S , 
-  RR_o1_o2_A_M_S ,    
-  RR_o2_o2_A_M_S
-) %>% 
-  mutate(id = row_number())
-
 # large
-
 RR_o1_o1_N_L_S <- RR_o1_o1_N_L[ sample(1:nrow(RR_o1_o1_N_L), N_trials/12, replace=F) , ] 
 RR_o1_o2_N_L_S <- RR_o1_o2_N_L[ sample(1:nrow(RR_o1_o2_N_L), N_trials/12, replace=F) , ]  
 RR_o2_o1_N_L_S <- RR_o2_o1_N_L[ sample(1:nrow(RR_o2_o1_N_L), N_trials/12, replace=F) , ] 
@@ -356,3 +287,8 @@ RR_L <- bind_rows(
 
 
 # store problems ----------------------------------------------------------
+
+write_rds(SR_S, 'revision/data/SR_S_problems.rds')
+write_rds(SR_L, 'revision/data/SR_L_problems.rds')
+write_rds(RR_S, 'revision/data/RR_S_problems.rds')
+write_rds(RR_L, 'revision/data/RR_L_problems.rds')

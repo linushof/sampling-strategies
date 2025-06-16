@@ -10,7 +10,8 @@ In the implementation below, scaling is omitted without any effect on the result
 pacman::p_load(tidyverse, digest, crayon, readxl)
 
 # load choice problems
-problems <- as.data.frame(read_rds("data/choice_problems.rds"))
+#problems <- as.data.frame(read_rds("data/choice_problems.rds"))
+problems <- SR_S
 
 # Simulation --------------------------------------------------------------
 # for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
@@ -19,9 +20,9 @@ problems <- as.data.frame(read_rds("data/choice_problems.rds"))
 param <- expand.grid(psi = seq(.1, 1, .1) , 
                      theta = seq(100, 300, 50))
 
-n_agents <- 2 # specify number of agents (iterations per strategy and problem)
+n_agents <- 10 # specify number of agents (iterations per strategy and problem)
 
-set.seed(36151) # seed random number generator to make simulations reproducible
+#set.seed(36151) # seed random number generator to make simulations reproducible
 
 # loop over strategies
 param_list <- vector("list", nrow(param)) 
@@ -146,5 +147,5 @@ simulation_summary <- bind_rows(param_list)
 
 # Storage --------------------------------------------------------------
 
-checksum_simulation_summary <- digest(simulation_summary, "sha256")
-write_rds(simulation_summary, "data/simulation_summary.rds.bz2", compress = "bz2")
+# checksum_simulation_summary <- digest(simulation_summary, "sha256")
+# write_rds(simulation_summary, "data/simulation_summary.rds.bz2", compress = "bz2")

@@ -4,16 +4,15 @@
 pacman::p_load(tidyverse, digest, crayon, readxl)
 
 # load choice problems
-problems <- as.data.frame(read_xlsx("data/choice_problems_general.xlsx"))
-problems <- RR_M
+#problems <- as.data.frame(read_rds("data/choice_problems.rds"))
+problems <- SR_M
 
 # Simulation --------------------------------------------------------------
 # for each strategy (combination of the search rule and stopping rule; rows of param), all choice problems (rows of problems) are solved by N agents
 
 # specify parameters for search rule (psi; switch rate) and stopping rule (theta; threshold)
-param <- expand.grid(base = seq(.1,.9, .2) , 
-                     rate = c(.1,.5) ,
-                     theta = 1:3)
+param <- expand.grid(psi = seq(.1, 1, .1) ,
+                     theta = 1:5)
 
 n_agents <- 10 # specify number of agents (iterations per strategy and problem)
 
@@ -24,8 +23,7 @@ param_list <- vector("list", nrow(param))
 for (set in seq_len(nrow(param))) {
   
   # retrieve settings for the search rule and the stopping rule
-  base <- param[[set,"base"]]
-  rate <- param[[set,"rate"]]
+  psi <- param[[set,"psi"]]
   theta <- param[[set, "theta"]]
   
   # loop over choice problems
@@ -63,7 +61,6 @@ for (set in seq_len(nrow(param))) {
       round_sum_2_total <- 0 # sum of option 2 samples (within a round)
       diff <- 0 # accumulated evidence
       boundary_reached <- FALSE # choice trial is stopped when TRUE
-      psi <- 1
       
       # specify vectors to store sampling & evidence history
       
@@ -99,7 +96,6 @@ for (set in seq_len(nrow(param))) {
             round_smp_1_total <- round_smp_1_total + 1
             round_sum_1_total <- round_sum_1_total + sampled_outcome
             p_attend_1 <- 1-psi # probability of remaining on the risky option (for the next sample)
-            psi <- base + (1 - base) * exp(-rate * smp_total)
             
           } else {# safe option
             
@@ -109,7 +105,6 @@ for (set in seq_len(nrow(param))) {
             round_smp_2_total <- round_smp_2_total + 1
             round_sum_2_total <- round_sum_2_total + sampled_outcome
             p_attend_1 <- psi # probability of switching to the safe option (for the next sample)
-            psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
             
           }
           
@@ -144,7 +139,6 @@ for (set in seq_len(nrow(param))) {
             round_smp_1_total <- round_smp_1_total + 1
             round_sum_1_total <- round_sum_1_total + sampled_outcome
             p_attend_1 <- 1-psi # probability of remaining on the risky option (for the next sample)
-            psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
             
           } else {# option 2
             
@@ -154,7 +148,6 @@ for (set in seq_len(nrow(param))) {
             round_smp_2_total <- round_smp_2_total + 1
             round_sum_2_total <- round_sum_2_total + sampled_outcome
             p_attend_1 <- psi # probability of switching to the safe option (for the next sample)
-            psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
             
           }
           
@@ -221,3 +214,8 @@ for (set in seq_len(nrow(param))) {
   print(paste("\u2713 Parameter Set No. ", set, " finished!"))
 } # close loop strategies
 simulation_roundwise <- bind_rows(param_list)
+
+# Storage -----------------------------------------------------------------
+
+# checksum_simulation_roundwise <- digest(simulation_roundwise, "sha256")
+# write_rds(simulation_roundwise, "data/simulation_roundwise.rds.bz2", compress = "bz2")

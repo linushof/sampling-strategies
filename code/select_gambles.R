@@ -55,7 +55,7 @@ RR <- RR |>
   
   # now we calculate some important properties for both options 
   
-  mutate( 
+  mutate(
     o1_ev = round( o1_1*o1_p1 + o1_2*o1_p2 , 2) ,
     o2_ev = round( o2_1*o2_p1 + o2_2*o2_p2 , 2) ,
     ev_diff = o1_ev-o2_ev , 
@@ -80,7 +80,6 @@ RR <- RR |>
     o2_psmall = if_else(o2_1 < o2_2, o2_p1, o2_p2) , 
     o2_plarge = 1-o2_psmall
   ) |> 
-  
   select(-c(c11:cp22))
 
 # apply filters -----------------------------------------------------------
@@ -129,10 +128,10 @@ for (i in seq_len(nrow(groups)) ){
   
 }
 
-problems |> 
-  group_by(better_ev) |> 
-  summarise(ev_mean=mean(ev_diff_sc) , 
-            rwp_mean=mean(o1_rwp))
+problems <- 
+  problems |> 
+  mutate(id=row_number()) |> 
+  select(id, everything())
 
 # store problems ----------------------------------------------------------
 

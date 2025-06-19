@@ -3,10 +3,6 @@ rm(list = ls())
 
 library(readxl)
 
-getname <- function(object){
-  deparse(substitute(object))
-  }
-
 # import models 
 model_files <- list.files(path='code/models', pattern='simulate', full.names = T)
 lapply(model_files, source)
@@ -87,9 +83,9 @@ write_rds(simulation_roundwise, "data/simulations/simulation_roundwise_RR.rds.bz
 # Decreasing switch rate --------------------------------------------------
 # we use safe-risky problems with large EV differences to demonstrate the effect of decreasing switch rates
 
-simulation_summary_decreasing <- simulate_summary_decreasing(problems=SR_large, param=summary_param_decreasing, n_agents)
+simulation_summary_decreasing <- simulate_summary_decreasing(problems=RR, param=summary_param_decreasing, n_agents)
 #write_rds(simulation_summary_decreasing, 'data/simulations/simulation_summary_decreasing.rds.bz2', compress = "bz2")
 
 # roundwise
-simulation_roundwise_decreasing <- simulate_roundwise_decreasing(problems=SR_large, param=roundwise_param_decreasing, n_agents)
+simulation_roundwise_decreasing <- simulate_roundwise_decreasing(problems=RR, param=roundwise_param_decreasing, n_agents)
 #write_rds(simulation_roundwise, 'data/simulations/simulation_roundwise_decreasing.rds.bz2', compress = "bz2")

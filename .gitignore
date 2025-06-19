@@ -18,6 +18,7 @@ data/simulation_roundwise.rds.bz2
 data/simulation_summary.rds.bz2
 data/csv/
 # other folders and files
+manuscript/
 housekeeping/
 talks/
 documentation/zip_data.R

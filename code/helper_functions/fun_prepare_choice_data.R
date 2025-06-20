@@ -4,6 +4,13 @@ prepare_choice_data <- function(file){
   model <- regmatches(file,  gregexpr("summary|summary_decreasing|roundwise|roundwise_decreasing", file))[[1]]
   problem <- regmatches(file,  gregexpr("SR_small|SR_large|RR", file))[[1]]
   
+  newfile <- paste0("data/", "temp/", "choices_", model,"_",problem,".rds.bz2")
+  if(file.exists(newfile)){
+    file.remove(newfile)
+    print(paste0("Removed existing (old) file: ", newfile, ". New file will be prepared."))
+  } else{ 
+    print(paste0("File ", newfile, " will be prepared."))}
+
   simulation <-  read_rds(file)
   
   if(problem=="RR"){ 
@@ -42,16 +49,17 @@ prepare_choice_data <- function(file){
   
   if(params){
     data <- data |> 
-      select(model, base, rate, theta, id, agent, n_smp, o1_smp, o2_smp, o1_sp1, o1_sp2, o2_sp1, o2_sp2, o1_avg, o2_avg, choice)
+      select(model, base, rate, theta, id, agent, n_smp, o1_smp, o2_smp, o1_sp1, o1_sp2, o2_sp1, o2_sp2, o1_avg, o2_avg, choice, 
+             o1_1:o2_rare)
   }else{
     data <- data |> 
-      select(model, psi, theta, id, agent, n_smp, o1_smp, o2_smp, o1_sp1, o1_sp2, o2_sp1, o2_sp2, o1_avg, o2_avg, choice)
+      select(model, psi, theta, id, agent, n_smp, o1_smp, o2_smp, o1_sp1, o1_sp2, o2_sp1, o2_sp2, o1_avg, o2_avg, choice, 
+             o1_1:o2_rare)
   }
   
-  data <- data |> rename(smp = "n_smp")
+  #data <- data |> rename(smp = "n_smp")
   #checksum_choices <- digest(choices, "sha256")
   
-  newfile <- paste0("data/", "temp/", "choices_", model,"_",problem,".rds.bz2")
   write_rds(data, newfile, compress = "bz2")
   
   if(file.exists(newfile)){

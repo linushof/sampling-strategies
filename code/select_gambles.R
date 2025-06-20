@@ -131,8 +131,9 @@ for (i in seq_len(nrow(groups)) ){
 problems <- 
   problems |> 
   mutate(id=row_number()) |> 
-  select(id, everything())
+  select(id, everything()) |> 
+  select(!(o1_psmall:o2_plarge))
 
 # store problems ----------------------------------------------------------
 
-write_rds(problems, 'data/problems/RR_large_rand.rds')
+write_rds(problems, 'data/problems/RR.rds')

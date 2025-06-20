@@ -13,9 +13,9 @@ lapply(model_files, source)
 n_agents <- 2 #1e3
 
 # problems
-SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large_sys.xlsx"))
-SR_small <- as.data.frame(read_xlsx("data/problems/SR_small_sys.xlsx"))
-RR <-  as.data.frame(read_rds("data/problems/RR_large_rand.rds"))
+SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large.xlsx"))
+SR_small <- as.data.frame(read_xlsx("data/problems/SR_small.xlsx"))
+RR <-  as.data.frame(read_rds("data/problems/RR.rds"))
 
 # parameters
 psi <- seq(.1, 1, .1) # switch rate

@@ -96,7 +96,7 @@ simulate_roundwise_decreasing <- function(problems, param, n_agents){
                 round_smp_2_total <- round_smp_2_total + 1
                 round_sum_2_total <- round_sum_2_total + sampled_outcome
                 p_attend_1 <- psi # probability of switching to the safe option (for the next sample)
-                psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
+                psi <- base + (1 - base) * exp(-rate * smp_total)
                 
               }
             
@@ -130,7 +130,7 @@ simulate_roundwise_decreasing <- function(problems, param, n_agents){
               round_smp_1_total <- round_smp_1_total + 1
               round_sum_1_total <- round_sum_1_total + sampled_outcome
               p_attend_1 <- 1-psi # probability of remaining on the risky option (for the next sample)
-              psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
+              psi <- base + (1 - base) * exp(-rate * smp_total)
               
               } else {# option 2
                 
@@ -140,7 +140,7 @@ simulate_roundwise_decreasing <- function(problems, param, n_agents){
                 round_smp_2_total <- round_smp_2_total + 1
                 round_sum_2_total <- round_sum_2_total + sampled_outcome
                 p_attend_1 <- psi # probability of switching to the safe option (for the next sample)
-                psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
+                psi <- base + (1 - base) * exp(-rate * smp_total)
                 
               }
             

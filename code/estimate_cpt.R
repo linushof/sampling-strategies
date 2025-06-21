@@ -1,86 +1,112 @@
+rm(list = ls())
+
 # Preparation -------------------------------------------------------------
 
 # load packages
-pacman::p_load(tidyverse, R2jags, digest, readxl)
+pacman::p_load(tidyverse, rstan, digest)
 
 # load data
-problems <- read_rds("data/choice_problems.rds")
-choices <- read_rds("data/choice_data.rds.bz2") 
+dir <- "data/temp/"
+choice_files <- list.files(dir, pattern='choices')
+choices <- lapply(paste0(dir, choice_files), read_rds)
+names(choices) <- choice_files |> str_remove(".rds.bz2")
+#choices <- choices[2]
 
-# prepare data for CPT model (requires rank-ordered outcomes and probabilities)
-choices <- left_join(choices, problems, by=join_by(id)) %>% 
-  mutate(choice_r = if_else(choice == "r", 1, 0) , # predict choice of risky option
-         r_low = if_else(r_1 < r_2, r_1, r_2) ,
-         r_high = if_else(r_1 > r_2, r_1, r_2) ,         
-         sp_r_low = if_else(r_low == r_1, sp_r_1, sp_r_2) , 
-         sp_r_high = if_else(r_high == r_1, sp_r_1, sp_r_2))
+# Stan settings
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 
-# to model choices of each strategy separately, group choices
-params_sim <- choices %>% distinct(model, psi, theta) # retrieve all strategies
-choices_grouped <- vector("list", nrow(params_sim))
-for(set in seq_len(nrow(params_sim))){
-  choices_grouped[[set]] <- choices %>%
-    filter(model == params_sim[[set, "model"]] & psi == params_sim[[set, "psi"]] & theta == params_sim[[set, "theta"]]) %>%
-    mutate(i = row_number()) # assign trial numbers for JAGS loop
+## initial values for MCMC
+set_inits <- function(chain_id = 1) {
+  list(alpha_pre=.5, gamma_pre=.5, delta_pre=.5, phi_pre=.01 )
 }
+n_chains <- 4 # number of chains
+inits <- lapply(1:n_chains, function(id) set_inits(chain_id = id))
 
-# allocate space for JAGS output
-estimates_cpt <- vector("list", nrow(params_sim)) # posterior summary and MCMC diagnostics
-posterior_cpt <- vector("list", nrow(params_sim)) # all posterior samples
 
-# Model fitting -----------------------------------------------------------
+# Fit CPT -----------------------------------------------------------------
+# For each simulation, a CPT model is fitted separately for each sampling strategy in that simulation
 
-# JAGS settings
-params_cpt <- c("alpha", "gamma", "delta", "rho") # free parameters
-source("code/helper_functions/fun_initialize_MCMC.R") # calls function to create starting values for MCMC
-
-# loop over the different sampling strategies
-for(set in seq_len(nrow(params_sim))){
-
-  # get trial data
-  current_trials <- list(choice = choices_grouped[[set]]$choice_r ,
-                         r_low = choices_grouped[[set]]$r_low ,
-                         r_high = choices_grouped[[set]]$r_high ,
-                         safe = choices_grouped[[set]]$safe ,
-                         ep_r_low = choices_grouped[[set]]$sp_r_low ,
-                         ep_r_high = choices_grouped[[set]]$sp_r_high ,
-                         start = min(choices_grouped[[set]]$i) ,
-                         stop = max(choices_grouped[[set]]$i)
-                         )
-
-  ## sample from posterior distributions using MCMC
-  current_sample <- jags.parallel(data = current_trials ,
-                                  inits = inits_MCMC ,
-                                  parameters.to.save = params_cpt ,
-                                  model.file = "code/models/cpt_model.txt" ,
-                                  n.chains = 20,
-                                  n.iter = 30000 ,
-                                  n.burnin = 10000 ,
-                                  n.thin = 10 ,
-                                  n.cluster = 20 , # compute MCMC chains in parallel
-                                  DIC = TRUE ,
-                                  jags.seed = 5615317)
+for (sim in 1:length(choices)){
   
-  ## posterior summary and MCMC diagnostics
-  current_summary <- current_sample$BUGSoutput$summary %>% as_tibble(rownames = "parameter")
-  estimates_cpt[[set]] <- expand_grid(params_sim[set, ], current_summary)
+  # get simulation info
+  simname <- names(choices)[[sim]]
+  newfile <- paste0("data/cpt/", "cpt_", simname,".rds")
   
-  ## full posterior
-  current_posterior <- current_sample$BUGSoutput$sims.matrix %>% as_tibble()
-  posterior_cpt[[set]] <- expand_grid(params_sim[set, ], current_posterior)
+  # group data by sampling strategies (CPT is fitted to each strategy separately)
+  model <- regmatches(simname,  gregexpr("summary|summary_decreasing|roundwise|roundwise_decreasing", simname))[[1]]
+  params <- grepl("decreasing", model)
+  if(params==FALSE) { # constant switch rate
+    params_sim <- choices[[sim]] %>% distinct(model, psi, theta) # retrieve all strategies
+    estimates_cpt <- vector("list", nrow(params_sim)) # posterior summary and MCMC diagnostics
+    dat <- vector("list", nrow(params_sim))
+    for(set in seq_len(nrow(params_sim))){
+      
+      dat[[set]] <- choices[[sim]] %>%
+        filter(model == params_sim[[set, "model"]] &
+                 psi == params_sim[[set, "psi"]] &
+                 theta == params_sim[[set, "theta"]])
+      }
+    } else { # decreasing switch rate
+      
+        params_sim <- choices[[sim]] %>% distinct(model, base, rate, theta)
+        estimates_cpt <- vector("list", nrow(params_sim)) # posterior summary and MCMC diagnostics
+        dat <- vector("list", nrow(params_sim))
+        for(set in seq_len(nrow(params_sim))){
+          dat[[set]] <- choices[[sim]] %>%
+            filter(model==params_sim[[set, "model"]] & 
+                     base==params_sim[[set, "base"]] & 
+                     rate==params_sim[[set, "rate"]] & 
+                     theta==params_sim[[set, "theta"]]
+                   )
+        }
+    }
   
-  ## status
-  print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
-} # close strategy loop
+  # fit CPT model
+  # loop over the different sampling strategies
+  
+  for(set in seq_len(nrow(params_sim))){
+    
+    # create data list for Stan
+    dat_stan <- list(
+      N = nrow(dat[[set]]) , 
+      choice = if_else(dat[[set]][["choice"]]=="o1",1,0) ,
+      o1_low = if_else(dat[[set]][["o1_1"]]<dat[[set]][["o1_2"]], dat[[set]][["o1_1"]], dat[[set]][["o1_2"]]) ,
+      o1_sp_low = if_else(dat[[set]][["o1_1"]]<dat[[set]][["o1_2"]], dat[[set]][["o1_sp1"]], dat[[set]][["o1_sp2"]]) , 
+      o1_high = if_else(dat[[set]][["o1_1"]]>dat[[set]][["o1_2"]], dat[[set]][["o1_1"]], dat[[set]][["o1_2"]]) , 
+      o1_sp_high = if_else(dat[[set]][["o1_1"]]>dat[[set]][["o1_2"]], dat[[set]][["o1_sp1"]], dat[[set]][["o1_sp2"]]) ,
+      o2_low = if_else(dat[[set]][["o2_1"]]<dat[[set]][["o2_2"]], dat[[set]][["o2_1"]], dat[[set]][["o2_2"]]) ,
+      o2_sp_low = if_else(dat[[set]][["o2_1"]]<dat[[set]][["o2_2"]], dat[[set]][["o2_sp1"]], dat[[set]][["o2_sp2"]]) , 
+      o2_high = if_else(dat[[set]][["o2_1"]]>dat[[set]][["o2_2"]], dat[[set]][["o2_1"]], dat[[set]][["o2_2"]]) , 
+      o2_sp_high = if_else(dat[[set]][["o2_1"]]>dat[[set]][["o2_2"]], dat[[set]][["o2_sp1"]], dat[[set]][["o2_sp2"]]) 
+    )
+    
+    # fit model
+    cpt_fit <- stan(
+      file = "code/models/CPT.stan",  # Stan program
+      init = inits,
+      data = dat_stan,    # named list of data
+      chains = n_chains,             # number of Markov chains
+      warmup = 1000,          # number of warmup iterations per chain
+      iter = 2000,            # total number of iterations per chain
+      refresh = 1000          # show progress every 'refresh' iterations
+    )
+    
+    
+    ## posterior summary and MCMC diagnostics
+    pars <- cpt_fit@model_pars
+    fit_summary <- summary(cpt_fit)$summary |> 
+      as_tibble() |> 
+      mutate("parameter"=pars) |> 
+      select(parameter,everything())
+    
+    estimates_cpt[[set]] <- expand_grid(params_sim[set, ], fit_summary)
+    
+    print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
+  } # close strategy loop
+  
+  estimates_cpt <- estimates_cpt %>% bind_rows()
+  write_rds(estimates_cpt, newfile)
 
-estimates_cpt <- estimates_cpt %>% bind_rows()
-posterior_cpt <- posterior_cpt %>% bind_rows()
+} # close simulation loop
 
-# Storage -----------------------------------------------------------------
-
-# checksums
-checksum_estimates_cpt <- digest(estimates_cpt, "sha256")
-checksum_posterior_cpt <- digest(posterior_cpt, "sha256")
-
-write_rds(estimates_cpt, "data/cpt_estimates.rds")
-write_rds(posterior_cpt, "data/cpt_posteriors.rds.bz2", compress = "bz2") 

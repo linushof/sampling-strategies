@@ -76,7 +76,7 @@ simulate_summary_decreasing <- function(problems, param, n_agents){
             out_2 <- c(out_2, NA)
             D_1 <- D_1 + sampled_outcome
             p_attend_1 <- 1-psi # probability of remaining on option 1 (for the next sample)
-            psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
+            psi <- base + (1 - base) * exp(-rate * smp_total)
             
             } else {# safe option
               
@@ -86,7 +86,7 @@ simulate_summary_decreasing <- function(problems, param, n_agents){
               out_1 <- c(out_1, NA)
               D_2 <- D_2 + sampled_outcome
               p_attend_1 <- psi # probability of switching to option 1 (for the next sample)
-              psi <- psi <- base + (1 - base) * exp(-rate * smp_total)
+              psi <- base + (1 - base) * exp(-rate * smp_total)
               
             }
           

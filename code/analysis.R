@@ -10,7 +10,6 @@ pacman::p_load(tidyverse,
                readxl,
                viridis,
                viridisLite,
-               hrbrthemes, 
                gtools)
 
 # load data 
@@ -20,17 +19,24 @@ pacman::p_load(tidyverse,
 #summary <- read_rds("data/simulation_summary.rds.bz2")
 
 ## choices
-dir <- "data/temp/"
-choice_files <- list.files(dir, pattern='choices')
-choices <- lapply(paste0(dir, choice_files), read_rds)
+dir_choices <- "data/temp/"
+choice_files <- list.files(dir_choices, pattern='choices')
+choices <- lapply(paste0(dir_choices, choice_files), read_rds)
 names(choices) <- choice_files |> str_remove(".rds.bz2")
 
-for(i in 1:length(choices)){
-  choices[[i]] <- choices[[i]] |> mutate(theta = factor(if_else(str_detect(model, "summary"), theta*.01, theta )))
-}
+# for(i in 1:length(choices)){
+#   choices[[i]] <- choices[[i]] |> mutate(theta = factor(if_else(str_detect(model, "summary"), theta*.01, theta )))
+# }
 
 ## cumulative prospect theory
-# cpt <- read_rds("data/cpt_estimates.rds") 
+dir_cpt <- "data/cpt/"
+cpt_files <- list.files(dir_cpt, pattern='cpt')
+cpt_estimates <- lapply(paste0(dir_cpt, cpt_files), read_rds)
+names(cpt_estimates) <- cpt_files |> str_remove(".rds")
+
+# for(i in 1:length(cpt_estimates)){
+#   cpt_estimates[[i]] <- cpt_estimates[[i]] |> mutate(theta = factor(if_else(str_detect(model, "summary"), theta*.01, theta )))
+# } 
 
 # ggplot theme
 
@@ -50,24 +56,31 @@ label_rare <- function(string) {
 }
 
 # Behavioral --------------------------------------------------------------
-
 ## Trajectories (Figures 2 and 3) -----------------------------------------------
+
+summary <- read_rds("data/simulations/temp/simulation_summary_RR.rds.bz2")
+round <- read_rds("data/simulations/temp/simulation_roundwise_RR.rds.bz2")
+#SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large2.xlsx"))
+RR <- read_rds("data/problems/RR.rds")
 
 # select and prepare data
 
 ## problems 5 and 19 for illustration
-round_sub <- round %>% filter(id %in% c(5, 19))
-summary_sub <- summary %>% filter(id %in% c(5, 19)) %>% mutate(theta = 0.01 * theta)
+problems <- c(5,19)
+round_sub <- round |>  filter(id %in% problems)
+summary_sub <- summary |>  filter(id %in% problems)
+#pbs <- SR_large |> filter(id %in% problems)
+pbs <- RR |> filter(id %in% problems)
 
 ##  medium thresholds for illustration
-summary_boundary <- 1.5
-round_boundary <- 3
+summary_boundary <- 2
+round_boundary <- 2
 
 ## compute median trajectory for each sampling strategy
 summary_median <- summary_sub %>% 
   group_by(psi, theta, id, smp) %>% 
   summarise(count = n(), # number of sampling agents
-            median = 0.01 * median(D)) %>%  # median evidence across sampling agents 
+            median = median(D)) %>%  # median evidence across sampling agents 
   slice(seq_len(min(which(median <= -theta | median >= theta), n()))) # remove samples after median hit the threshold
 
 round_median <- round_sub %>% 
@@ -76,166 +89,169 @@ round_median <- round_sub %>%
             median = median(D)) %>% # median evidence across sampling agents
   slice(seq_len(min(which(median %in% c(-theta, theta)), n()))) # remove samples after median hit the threshold
 
-## data for problem 5
-problem_number <- 5
-
-summary_sub_5 <- summary_sub %>% 
-  filter(psi %in% c(.1, .5, 1), 
-         theta == summary_boundary, 
-         id == problem_number) %>% 
-  mutate(D = 0.01 * D) %>% 
+summary_sub <- summary_sub %>% 
+  filter((near(psi, 0.1) | near(psi, 0.4) | near(psi, 1)),
+         theta == summary_boundary) %>% 
+  mutate(D = D) %>% 
   mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
                        D > summary_boundary ~ summary_boundary , 
                        D >= -summary_boundary & D <= summary_boundary ~ D))
 
-round_sub_5 <- round_sub %>%
-  filter(psi %in% c(.1, .5, 1), 
-         theta == round_boundary, 
-         id == problem_number)
+round_sub <- round_sub %>%
+  filter((near(psi, 0.1) | near(psi, 0.4) | near(psi, 1)),
+         theta == round_boundary)
 
-summary_median_sub_5 <- summary_median %>%  
-  filter(psi %in% c(.1, .5, 1), 
-         theta == summary_boundary, 
-         id == problem_number) %>%
+summary_median_sub <- summary_median %>%  
+  filter((near(psi, 0.1) | near(psi, 0.4) | near(psi, 1)),
+         theta == summary_boundary) %>%
   mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
                             median > summary_boundary ~ summary_boundary, 
                             median >= -summary_boundary & median <= summary_boundary ~ median))
 
-round_median_sub_5 <- round_median %>% 
-  filter(psi %in% c(.1, .5, 1),
-         theta == round_boundary, 
-         id == problem_number)
-
-## data for problem 19
-problem_number <- 19
-
-summary_sub_19 <- summary_sub %>% 
-  filter(psi %in% c(.1, .5, 1), 
-         theta == summary_boundary, 
-         id == problem_number) %>% 
-  mutate(D = 0.01 * D) %>% 
-  mutate(D = case_when(D < -summary_boundary ~ -summary_boundary , 
-                       D > summary_boundary ~ summary_boundary , 
-                       D >= -summary_boundary & D <= summary_boundary ~ D))
-
-round_sub_19 <- round_sub %>%
-  filter(psi %in% c(.1, .5, 1), 
-         theta == round_boundary, 
-         id == problem_number)
-
-
-summary_median_sub_19 <- summary_median %>%  
-  filter(psi %in% c(.1, .5, 1), 
-         theta == summary_boundary, 
-         id == problem_number) %>%
-  mutate(median = case_when(median < -summary_boundary ~ -summary_boundary, 
-                            median > summary_boundary ~ summary_boundary, 
-                            median >= -summary_boundary & median <= summary_boundary ~ median))
-
-
-round_median_sub_19 <- round_median %>% 
-  filter(psi %in% c(.1, .5, 1),
-         theta == round_boundary, 
-         id == problem_number)
+round_median_sub <- round_median %>% 
+  filter((near(psi, 0.1) | near(psi, 0.4) | near(psi, 1)),
+         theta == round_boundary)
 
 
 # plot data 
 
-## problem 5
-
 # create EV labels
-ann_risky_5 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 44 \n (32, 40%; 52, 60%)")
-ann_safe_5 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 47")
+ann_risky <- data.frame(psi=.1, smp = 75, D=1.7, label="Risky Threshold")
+ann_safe <- data.frame(psi=.1, smp = 75, D=-1.7, label="Safe Threshold")
+p1_label <- paste0("R=[", pbs[1,"o1_1"],",",pbs[1,"o1_p1"],"; ",pbs[1,"o1_1"],"; EV=", pbs[1,"o1_ev"],"]","\n",
+                   "S=[",pbs[1,"o2_1"],",",pbs[1,"o2_p1"], "; EV=",pbs[1,"o2_1"],"]")
+p2_label <- paste0("R=[", pbs[2,"o1_1"],",",pbs[2,"o1_p1"],"; ",pbs[2,"o1_1"],"; EV=", pbs[2,"o1_ev"],"]","\n",
+                   "S=[",pbs[2,"o2_1"],",",pbs[2,"o2_p1"], "; EV=",pbs[2,"o2_1"],"]")
+problem_labels <- c(p1_label, p2_label)
+stopping_samples_summary <- summary_sub %>%
+  group_by(id, psi, agent) %>%
+  summarise(stopping_smp = max(smp), .groups = "drop")
+
 
 # summary comparison
-summary_trajectories_5 <- summary_sub_5 %>% 
+summary_trajectories <- summary_sub %>% 
   ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  facet_wrap(~psi, nrow = 1, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
                      breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary Comparison", 
+  labs(title = "", 
        x = "Number of Sampled Outcomes",
        y = "Decision Variable",
-       color = expression(psi),
+       color = "Choice\nProblem",
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky_5, label=ann_risky_5$label, size = 5, vjust = .6) + 
-  geom_text(data = ann_safe_5, label=ann_safe_5$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = summary_median_sub_5, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  geom_text(data = ann_risky, label=ann_risky$label, size = 5, vjust = .6) + 
+  geom_text(data = ann_safe, label=ann_safe$label, size = 5) +
+  scale_x_continuous(limits=c(0,100)) +
+  geom_line(data = summary_median_sub, aes(y = median, alpha = count, color=as.factor(id)), linewidth = 1.5) +
+  geom_vline(xintercept=22)+
   scale_alpha_continuous(labels=function(x) format(x, big.mark = ",", scientific = F)) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid = element_blank())
+  scale_color_manual(labels = problem_labels, values = c("#DF9D56", "#6EB5E1")) +
+  theme_bw(base_size = 18) + 
+  theme(panel.grid = element_blank(),
+        legend.key.size = unit(1.5, "cm"),
+        strip.text = element_blank())
 
-# roundwise comparison
-round_trajectories_5 <- round_sub_5 %>%
+
+marginal_hist_summary <- stopping_samples_summary %>%
+  ggplot(aes(x = stopping_smp, fill=as.factor(id))) +
+  facet_wrap(~psi, nrow = 1, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
+  #geom_histogram(bins = 30, position = "identity", alpha =.5) +
+  geom_density(position = "identity", alpha =.5) +
+  geom_vline(xintercept=22)+
+  scale_fill_manual(labels = problem_labels, values = c("#DF9D56", "#6EB5E1")) +
+  scale_x_continuous(limits=c(0,100)) +
+  theme_bw(base_size = 18) +
+  labs(x = "Stopping Sample Size", 
+       y = "Count",
+       fill = "Choice\nProblem",
+       title = "Summary Comparison") +
+  theme(
+    plot.margin = margin(0, 5, 5, 5),
+    legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+  )
+
+# Combine marginal histogram above the trajectories
+combined_plot_summary <- marginal_hist_summary / plot_spacer() /summary_trajectories +
+  plot_layout(heights = c(.5, -.25, 1.5), guides = "collect") &
+  theme(plot.margin = margin(0, 0, 0, 0)) 
+
+stopping_samples_round <- round_sub %>%
+  group_by(id, psi, agent) %>%
+  summarise(stopping_smp = max(smp), .groups = "drop")
+
+
+# round comparison
+round_trajectories <- round_sub %>% 
   ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
+  facet_wrap(~psi, nrow = 1, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
   scale_y_continuous(limits = c(-round_boundary, round_boundary), 
                      breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise Comparison", 
+  labs(title = "", 
        x = "Number of Sampled Outcomes",
        y = "Decision Variable",
-       color = expression(psi),
+       color = "Choice\nProblem",
        alpha = "Agent\nCount") +
   geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = round_median_sub_5, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
+  scale_x_continuous(limits=c(0,100)) +
+  geom_line(data = round_median_sub, aes(y = median, alpha = count, color=as.factor(id)), linewidth = 1.5) +
+  geom_vline(xintercept=22)+
   scale_alpha_continuous(labels=function(x) format(x, big.mark = ",", scientific = F)) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid = element_blank())
+  scale_color_manual(labels = problem_labels, values = c("#DF9D56", "#6EB5E1")) +
+  theme_bw(base_size = 18) + 
+  theme(panel.grid = element_blank(),
+        legend.key.size = unit(1.5, "cm"),
+        strip.text = element_blank())
 
-# merge and save plot
-ggarrange(summary_trajectories_5, round_trajectories_5, labels = "AUTO", common.legend = TRUE, legend = "right", font.label = list(size = 22) )
-ggsave(file = "manuscript/figures/accumulation_problem_5.jpg", width = 14, height = 14)
 
-##  problem 19
+marginal_hist_round <- stopping_samples_round %>%
+  ggplot(aes(x = stopping_smp, fill=as.factor(id))) +
+  facet_wrap(~psi, nrow = 1, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
+  #geom_histogram(bins = 30, position = "identity", alpha =.5) +
+  geom_density(position = "identity", alpha =.5) +
+  geom_vline(xintercept=22)+
+  scale_fill_manual(labels = problem_labels, values = c("#DF9D56", "#6EB5E1")) +
+  scale_x_continuous(limits=c(0,100)) +
+  theme_bw(base_size = 18) +
+  labs(x = "Stopping Sample Size", 
+       y = "Count",
+       fill = "Choice\nProblem",
+       title = "Round Comparison") +
+  theme(
+    plot.margin = margin(0, 5, 5, 5),
+    legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+  )
 
-# create EV labels
-ann_risky_19 <- data.frame(psi=.1, smp = 50, D=1.15, label="Risky Threshold \n EV = 31 \n (23, 60%; 43, 40%)")
-ann_safe_19 <- data.frame(psi=.1, smp = 50, D=-1.15, label="Safe Threshold \n EV = 28")
+# Combine marginal histogram above the trajectories
+combined_plot_round <- marginal_hist_round / plot_spacer() /round_trajectories +
+  plot_layout(heights = c(.5, -.25, 1.5), guides = "collect") &
+  theme(plot.margin = margin(0, 0, 0, 0)) 
 
-# summary comparison
-summary_trajectories_19 <- summary_sub_19 %>% 
-  ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-summary_boundary, summary_boundary), 
-                     breaks = seq(-summary_boundary, summary_boundary, summary_boundary)) +
-  labs(title = "Summary Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Decision Variable",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-summary_boundary, 0, summary_boundary), linetype = "dashed") + 
-  geom_text(data = ann_risky_19, label=ann_risky_19$label, size = 5, vjust = .6) + 
-  geom_text(data = ann_safe_19, label=ann_safe_19$label, size = 5) +
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = summary_median_sub_19, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
-  scale_alpha_continuous(labels=function(x) format(x, big.mark = ",", scientific = F)) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid = element_blank())
 
-# roundwise comparison
-round_trajectories_19 <- round_sub_19 %>%
-  ggplot(aes(x = smp, y = D)) + 
-  facet_wrap(~psi, nrow = 3, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed)), scales = "free_x") + 
-  scale_y_continuous(limits = c(-round_boundary, round_boundary), 
-                     breaks = seq(-round_boundary, round_boundary, round_boundary)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Number of Sampled Outcomes",
-       y = "Decision Variable",
-       color = expression(psi),
-       alpha = "Agent\nCount") +
-  geom_hline(yintercept = c(-round_boundary, 0, round_boundary), linetype = "dashed") + 
-  geom_line(aes(group = agent), position = position_dodge(width = .3), linewidth = .3, alpha = .1, color = "gray") + 
-  geom_line(data = round_median_sub_19, aes(y = median, alpha = count), linewidth = 1, color = "#9c179e") +
-  scale_alpha_continuous(labels=function(x) format(x, big.mark = ",", scientific = F)) +
-  theme_minimal(base_size = 20) + 
-  theme(panel.grid = element_blank())
 
-# merge and save
-ggarrange(summary_trajectories_19, round_trajectories_19, labels = "AUTO", common.legend = TRUE, legend = "right", font.label = list(size = 22))
-ggsave(file = "manuscript/figures/accumulation_problem_19.jpg", width = 14, height = 14)
+ggarrange(combined_plot_summary, 
+          NULL,
+          combined_plot_round, 
+          heights = c(1,.1,1),
+          labels = c("A","","B"), 
+          nrow=3,
+          common.legend = TRUE, legend = "right", 
+          font.label = list(size = 22) )
+
+
+
+ggsave(file = "manuscript/figures/temp/accumulation.jpg", width = 14, height = 10)
+
 
 ## Maximization (Figure 4)  ------------------------------------------------------
 
@@ -262,7 +278,7 @@ for(i in 1:length(choices)){
     max_plot <- rates |> 
       ggplot(aes(psi, rate, group = theta, color = theta)) +
       facet_wrap(~Benchmark, nrow=2) +
-      scale_color_scico_d(palette = "imola", end = .9) + 
+      scale_color_scico(palette = "imola", end = .9) + 
       scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
       scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
       labs(title = paste(capwords(model), "Comparison"), 
@@ -282,7 +298,6 @@ for(i in 1:length(choices)){
   }
 }
 
-
 ## Risk (Figure 5)  -----------------------------------------------------------
 
 for(i in 1:length(choices)){
@@ -300,7 +315,7 @@ for(i in 1:length(choices)){
     
     risk_plot <- rates |> 
       ggplot(aes(psi, rate, group = theta, color = theta)) +
-      scale_color_scico_d(palette = "imola", end = .9) + 
+      scale_color_scico(palette = "imola", end = .9) + 
       scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
       scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
       labs(title = paste(capwords(model), "Comparison"), 
@@ -320,403 +335,285 @@ for(i in 1:length(choices)){
   }
 }
 
-# Computational ---------------------------------------------------------------------
+# CPT (Figures 6 - 9) ---------------------------------------------------------------------
 
-# check convergence 
-cpt <- cpt %>% filter(parameter != "deviance") 
-max(cpt$Rhat) # 1.005 --> < 1.01
-mean(cpt$Rhat) # 1.001267 --> 1.001
-min(cpt$n.eff) # 2200
-mean(cpt$n.eff) # 27198
+for(i in 1:length(cpt_estimates)){
+  sim <- names(cpt_estimates)[[i]]
+  if(str_detect(sim, "decreasing")==FALSE){
+    
+    dat <- cpt_estimates[[i]]
+    model <- regmatches(sim,  gregexpr("summary|roundwise", sim))[[1]]
+    
+    # probability weighting function
+    
+    ## prepare data
+    weights <- dat |> 
+      select(model, psi, theta, parameter, mean) |> 
+      pivot_wider(names_from = parameter, values_from = mean) |>  
+      select(model, psi, theta, gamma, delta) |> 
+      expand_grid(p = seq(0, 1, .05)) |>  # create vector of sampled relative frequencies
+      mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2)) # compute decision weights (see Goldstein & Einhorn, 1987) using the parameter estimates  
+    
+    ## plot data
+    
+    #### gamma
+    gamma <- dat |> 
+      filter(parameter == "gamma") |> 
+      ggplot(aes(psi, mean, color = psi)) + 
+      scale_color_scico(palette = "tokyo", end = .8) +
+      facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+      scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
+      scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
+      labs(x = "Switch Rate (Search Rule)", 
+           y = expression(paste("Curvature  ", gamma)),
+           color = "Switch\nRate") +
+      geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
+      geom_point(size = 3) +
+      geom_line(linewidth = 1) +
+      theme_minimal(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    #### delta
+    delta <- dat %>%
+      filter(parameter == "delta") %>%
+      ggplot(aes(psi, mean, color = psi)) +
+      scale_color_scico(palette = "tokyo", end = .8) +
+      facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+      scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
+      scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0, 10, length.out = 3)) +
+      labs(x = "Switch Rate (Search Rule)", 
+           y = expression(paste("Elevation  ", delta)), 
+           color = "Switch\nRate") +
+      geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
+      geom_point(size = 3) +
+      geom_line(linewidth = 1) +
+      theme_minimal(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    ####  probability weighting
+    wf <- weights %>% 
+      ggplot(aes(p, w, group = psi, color = psi)) +
+      scale_color_scico(palette = "tokyo", end = .8) +
+      facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+      scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
+      scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
+      labs(x = TeX("$\\p_{high}$"),
+           y = TeX("$w(\\p_{high})$"),
+           color = "Switch\nRate") +
+      geom_line(linewidth = 1) +
+      theme_minimal(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    ### merge and save plots
+    weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22))
+    plotfile_weighting <- paste0("manuscript/figures/temp/cpt_weighting_",sim,".png")
+    
+    
+    ## value function 
+    values <- dat |> 
+      select(model, psi, theta, parameter, mean) |> 
+      pivot_wider(names_from = parameter, values_from = mean) |> 
+      select(psi, theta, alpha) |> 
+      expand_grid(x = seq(0, 20, 1)) |> # create vector of possible outcomes
+      mutate(v = round(x^alpha, 2)) # compute subjective values on the basis of estimated parameters
+    
+    # plot data 
+    
+    ### alpha
+    alpha <- dat |> 
+      filter(parameter == "alpha") |>  
+      ggplot(aes(psi, mean, color = psi)) +
+      scale_color_scico(palette = "tokyo", end = .8) + 
+      facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+      scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
+      scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
+      labs(x = "Switch Rate (Search Rule)", 
+           y = expression(paste("Outcome Sensitivity  ", alpha)),
+           color = "Switch\nRate") +
+      geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
+      geom_point(size = 3) +
+      geom_line(linewidth = 1) +
+      theme_minimal(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    ### value function 
+    vf <- values |>  
+      ggplot(aes(x, v, group = psi, color = psi)) +
+      scale_color_scico(palette = "tokyo", end = .8) +
+      facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
+      scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+      scale_y_continuous(limits = c(-1, 20), breaks = seq(0, 20, length.out = 3)) +
+      labs(x = "Sampled Outcome",
+           y = "Subjective Value",
+           color = "Switch\nRate") +
+      geom_line(linewidth = 1) +
+      theme_minimal(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    # merge
+    value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22) )
+    plotfile_value <- paste0("manuscript/figures/temp/cpt_value_",sim,".png")
 
+    # save plots
+    ggsave(file = plotfile_weighting, plot=weighting_plot, width = 10, height = 10)
+    ggsave(file = plotfile_value, plot=value_plot, width = 10, height = 10)
+    print(paste("New plot", plotfile_weighting, "was generated."))
+    print(paste("New plot", plotfile_value, "was generated."))
+  }
+}
 
-## Probability Weighting (Figures 6 and 7) ---------------------------------------------------------
-
-# prepare data
-weights <- cpt %>%
-  select(model, psi, theta, parameter, mean) %>%
-  pivot_wider(names_from = parameter, values_from = mean) %>% 
-  select(-c(alpha, rho)) %>%
-  expand_grid(p = seq(0, 1, .05)) %>% # create vector of sampled relative frequencies
-  mutate(w = round(  (delta * p^gamma)/ ((delta * p^gamma)+(1-p)^gamma), 2)) # compute decision weights (see Goldstein & Einhorn, 1987) using the parameter estimates  
-
-# plot data
-
-## summary 
-
-cpt_summary <- cpt %>% filter(model == "summary") %>%  mutate(theta = .01 * theta)
-weights_summary <- weights %>% filter(model == "summary") %>%  mutate(theta = .01 * theta)
-
-#### gamma
-gamma_summary <- cpt_summary %>%
-  filter(parameter == "gamma") %>%
-  ggplot(aes(psi, mean, color = psi)) + 
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
-  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Curvature  ", gamma)),
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-  
-
-#### delta
-delta_summary <- cpt_summary %>%
-  filter(parameter == "delta") %>%
-  ggplot(aes(psi, mean, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
-  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
-  scale_y_continuous(limits = c(-0.1, 10.1), breaks = seq(0, 10, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Elevation  ", delta)), 
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-####  probability weighting
-wf_summary <- weights_summary %>% 
-  ggplot(aes(p, w, group = psi, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
-  scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = TeX("$\\p_{high}$"),
-       y = TeX("$w(\\p_{high})$"),
-       color = "Switch\nRate") +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-# merge and save plots
-
-ggarrange(wf_summary, gamma_summary, delta_summary, nrow = 3, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22))
-ggsave(file = "manuscript/figures/cpt_weighting_summary.png", width = 14, height = 10)
-
-## roundwise
-cpt_roundwise <- cpt %>%  filter(model == "roundwise", !(psi == 1 & theta == 1))
-weights_roundwise <- weights %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
-
-#### gamma
-gamma_roundwise <- cpt_roundwise %>%
-  filter(parameter == "gamma") %>%
-  ggplot(aes(psi, mean, color = psi)) + 
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
-  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits =c(-.1,10.1), breaks = seq(0,10, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Curvature  ", gamma)),
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-#### delta
-delta_roundwise <- cpt_roundwise %>%
-  filter(parameter == "delta") %>%
-  ggplot(aes(psi, mean, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed)), scales = "free") +
-  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
-  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Elevation  ", delta)), 
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) + 
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-####  probability weighting
-wf_roundwise <- weights_roundwise %>% 
-  ggplot(aes(p, w, group = psi, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
-  scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = TeX("$\\p_{high}$"),
-       y = TeX("$w(\\p_{high})$"), 
-       color = "Switch\nRate") +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-# merge and save plots
-
-ggarrange(wf_roundwise, gamma_roundwise, delta_roundwise, nrow = 3, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22) )
-ggsave(file = "manuscript/figures/cpt_weighting_roundwise.png", width = 14, height = 10)
-
-## Outcome Sensitivity (Figures 8 and 9) ---------------------------------------------------------
-
-# prepare data
-
-values <- cpt %>%
-  select(model, psi, theta, parameter, mean) %>%
-  pivot_wider(names_from = parameter, values_from = mean) %>%
-  select(-c(gamma, delta, rho)) %>%
-  expand_grid(x = seq(0, 20, 1)) %>%  # create vector of possible outcomes
-  mutate(v = round(x^alpha, 2)) # compute subjective values on the basis of estimated parameters
-
-# plot data 
-
-## summary
-
-values_summary <- values %>% filter(model == "summary") %>% mutate(theta = .01 * theta)
-
-### alpha
-alpha_summary <- cpt_summary %>%
-  filter(parameter == "alpha") %>% 
-  ggplot(aes(psi, mean, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
-  scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Outcome Sensitivity  ", alpha)),
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-### value function 
-vf_summary <- values_summary %>% 
-  ggplot(aes(x, v, group = psi, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
-  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
-  scale_y_continuous(limits = c(-1, 100), breaks = seq(0, 100, length.out = 3)) +
-  labs(x = "Sampled Outcome",
-       y = "Subjective Value",
-       color = "Switch\nRate") +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-# merge and save plots
-ggarrange(vf_summary, alpha_summary, nrow = 2, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22) )
-ggsave(file = "manuscript/figures/cpt_value_summary.png", width = 14, height = 7)
-
-## round-wise
-
-values_roundwise <- values %>% filter(model == "roundwise", !(psi == 1 & theta == 1))
-
-### alpha
-alpha_roundwise <- cpt_roundwise %>%
-  filter(parameter == "alpha") %>% 
-  ggplot(aes(psi, mean, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) + 
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
-  scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
-  scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = "Switch Rate (Search Rule)", 
-       y = expression(paste("Outcome Sensitivity  ", alpha)),
-       color = "Switch\nRate") +
-  geom_linerange(aes(ymin=`2.5%`, ymax=`97.5%`), linewidth = 1) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-### value function 
-vf_roundwise <- values_roundwise %>% 
-  ggplot(aes(x, v, group = psi, color = psi)) +
-  scale_color_scico(palette = "tokyo", end = .8) +
-  facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
-  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
-  scale_y_continuous(limits = c(-1, 100), breaks = seq(0, 100, length.out = 3)) +
-  labs(x = "Sampled Outcome",
-       y = "Subjective Value",
-       color = "Switch\nRate") +
-  geom_line(linewidth = 1) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-# merge and save plots
-ggarrange(vf_roundwise, alpha_roundwise, nrow = 2, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22) )
-ggsave(file = "manuscript/figures/cpt_value_roundwise.png", width = 14, height = 7)
+# # check convergence 
+# cpt <- cpt_estimates %>% filter(parameter != "deviance") 
+# max(cpt$Rhat) # 1.005 --> < 1.01
+# mean(cpt$Rhat) # 1.001267 --> 1.001
+# min(cpt$n.eff) # 2200
+# mean(cpt$n.eff) # 27198
 
 # Ecological  ----------------------------------------------------------
 
 ## Risk (Figure 10) -----------------------------------------------------
 
-# prepare data 
-rates_rare <- choices %>% 
-  mutate(safe_choice = ifelse(choice == "s", 1, 0)) %>% # risk averse choice
-  group_by(model, psi, theta, rare, safe_choice) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = n/sum(n)) %>% 
-  ungroup() %>%
-  filter(!(safe_choice == 0))
-
-r_averse_rare_summary <- rates_rare %>%  
-  filter(model == "summary") %>% 
-  mutate(theta = .01 * theta) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  scale_color_scico(palette = "imola", end = .9) +
-  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switch Rate\n(Search Rule)",
-       y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-r_averse_rare_roundwise <- rates_rare %>%
-  filter(model == "roundwise") %>% 
-  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  scale_color_scico_d(palette = "imola", end = .9, guide = guide_legend(reverse = TRUE)  ) + 
-  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switch Rate\n(Search Rule)",
-       y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-ggarrange(r_averse_rare_summary, r_averse_rare_roundwise, nrow = 1, labels = "AUTO", font.label = list(size = 22) )
-ggsave(file = "manuscript/figures/rates_risk_aversion_rare.png", width = 14, height = 10)
+for(i in 1:length(choices)){
+  sim <- names(choices)[[i]]
+  if(str_detect(sim, "decreasing")==FALSE){
+    
+    dat <- choices[[i]]
+    model <- regmatches(sim,  gregexpr("summary|roundwise", sim))[[1]]
+    
+    rates <- dat |>  
+      mutate(risk = ifelse(choice == higher_risk, 1, 0)) %>% # risk seeking choice
+      group_by(model, psi, theta, o1_rare, o2_rare) |> 
+      summarise(rate = mean(risk, na.rm=T)) |> 
+      ungroup() 
+    
+    risk_plot <- rates |> 
+      ggplot(aes(psi, rate, group = theta, color = theta)) +
+      facet_grid(factor(o1_rare, levels = c("none", "attractive", "unattractive"))~factor(o2_rare, levels = c("none", "attractive", "unattractive"))) +
+      scale_color_scico(palette = "imola", end = .9) + 
+      #scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+      #scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
+      labs(title = paste(capwords(model), "Comparison"), 
+           x = "Switch Rate\n(Search Rule)",
+           y = "Rate",
+           color = "Threshold\n(Stopping Rule)") +
+      geom_line(linewidth = 1) + 
+      geom_point(size = 3) +
+      theme_bw(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    ### merge and save plots
+    plotfile <- paste0("manuscript/figures/temp/eco_risk_",sim,".png")
+    ggsave(file = plotfile, plot=risk_plot, width = 10, height = 10)
+    print(paste("New plot", plotfile, "was generated."))
+    
+  }
+}
 
 # Efficiency (Figure 11) --------------------------------------------------------------
 
-# prepare data
-
-## Maximization as a function of comparison strategies and sample size
-max_n <- choices %>% 
-  mutate(norm = case_when(ev_risky/safe > 1 ~ "r", 
-                          ev_risky/safe < 1 ~ "s")) %>%
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, theta) %>% 
-  summarise(n = n(), 
-            median_n = median(smp) , 
-            max_prop = sum(max)/n)
-
-## reward rate
-reward_rates <- choices %>%  
-  mutate(chosen_option_EV = ifelse(choice == "s", safe, ev_risky) ,
-         rr_EV = chosen_option_EV/smp) %>% 
-  select(model, psi, theta, rr_EV)
-
-
-# plot data
-
-### summary
-
-## Maximization as a function of comparison strategies and sample size
-
-max_n_summary <- max_n %>% 
-  filter(model == "summary") %>%
-  filter(psi %in% c(.2, .4, .6, .8, 1)) %>% 
-  mutate(theta = .01 * theta) %>% 
-  ggplot(aes(x=median_n, y=max_prop, group = theta, fill = theta, shape = as.factor(psi))) +
-  scale_fill_scico(palette = "imola", end = .9) +
-  scale_color_scico(palette = "imola", end = .9) +
-  scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
-  labs(title = "Summary Comparison", 
-       x = "Median Sample Size",
-       y = "% EV Maximization",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)",  
-       shape = "Switch Rate\n(Search Rule)") +
-  geom_line(aes(group = psi, color = theta), linewidth = 1) + 
-  geom_point(size = 5) + 
-  scale_y_continuous(limits = c(.4,1), breaks = seq(.4,1, length.out = 6)) +
-  scale_x_continuous(limits = c(0, 175), breaks = seq(0, 175, 25)) + 
-  theme_minimal(base_size = 18) + 
-  theme(plot.title = element_text(hjust = 0.5)) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-## reward rate
-
-rr_summary <- reward_rates %>% 
-  group_by(model, psi, theta) %>% 
-  summarise(mean_rr_EV = mean(rr_EV, na.rm = TRUE)) %>% 
-  filter(model == "summary") %>%  
-  mutate(theta = .01*theta) %>% 
-  ggplot(aes(x = psi, y = mean_rr_EV, group = theta, color = theta)) + 
-  scale_color_scico(palette = "imola", end = .9) + 
-  geom_line(linewidth = 1) +
-  geom_point(size = 3) +
-  labs(x = "Switch Rate\n(Search Rule)", 
-       y = "Mean Reward Rate",
-       color = "Threshold\n(Stopping Rule)") + 
-  scale_y_continuous(limits = c(0, 23), breaks = seq(0,23,length.out = 6)) + 
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-efficiency_summary <- ggarrange(max_n_summary, rr_summary, nrow = 2, common.legend = T, legend = "right", labels = "AUTO", font.label = list(size = 22))
-
-
-### roundwise
-
-## maximization 
-
-max_n_roundwise <- 
-  max_n %>% 
-  filter(model == "roundwise") %>%
-  filter(psi %in% c(.2, .4, .6, .8, 1)) %>% 
-  ggplot(aes(x=median_n, y=max_prop, group = theta, shape = as.factor(psi))) +
-  scale_fill_scico_d(palette = "imola", end = .9, guide = guide_legend(reverse = TRUE) ) +
-  scale_color_scico_d(palette = "imola", end = .9, guide = guide_legend(reverse = TRUE) ) +
-  scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE, order = 1)) +
-  geom_point(aes(fill = as.factor(theta), color = as.factor(theta)), size = 5) + 
-  geom_point(color = "black", size = 5) +  
-  geom_line(aes(group = psi, color = as.factor(theta)), linewidth = 1) +
-  labs(title = "Roundwise Comparison", 
-       x = "Median Sample Size",
-       y = "% EV Maximization",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)",  
-       shape = "Switch Rate\n(Search Rule)") +
-  scale_y_continuous(limits = c(.4,1), breaks = seq(.4,1, length.out = 6)) +
-  scale_x_continuous(limits = c(0, 175), breaks = seq(0, 175, 25)) + 
-  theme_minimal(base_size = 18) + 
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25)) 
+for(i in 1:length(choices)){
+  sim <- names(choices)[[i]]
+  if(str_detect(sim, "decreasing")==FALSE){
+    
+    dat <- choices[[i]]
+    model <- regmatches(sim,  gregexpr("summary|roundwise", sim))[[1]]
+    
+    # prepare data
+    
+    ## Maximization as a function of comparison strategies and sample size
+    max_n <- dat |>  
+      mutate(norm = if_else(o1_ev > o2_ev, "o1", "o2") ,
+             max = ifelse(norm == choice, 1, 0)) |>  
+      group_by(model, psi, theta) |>  
+      summarise(mean_n = mean(n_smp) , 
+                median_n = median(n_smp) , 
+                max_prop = mean(max),
+                max_n = sum(max))
+    
+    #reward rate
+    reward_rates <- dat |>
+       mutate(chosen_option_EV = ifelse(choice == "o1", o1_ev, o2_ev),
+              rr = chosen_option_EV/n_smp) |>
+       select(model, psi, theta, rr)
   
-#### reward rate
-
-rr_roundwise <- reward_rates %>% 
-  group_by(model, psi, theta) %>% 
-  summarise(mean_rr_EV = mean(rr_EV, na.rm = TRUE)) %>% 
-  filter(model == "roundwise") %>%  
-  ggplot(aes(x = psi, y = mean_rr_EV, group = theta, color = as.factor(theta))) + 
-  scale_color_scico_d(palette = "imola", end = .9) + 
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  labs(x = "Switch Rate\n(Search Rule)", 
-       y = "Mean Reward Rate",
-       color = "Threshold\n(Stopping Rule)") + 
-  scale_y_continuous(limits = c(0, 23), breaks = seq(0,23,length.out = 6)) + 
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-efficiency_roundwise <- ggarrange(max_n_roundwise, rr_roundwise, nrow = 2, common.legend = T, legend = "right") 
-  
-#### merge and save
-ggarrange(efficiency_summary, efficiency_roundwise, nrow = 1)
-ggsave(file = "manuscript/figures/efficiency.png", width = 14, height = 10)
+    # plot data
+    
+    effort_plot <- max_n |>
+      #filter(psi %in% c(.2, .4, .6, .8, 1)) |> 
+      ggplot(aes(psi, median_n, group = theta, color = theta, fill=theta, shape = as.factor(psi))) +
+      scale_color_scico(palette = "imola", end = .9) + 
+      scale_fill_scico(palette = "imola", end = .9) +
+      scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
+      scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+      #scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
+      labs(x = "Switch Rate\n(Search Rule)",
+           y = "Median Sample Size",
+           fill = "Threshold\n(Stopping Rule)",
+           color = "Threshold\n(Stopping Rule)",  
+           shape = "Switch Rate\n(Search Rule)") +
+      geom_line(linewidth = 1) + 
+      geom_point(size = 3) +
+      geom_hline(yintercept = if_else(str_detect(sim, "SR"), 14,22), linewidth=1) +
+      theme_bw(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    
+    ## Maximization as a function of comparison strategies and sample size
+    
+    effort_return_plot <- max_n |> 
+      #filter(psi %in% c(.2, .4, .6, .8, 1)) |> 
+      ggplot(aes(x=median_n, y=max_prop, group = theta, color=theta, fill = theta, shape = as.factor(psi))) +
+      scale_fill_scico(palette = "imola", end = .9) +
+      scale_color_scico(palette = "imola", end = .9) +
+      scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
+      labs(x = "Median\nSample Size",
+           y = "% EV Maximization",
+           fill = "Threshold\n(Stopping Rule)",
+           color = "Threshold\n(Stopping Rule)",  
+           shape = "Switch Rate\n(Search Rule)") +
+      geom_line(aes(group = psi, color = theta), linewidth = 1) + 
+      geom_point(size = 5) + 
+      scale_y_continuous(limits = c(.4,1), breaks = seq(.4,1, length.out = 6)) +
+      #scale_x_continuous(limits = c(0, 175), breaks = seq(0, 175, 25)) + 
+      theme_bw(base_size = 18) + 
+      theme(plot.title = element_text(hjust = 0.5)) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    ## reward rate
+    
+    rr_plot <- reward_rates |>  
+      #filter(psi %in% c(.2, .4, .6, .8, 1)) |> 
+      group_by(model, psi, theta) %>% 
+      summarise(mean_rr = mean(rr, na.rm = TRUE)) %>% 
+      ggplot(aes(x = psi, y = mean_rr, group = theta, color = theta, fill = theta, shape=as.factor(psi))) + 
+      scale_fill_scico(palette = "imola", end = .9) +
+      scale_color_scico(palette = "imola", end = .9) +
+      scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
+      geom_line(linewidth = 1) +
+      geom_point(size = 3) +
+      labs(x = "Switch Rate\n(Search Rule)", 
+           y = "Mean Reward Rate",
+           fill = "Threshold\n(Stopping Rule)",
+           color = "Threshold\n(Stopping Rule)",  
+           shape = "Switch Rate\n(Search Rule)") + 
+      #scale_y_continuous(limits = c(0, 23), breaks = seq(0,23,length.out = 6)) + 
+      theme_bw(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    p <- ggarrange(NULL, effort_plot, effort_return_plot, rr_plot,
+                   nrow = 1, widths = c(.05,1,1,1),
+                   legend = "right", common.legend = T,
+                   labels = c(NA,"A", "B", "C") ,
+                   font.label = list(size = 18))
+    efficiency <- annotate_figure(p, left = text_grob(paste(capwords(model), "Comparison"), size = 22, rot = 90))
+    
+    ### merge and save plots
+    plotfile <- paste0("manuscript/figures/temp/efficiency_",sim,".png")
+    ggsave(file = plotfile, plot=efficiency, width = 14, height = 4)
+    print(paste("New plot", plotfile, "was generated."))
+    
+  }
+}
 
 # Appendix ----------------------------------------------------------------
 
@@ -1189,56 +1086,41 @@ ggsave(file = "manuscript/figures/appendix/ppc_roundwise_max_acc.png", width = 1
 
 ## E) EV Eco ---------------------------------------------------------------
 
-### Maximization (Figure E1)  ---------------------------------------------------
+for(i in 1:length(choices)){
+  sim <- names(choices)[[i]]
+  if(str_detect(sim, "decreasing")==FALSE){
+    
+    dat <- choices[[i]]
+    model <- regmatches(sim,  gregexpr("summary|roundwise", sim))[[1]]
+    
+    rates <- dat |> 
+      mutate(max_ev = if_else(better_ev == choice, 1, 0)) |>  
+      group_by(model, psi, theta, o1_rare, o2_rare) |>  
+      summarise(rate_ev = mean(max_ev, na.rm=T)) |> 
+      ungroup()
+    
+    max_plot <- rates |> 
+      ggplot(aes(psi, rate_ev, group = theta, color = theta)) +
+      facet_grid(factor(o1_rare, levels = c("none", "attractive", "unattractive"))~factor(o2_rare, levels = c("none", "attractive", "unattractive"))) +
+      scale_color_scico_d(palette = "imola", end = .9) + 
+      scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
+      scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
+      labs(title = paste(capwords(model), "Comparison"), 
+           x = "Switch Rate\n(Search Rule)",
+           y = "Rate",
+           color = "Threshold\n(Stopping Rule)") +
+      geom_line(linewidth = 1) + 
+      geom_point(size = 3) +
+      theme_bw(base_size = 18) + 
+      theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+    
+    plotfile <- paste0("manuscript/figures/temp/eco_max_",sim,".png")
+    ggsave(file = plotfile, plot=max_plot, width = 10, height = 10)
+    print(paste("New plot", plotfile, "was generated."))
+    
+  }
+}
 
-## expected values
-rates_EV_rare <- choices %>%
-  mutate(norm = case_when(ev_risky/safe > 1 ~ "r", 
-                          ev_risky/safe < 1 ~ "s")) %>% # determine option with higher sampled mean 
-  filter(!is.na(norm)) %>% # drop options without normative choice 
-  mutate(max = ifelse(norm == choice, 1, 0)) %>% 
-  group_by(model, psi, theta, rare, max) %>% 
-  summarise(n = n()) %>% 
-  mutate(rate = round(n/sum(n), 2)) %>% 
-  ungroup() %>%
-  filter(!(max == 0))
-
-# plot data 
-
-## summary
-max_EV_rare_summary <- rates_EV_rare %>%
-  filter(model == "summary") %>% 
-  mutate(theta = .01*theta) %>% 
-  ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
-  scale_color_scico(palette = "imola", end = .9) + 
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
-  labs(title = "Summary Comparison", 
-       x = "Switch Rate\n(Search Rule)",
-       y = "% EV Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-## roundwise
-max_EV_rare_roundwise <- rates_EV_rare %>%
-  filter(model == "roundwise") %>% 
-  ggplot(aes(psi, rate, group = theta, color = as.factor(theta))) +
-  facet_wrap(~factor(rare, levels = c("none", "attractive", "unattractive")), nrow = 3) +
-  scale_color_scico_d(palette = "imola", end = .9, guide = guide_legend(reverse = TRUE)) + 
-  scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
-  labs(title = "Roundwise Comparison", 
-       x = "Switch Rate\n(Search Rule)",
-       y = "% EV Maximization",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
-  theme_minimal(base_size = 18) + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
 
 ggarrange(max_EV_rare_summary, max_EV_rare_roundwise, nrow = 1, labels = "AUTO", font.label = list(size = 22) )
 ggsave(file = "manuscript/figures/appendix/maximization_rare.png", width = 14, height = 10)

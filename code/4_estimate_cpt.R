@@ -6,7 +6,7 @@ rm(list = ls())
 pacman::p_load(tidyverse, rstan, digest)
 
 # load data
-dir <- "data/temp/"
+dir <- "data/choices/"
 choice_files <- list.files(dir, pattern='choices')
 choices <- lapply(paste0(dir, choice_files), read_rds)
 names(choices) <- choice_files |> str_remove(".rds.bz2")

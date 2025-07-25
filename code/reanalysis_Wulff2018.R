@@ -5,7 +5,7 @@
 # Preparation -------------------------------------------------------------
 
 # load packages 
-pacman::p_load(tidyverse, brms, posterior, scico, ggExtra, gridExtra, knitr, ggpubr, cowplot)
+pacman::p_load(tidyverse, brms, posterior, scico, ggExtra, gridExtra, ggpubr, cowplot)
 
 # load data
 data <- read.table("data/exp.txt") %>% as_tibble()
@@ -169,7 +169,6 @@ predictions_drop <-
 
 # Preparation -------------------------------------------------------------
 
-source("code/prepare_reanalysis.R") 
 source("code/helper_functions/fun_logistic.R")
 
 # Main Analysis ----------------------------------------------------------------
@@ -361,8 +360,7 @@ consistency2 %>%
                                 (Summary == "In" & Roundwise == "F")  | (Summary == "F" & Roundwise == "In")  | (Summary == "In" & Roundwise == "In") ~ "Indifferent")
   ) %>% 
   select(Prediction, everything()) %>% 
-  arrange(Prediction, Summary) %>% 
-  kable()
+  arrange(Prediction, Summary)
 
 
 

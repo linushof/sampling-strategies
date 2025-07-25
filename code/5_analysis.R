@@ -4,12 +4,9 @@
 pacman::p_load(tidyverse,
                scico, # for scientific color palettes
                latex2exp, # for LaTeX expressions in plots
-               papaja,
                ggpubr,
                patchwork, 
-               readxl,
                viridis,
-               viridisLite,
                gtools)
 
 # load data 
@@ -19,7 +16,7 @@ pacman::p_load(tidyverse,
 #summary <- read_rds("data/simulation_summary.rds.bz2")
 
 ## choices
-dir_choices <- "data/temp/"
+dir_choices <- "data/"
 choice_files <- list.files(dir_choices, pattern='choices')
 choices <- lapply(paste0(dir_choices, choice_files), read_rds)
 names(choices) <- choice_files |> str_remove(".rds.bz2")
@@ -58,9 +55,8 @@ label_rare <- function(string) {
 # Behavioral --------------------------------------------------------------
 ## Trajectories (Figures 2 and 3) -----------------------------------------------
 
-summary <- read_rds("data/simulations/temp/simulation_summary_RR.rds.bz2")
-round <- read_rds("data/simulations/temp/simulation_roundwise_RR.rds.bz2")
-#SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large2.xlsx"))
+summary <- read_rds("data/simulations/simulation_summary_RR.rds.bz2")
+round <- read_rds("data/simulations/simulation_roundwise_RR.rds.bz2")
 RR <- read_rds("data/problems/RR.rds")
 
 # select and prepare data

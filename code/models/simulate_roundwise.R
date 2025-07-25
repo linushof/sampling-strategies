@@ -1,4 +1,3 @@
-
 simulate_roundwise <- function(problems, param, n_agents){
   
   # load required packages

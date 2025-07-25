@@ -4,7 +4,7 @@ prepare_choice_data <- function(file){
   model <- regmatches(file,  gregexpr("summary|summary_decreasing|roundwise|roundwise_decreasing", file))[[1]]
   problem <- regmatches(file,  gregexpr("SR_small|SR_large|RR", file))[[1]]
   
-  newfile <- paste0("data/", "temp/", "choices_", model,"_",problem,".rds.bz2")
+  newfile <- paste0("data/", "choices/", "choices_", model,"_",problem,".rds.bz2")
   if(file.exists(newfile)){
     file.remove(newfile)
     print(paste0("Removed existing (old) file: ", newfile, ". New file will be prepared."))

@@ -20,7 +20,7 @@ parameters {
 
 transformed parameters {
   real alpha = 2*alpha_pre;
-  real gamma = 2*gamma_pre;
+  real gamma = 10*gamma_pre;
   real delta = 5*delta_pre;
   real phi = 5*phi_pre;
 }

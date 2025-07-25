@@ -10,7 +10,7 @@ lapply(model_files, source)
 # simulation settings ----------------------------------------------------------------
 
 # number of synthetic agents
-n_agents <- 2 #1e3
+n_agents <- 50 #1e3
 
 # problems
 SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large.xlsx"))
@@ -18,9 +18,9 @@ SR_small <- as.data.frame(read_xlsx("data/problems/SR_small.xlsx"))
 RR <-  as.data.frame(read_rds("data/problems/RR.rds"))
 
 # parameters
-psi <- seq(.1, 1, .1) # switch rate
-theta_summary <- seq(100, 300, 100) # threshold summary comparison
-theta_roundwise <- 1:3 # thresholds roundwise comparison
+psi <- seq(.1, 1, .3) # switch rate
+theta_summary <- 1:3 # thresholds 
+theta_roundwise <- 1:3 # thresholds 
 
 # when switch rates should decrease over time, replace psi by:
 base <- seq(.2,.8,.2) # minimum switch rate

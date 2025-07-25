@@ -10,7 +10,6 @@ dir <- "data/temp/"
 choice_files <- list.files(dir, pattern='choices')
 choices <- lapply(paste0(dir, choice_files), read_rds)
 names(choices) <- choice_files |> str_remove(".rds.bz2")
-#choices <- choices[2]
 
 # Stan settings
 rstan_options(auto_write = TRUE)
@@ -109,4 +108,3 @@ for (sim in 1:length(choices)){
   write_rds(estimates_cpt, newfile)
 
 } # close simulation loop
-

@@ -17,6 +17,7 @@ data/cpt_posteriors.rds.bz2
 data/simulation_roundwise.rds.bz2
 data/simulation_summary.rds.bz2
 data/csv/
+data/old/
 # other folders and files
 manuscript/
 housekeeping/

@@ -1,8 +1,6 @@
 # preparation -------------------------------------------------------------
 rm(list = ls())
 
-library(readxl)
-
 # import models 
 model_files <- list.files(path='code/models', pattern='simulate', full.names = T)
 lapply(model_files, source)
@@ -13,8 +11,8 @@ lapply(model_files, source)
 n_agents <- 50 #1e3
 
 # problems
-SR_large <-  as.data.frame(read_xlsx("data/problems/SR_large.xlsx"))
-SR_small <- as.data.frame(read_xlsx("data/problems/SR_small.xlsx"))
+SR_large <-  as.data.frame(read_rds("data/problems/SR_large.rds"))
+SR_small <- as.data.frame(read_rds("data/problems/SR_small.rds"))
 RR <-  as.data.frame(read_rds("data/problems/RR.rds"))
 
 # parameters

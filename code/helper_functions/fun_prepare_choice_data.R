@@ -12,13 +12,7 @@ prepare_choice_data <- function(file){
     print(paste0("File ", newfile, " will be prepared."))}
 
   simulation <-  read_rds(file)
-  
-  if(problem=="RR"){ 
-    problems <- read_rds(paste0("data/problems/",problem,".rds"))
-    } else{
-      problems <- read_xlsx(paste0("data/problems/",problem,".xlsx"))
-  }
-    
+  problems <- read_rds(paste0("data/problems/",problem,".rds"))
   data <- left_join(simulation, problems, by=join_by(id)) # add problem features
   
   params <- grepl("decreasing", model)

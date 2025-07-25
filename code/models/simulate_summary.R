@@ -25,14 +25,14 @@ simulate_summary <- function(problems, param, n_agents){
       # retrieve problem features
       
       # option 1 (for SR gambles: risky option)
-      o1_1 <- problems[[problem, "o1_1"]] # (smaller) outcome 1 
-      o1_2 <- problems[[problem, "o1_2"]] # (larger) outcome 2
+      o1_1 <- .01*problems[[problem, "o1_1"]] # (smaller) outcome 1 
+      o1_2 <- .01*problems[[problem, "o1_2"]] # (larger) outcome 2
       o1_p1 <- problems[[problem, "o1_p1"]] # probability outcome 1  
       o1_p2 <- problems[[problem, "o1_p2"]] # probability outcome 2 
       
       # option 2 (for SR gambles: safe option)
-      o2_1 <- problems[[problem, "o2_1"]] # (smaller/safe) outcome 1
-      o2_2 <- problems[[problem, "o2_2"]] # (larger/missing) outcome 2
+      o2_1 <- .01*problems[[problem, "o2_1"]] # (smaller/safe) outcome 1
+      o2_2 <- .01*problems[[problem, "o2_2"]] # (larger/missing) outcome 2
       o2_p1 <- problems[[problem, "o2_p1"]] # probability outcome 1 (for SR gambles: 1)
       o2_p2 <- problems[[problem, "o2_p2"]] # probability outcome 2 (for SR gambles: 0)
       

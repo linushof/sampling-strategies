@@ -16,7 +16,7 @@ pacman::p_load(tidyverse,
 #summary <- read_rds("data/simulation_summary.rds.bz2")
 
 ## choices
-dir_choices <- "data/"
+dir_choices <- "data/choices/"
 choice_files <- list.files(dir_choices, pattern='choices')
 choices <- lapply(paste0(dir_choices, choice_files), read_rds)
 names(choices) <- choice_files |> str_remove(".rds.bz2")
@@ -170,6 +170,7 @@ marginal_hist_summary <- stopping_samples_summary %>%
     axis.ticks.x = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
+    panel.grid = element_blank()
   )
 
 # Combine marginal histogram above the trajectories
@@ -226,6 +227,7 @@ marginal_hist_round <- stopping_samples_round %>%
     axis.ticks.x = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
+    panel.grid = element_blank()
   )
 
 # Combine marginal histogram above the trajectories
@@ -359,7 +361,7 @@ for(i in 1:length(cpt_estimates)){
       scale_color_scico(palette = "tokyo", end = .8) +
       facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
       scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
-      scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
+      scale_y_continuous(limits =c(-.1, 10.1), breaks = seq(0,10, length.out = 3)) +
       labs(x = "Switch Rate (Search Rule)", 
            y = expression(paste("Curvature  ", gamma)),
            color = "Switch\nRate") +
@@ -402,7 +404,7 @@ for(i in 1:length(cpt_estimates)){
     
     ### merge and save plots
     weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22))
-    plotfile_weighting <- paste0("manuscript/figures/temp/cpt_weighting_",sim,".png")
+    plotfile_weighting <- paste0("manuscript/figures/temp/cpt_weighting_",sim,".jpg")
     
     
     ## value function 
@@ -448,7 +450,7 @@ for(i in 1:length(cpt_estimates)){
     
     # merge
     value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T, labels = "AUTO", font.label = list(size = 22) )
-    plotfile_value <- paste0("manuscript/figures/temp/cpt_value_",sim,".png")
+    plotfile_value <- paste0("manuscript/figures/temp/cpt_value_",sim,".jpg")
 
     # save plots
     ggsave(file = plotfile_weighting, plot=weighting_plot, width = 10, height = 10)

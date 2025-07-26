@@ -86,8 +86,8 @@ for (sim in 1:length(choices)){
       init = inits,
       data = dat_stan,    # named list of data
       chains = n_chains,             # number of Markov chains
-      warmup = 1000,          # number of warmup iterations per chain
-      iter = 2000,            # total number of iterations per chain
+      warmup = 10000,          # number of warmup iterations per chain
+      iter = 5000,            # total number of iterations per chain
       refresh = 1000          # show progress every 'refresh' iterations
     )
     

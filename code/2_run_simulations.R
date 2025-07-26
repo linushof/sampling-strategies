@@ -8,7 +8,7 @@ lapply(model_files, source)
 # simulation settings ----------------------------------------------------------------
 
 # number of synthetic agents
-n_agents <- 2 #1e3
+n_agents <- 3e2
 
 # problems
 SR_large <-  as.data.frame(readRDS("data/problems/SR_large.rds"))

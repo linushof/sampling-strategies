@@ -13,6 +13,13 @@ prepare_choice_data <- function(file){
 
   simulation <-  read_rds(file)
   problems <- read_rds(paste0("data/problems/",problem,".rds"))
+  if(model=='summary'){
+    problems <- problems |> 
+      mutate(o1_1 = .01*o1_1 , 
+             o1_2 = .01*o1_2 ,
+             o2_1 = .01*o2_1 , 
+             o2_2 = .01*o2_2)
+    }
   data <- left_join(simulation, problems, by=join_by(id)) # add problem features
   
   params <- grepl("decreasing", model)

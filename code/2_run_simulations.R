@@ -82,9 +82,9 @@ write_rds(simulation_roundwise_RR, "data/simulations/simulation_roundwise_RR.rds
 # Decreasing switch rate --------------------------------------------------
 # we use safe-risky problems with large EV differences to demonstrate the effect of decreasing switch rates
 
-simulation_summary_decreasing <- simulate_summary_decreasing(problems=RR, param=summary_param_decreasing, n_agents)
-write_rds(simulation_summary_decreasing, 'data/simulations/simulation_summary_decreasing_RR.rds.bz2', compress = "bz2")
+#simulation_summary_decreasing <- simulate_summary_decreasing(problems=RR, param=summary_param_decreasing, n_agents)
+#write_rds(simulation_summary_decreasing, 'data/simulations/simulation_summary_decreasing_RR.rds.bz2', compress = "bz2")
 
 # roundwise
-simulation_roundwise_decreasing <- simulate_roundwise_decreasing(problems=RR, param=roundwise_param_decreasing, n_agents)
-write_rds(simulation_roundwise_decreasing, 'data/simulations/simulation_roundwise_decreasing_RR.rds.bz2', compress = "bz2")
+#simulation_roundwise_decreasing <- simulate_roundwise_decreasing(problems=RR, param=roundwise_param_decreasing, n_agents)
+#write_rds(simulation_roundwise_decreasing, 'data/simulations/simulation_roundwise_decreasing_RR.rds.bz2', compress = "bz2")

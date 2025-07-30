@@ -2,7 +2,7 @@ prepare_choice_data <- function(file){
   
   # get model and problem details  
   model <- regmatches(file,  gregexpr("summary|summary_decreasing|roundwise|roundwise_decreasing", file))[[1]]
-  problem <- regmatches(file,  gregexpr("SR_small|SR_large|RR", file))[[1]]
+  problem <- regmatches(file,  gregexpr("SR_small|SR_large|RR|RR2", file))[[1]]
   
   newfile <- paste0("data/", "choices/", "choices_", model,"_",problem,".rds.bz2")
   if(file.exists(newfile)){
@@ -15,10 +15,12 @@ prepare_choice_data <- function(file){
   problems <- read_rds(paste0("data/problems/",problem,".rds"))
   if(model=='summary'){
     problems <- problems |> 
-      mutate(o1_1 = .01*o1_1 , 
-             o1_2 = .01*o1_2 ,
+      mutate(# scaling
+             o1_1 = .01*o1_1 , 
+             o1_2 = .01*o1_2 , 
              o2_1 = .01*o2_1 , 
-             o2_2 = .01*o2_2)
+             o2_2 = .01*o2_2
+             )
     }
   data <- left_join(simulation, problems, by=join_by(id)) # add problem features
   
@@ -47,6 +49,17 @@ prepare_choice_data <- function(file){
     ungroup() |> 
     filter(!is.na(choice)) |>  # discard samples without choice
     mutate(model = model) 
+  
+  if(model=='summary'){
+    data <- data |> 
+      mutate(# reverse scaling
+        o1_1 = 100*o1_1 , 
+        o1_2 = 100*o1_2 , 
+        o2_1 = 100*o2_1 , 
+        o2_2 = 100*o2_2
+      )
+  }
+  
   
   if(params){
     data <- data |> 

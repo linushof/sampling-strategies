@@ -1,15 +1,11 @@
 library(readxl)
 library(tidyverse)
 
-# original data set
-
+# SR_small: safe-risky (original) -------------------------------------------------------
 SR_small <- as.data.frame(read_xlsx("data/problems/SR_small.xlsx"))
+write_rds(SR_small, "data/problems/SR_small.rds")
 
-# create additional data sets ---------------------------------------------
-
-
-## safe-risky with larger EV differences -----------------------------------
-
+# SR_large: safe-risky with larger absolute EV difference (SR_large) -----------------------------------
 SR_large <- SR_small |> 
   mutate(o1_1 = o1_1*2 , 
          o1_2 = o1_2*2 , 
@@ -35,9 +31,9 @@ SR_large <- SR_small |>
          o2_rwp = 1-o1_rwp 
   ) |> 
   select(-c(c11:cp22))
+write_rds(SR_large, "data/problems/SR_large.rds")
 
-
-## Risky Risky -------------------------------------------------------------
+# RR: risky-risky build from SR_large (narrow) -------------------------------------------------------------
 
 spread <- 1:5 # outcomes of option 2 diverge {1,2,3,4,5} units from ev
 RR <- SR_large |> 
@@ -65,41 +61,34 @@ RR <- SR_large |>
          higher_risk = if_else(cvar_o1 > cvar_o2, "o1", "o2") 
   ) |> 
   select(id:o2_rare)
-
-
-# write rds files ---------------------------------------------------------
-write_rds(SR_small, "data/problems/SR_small.rds")
-write_rds(SR_large, "data/problems/SR_large.rds")
 write_rds(RR, "data/problems/RR.rds")
 
 
 
-# preparation -------------------------------------------------------------
-  
-
+# RR: risky-risky simulated -------------------------------------------------------------
 # import functions for generating choice problems
 source("code/helper_functions/fun_gambles_risky.R")
-# source("code/helper_functions/fun_gambles_safe.R")
 
 # problem/filter settings ------------------------------------------------
 
-N <- 1e6 #1e7
+N <- 1e7 #1e7
 lower <- 0 # lowest possible outcome 
 upper <- 100 # highest possible outcome
 pmin <- .1 # lowest possible probability 
 pmin_com <- .4 # lowest probability for non-rare events
 pmax_rare <- .2 # highest probability for rare events
 N_trials <- 200 # number of trials per agent
-diffs <- seq(.05,.25,.1) # magnitude of EV differences
+diffs <- c(.05,.10,.15,.20) # magnitude of EV differences
 
 # generate problem pool -------------------------------------------------------
 
-set.seed(123)
-RR <- RR_gambles(N, lower, upper, pmin)
+set.seed(667122)
+pool <- RR_gambles(N, lower, upper, pmin)
 
 # prepare problems -----------------------------------------------------
 
-RR <- RR |>
+RR <- pool |>
+  filter(o1_1!=o1_2 & o2_1!=o2_2) |> 
   
   # we start by determining which option is more risky (higher coefficient of variation)
   # we label the more (less) risky option o1 (o2) - similarly to safe-risky problems, where o1 (o2) is the risky (safe) option
@@ -174,29 +163,40 @@ RR <- RR |>
            o2_p1 >= pmin_com & o2_p1 <= (1-pmin_com) ~ "none" ,
            o2_psmall <= pmax_rare ~ "unattractive" ,
            o2_plarge <= pmax_rare  ~ "attractive"
-         )
+         ),
+         ev_mag = case_when(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2] ~ "small" , 
+                            ev_diff_sc > diffs[3] & ev_diff_sc <= diffs[4] ~ "large") 
   ) 
 
 groups <-  
   RR |>
-  drop_na(o1_rare, o2_rare) |> 
-  group_by (better_ev, better_rwp, o1_rare, o2_rare, .drop = FALSE) |>
-  summarise(group = cur_group_id() ) 
+  drop_na(o1_rare, o2_rare, ev_mag) |> 
+  group_by (better_ev, better_rwp, o1_rare, o2_rare, ev_mag, .drop = FALSE) |>
+  summarise(group = cur_group_id(),
+            n = n()) |> 
+  filter(!(better_ev=="o1" & better_rwp=="o1" & o1_rare=="attractive" & o2_rare=="unattractive") , 
+         !(better_ev=="o1" & better_rwp=="o2" & o1_rare=="unattractive" & o2_rare=="attractive") , 
+         !(better_ev=="o1" & better_rwp=="o2" & o1_rare=="unattractive" & o2_rare=="unattractive") , 
+         !(better_ev=="o2" & better_rwp=="o2" & o1_rare=="unattractive" & o2_rare=="attractive") , 
+         !(better_ev=="o2" & better_rwp=="o1" & o1_rare=="attractive" & o2_rare=="unattractive"),
+         !(better_ev=="o2" & better_rwp=="o1" & o1_rare=="attractive" & o2_rare=="attractive")
+         )
 
 # sample simulation set ---------------------------------------------------------
 
 problems <- tibble()
+set.seed(71618)
 for (i in seq_len(nrow(groups)) ){ 
   
   dat_temp <- RR |> 
-    # filter(ev_diff_sc > diffs[1] & ev_diff_sc <= diffs[2])  |> to filter for particular EV diffs
     filter(better_ev==groups[[i, "better_ev"]] & 
              better_rwp==groups[[i, "better_rwp"]] & 
              o1_rare==groups[[i, "o1_rare"]] & 
-             o2_rare==groups[[i, "o2_rare"]]
+             o2_rare==groups[[i, "o2_rare"]] &
+             ev_mag==groups[[i, 'ev_mag']]
     )
   
-  smp_tmp <- dat_temp[ sample(1:nrow(dat_temp), 10, replace=F) , ] 
+  smp_tmp <- dat_temp[ sample(1:nrow(dat_temp), 5, replace=F) , ] 
   
   problems <- bind_rows(problems, smp_tmp)
   
@@ -208,9 +208,4 @@ problems <-
   select(id, everything()) |> 
   select(!(o1_psmall:o2_plarge))
 
-# store problems ----------------------------------------------------------
-
 write_rds(problems, 'data/problems/RR2.rds')
-
-
-

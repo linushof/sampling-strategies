@@ -19,7 +19,7 @@ options(mc.cores = parallel::detectCores())
 set_inits <- function(chain_id = 1) {
   list(alpha_pre=.5, gamma_pre=.5, delta_pre=.5, phi_pre=.01 )
 }
-n_chains <- 4 # number of chains
+n_chains <- 6 # number of chains
 inits <- lapply(1:n_chains, function(id) set_inits(chain_id = id))
 
 
@@ -80,17 +80,25 @@ for (sim in 1:length(choices)){
       o2_sp_high = if_else(dat[[set]][["o2_1"]]>dat[[set]][["o2_2"]], dat[[set]][["o2_sp1"]], dat[[set]][["o2_sp2"]]) 
     )
     
+    seed <- as.numeric(gsub("[^0-9]", "", digest(dat_stan, algo = "xxhash32")))
+    seed
+    
     # fit model
     cpt_fit <- stan(
-      file = "code/models/CPT.stan",  # Stan program
+      file = "code/models/CPT.stan",  
       init = inits,
-      data = dat_stan,    # named list of data
-      chains = n_chains,             # number of Markov chains
-      warmup = 10000,          # number of warmup iterations per chain
-      iter = 5000,            # total number of iterations per chain
-      refresh = 1000          # show progress every 'refresh' iterations
+      data = dat_stan,    
+      chains = n_chains,           
+      warmup = 7500,          
+      iter = 12500,            
+      refresh = 625,
+      seed = seed
     )
     
+    print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
+    fitfile <- paste0("data/cpt/", "cpt_", simname,"_set_", set,".rds")
+    saveRDS(cpt_fit, fitfile)
+    if(file.exists(fitfile)){print(paste(fitfile, "created."))}
     
     ## posterior summary and MCMC diagnostics
     pars <- cpt_fit@model_pars
@@ -100,8 +108,7 @@ for (sim in 1:length(choices)){
       select(parameter,everything())
     
     estimates_cpt[[set]] <- expand_grid(params_sim[set, ], fit_summary)
-    
-    print(paste("\u2713 Parameter Set No. ", set, " estimated!"))
+
   } # close strategy loop
   
   estimates_cpt <- estimates_cpt %>% bind_rows()

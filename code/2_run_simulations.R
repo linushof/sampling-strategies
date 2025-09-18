@@ -64,11 +64,11 @@ write_rds(simulation_roundwise_RR, "data/simulations/simulation_roundwise_RR.rds
 # RR2 ---------------------------------------------------------------------
 
 ## summary -----------------------------------------------------------------
-set.seed(916389) # seed random number generator to make simulations reproducible
+set.seed(76178) # seed random number generator to make simulations reproducible
 simulation_summary_RR2 <- simulate_summary(problems=RR2, param=summary_param_constant, n_agents)
 write_rds(simulation_summary_RR2, "data/simulations/simulation_summary_RR2.rds.bz2", compress = "bz2")
 
 ## roundwise ---------------------------------------------------------------
-set.seed(1126542)
+set.seed(78162)
 simulation_roundwise_RR2 <- simulate_roundwise(problems=RR2, param=roundwise_param_constant, n_agents)
 write_rds(simulation_roundwise_RR2, "data/simulations/simulation_roundwise_RR2.rds.bz2", compress = "bz2")

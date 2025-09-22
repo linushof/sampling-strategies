@@ -317,7 +317,7 @@ p_d1_marginal
 ggsave(p_d1_marginal, file = "manuscript/figures/reanalysis.png", width = 6, height = 6)
 
 
-# Appendix (Figure F1) ----------------------------------------------------------------
+# Supplements (Figure F1) ----------------------------------------------------------------
 
 ## F1A) Drop incomplete rounds ----------------------------------------------------------------
 

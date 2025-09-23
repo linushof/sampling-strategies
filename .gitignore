@@ -19,6 +19,7 @@ data/simulation_summary.rds.bz2
 data/csv/
 data/old/
 # other folders and files
+results/
 manuscript/
 housekeeping/
 talks/

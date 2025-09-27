@@ -1,3 +1,7 @@
+custom_theme <-   theme_bw(base_size = 14) +
+  theme(panel.grid.minor = element_line(linewidth = .25) , 
+        panel.grid.major = element_line(linewidth = .25))
+
 # plot labels
 
 label_theta <- function(string) {

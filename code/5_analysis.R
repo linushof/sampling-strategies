@@ -562,11 +562,14 @@ trajectories <- sub |>
   scale_alpha_continuous(labels=function(x) format(x, big.mark = ",", scientific = F), range = c(.3, 1)) +
   scale_linewidth_continuous(range = c(.2, 1)) +
   scale_color_manual(labels = problem_labels, values = c("#DF9D56", "#6EB5E1")) +
-  theme_bw() + 
-  theme(panel.grid = element_blank(),
-        legend.position = "bottom")
+  theme_bw(base_size = 14) + 
+  theme(panel.grid = element_blank() ,
+        legend.position = "bottom" , 
+        legend.text = element_text(size = 9) , 
+        legend.title = element_text(size = 12)
+        )
 
-ggsave(file = "manuscript/figures/accumulation.jpg", plot = trajectories, units="mm", width = 190, height = 190*.75, dpi = 500)
+ggsave(file = "manuscript/figures/fig_2_accumulation.jpg", plot = trajectories, units="mm", width = 190, height = 190*.75, dpi = 500)
 
 ## Figure 3: maximization ------------------------------------------------------------
 
@@ -589,14 +592,13 @@ max_plot <- rates |>
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(.5, 1, length.out = 3)) +
   labs(x = "Switch Rate\n(Search Rule)",
-       y = "Maximization Rate",
+       y = "Proportion of Maximizing Choices",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave("manuscript/figures/maximization.jpg", plot=max_plot, units="mm", width = 190, height = 190*.75)
+ggsave("manuscript/figures/fig_3_maximization.jpg", plot=max_plot, units="mm", width = 190, height = 190*.75)
 
 ## Figure 4: risk --------------------------------------------------------------------
 
@@ -613,14 +615,13 @@ risk_plot <- rates |>
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
   labs(x = "Switch Rate\n(Search Rule)",
-       y = "Risky Choice Rate",
+       y = "Proportion of Choices\nof the Risky Option",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth=1, alpha = .5) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave("manuscript/figures/risk.jpg", plot=risk_plot, units="mm", width = 190, height = 190*.50)
+ggsave("manuscript/figures/fig_4_risk.jpg", plot=risk_plot, units="mm", width = 190, height = 190*.50)
 
 ## Figures 5-8: cpt ---------------------------------------------------------------------
 
@@ -659,27 +660,25 @@ gamma <- cpt_summary |>
          y = "Estimate",
          color = "Switch\nRate") +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
-    geom_point() +
-    geom_line() +
-    theme_bw() + 
-    theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-  
-delta <- cpt_summary %>%
-    filter(parameter == "delta") %>%
-    ggplot(aes(psi, mean, color = psi)) +
-    scale_color_scico(palette = "tokyo", end = .8) +
-    facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_delta, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
-    scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
-    scale_y_continuous(limits = c(-0.1, 5.1), breaks = seq(0, 5, length.out = 3)) +
-    labs(x = "Switch Rate (Search Rule)", 
-         y = "Estimate", 
-         color = "Switch\nRate") +
-    geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
-    geom_point() +
-    geom_line() +
-    theme_bw() + 
-    theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-  
+  geom_point() +
+  geom_line() +
+  custom_theme
+
+delta <- cpt_summary |> 
+  filter(parameter == "delta") |> 
+  ggplot(aes(psi, mean, color = psi)) +
+  scale_color_scico(palette = "tokyo", end = .8) +
+  facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_delta, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
+  scale_y_continuous(limits = c(-0.1, 5.1), breaks = seq(0, 5, length.out = 3)) +
+  labs(x = "Switch Rate (Search Rule)", 
+       y = "Estimate", 
+       color = "Switch\nRate") +
+  geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
+  geom_point() +
+  geom_line() +
+  custom_theme
+
 wf <- weights_summary %>% 
   mutate(parameter="Weighting Function") |> 
   ggplot(aes(p, w, group = psi, color = psi, fill = psi)) +
@@ -688,19 +687,16 @@ wf <- weights_summary %>%
   facet_grid(parameter~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "p (Sampled Frequency)",
+  labs(x = "p (Sampled Relative Frequency)",
        y = "w(p)",
        color = "Switch\nRate",
        fill = "Switch\nRate") +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25),
-        panel.grid.major = element_line(linewidth = .25))
+  custom_theme
   
-weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T)
-ggsave(file = "manuscript/figures/cpt_weighting_summary.jpg", plot=weighting_plot, units="mm" , width = 190, height = 190)
-
+weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T, labels="AUTO")
+ggsave(file = "manuscript/figures/fig_5_cpt_weighting_summary.jpg", plot=weighting_plot, units="mm" , width = 190, height = 190)
 
 # roundwise comparison 
 weights_round <- weights |> filter(model=="roundwise", !(near(psi,1) & theta==1)) 
@@ -719,11 +715,10 @@ gamma <- cpt_round |>
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-delta <- cpt_round %>%
-  filter(parameter == "delta") %>%
+delta <- cpt_round |> 
+  filter(parameter == "delta") |> 
   ggplot(aes(psi, mean, color = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_delta, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
@@ -735,8 +730,7 @@ delta <- cpt_round %>%
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 wf <- weights_round %>% 
   mutate(parameter="Weighting Function") |> 
@@ -746,18 +740,16 @@ wf <- weights_round %>%
   facet_grid(parameter~theta, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "p (Sampled Frequency)",
+  labs(x = "p (Sampled Relative Frequency)",
        y = "w(p)",
        color = "Switch\nRate",
        fill = "Switch\nRate") +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25),
-        panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T)
-ggsave(file = "manuscript/figures/cpt_weighting_roundwise.jpg", plot=weighting_plot, units="mm" , width = 190, height = 190)
+weighting_plot <- ggarrange(wf, gamma, delta, nrow = 3, legend = "right", common.legend = T, labels="AUTO")
+ggsave(file = "manuscript/figures/fig_6_cpt_weighting_roundwise.jpg", plot=weighting_plot, units="mm" , width = 190, height = 190)
 
 
 ### outcome sensitivity -----------------------------------------------------
@@ -794,8 +786,7 @@ alpha <- cpt_summary |>
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width = .1) +
   geom_point() +
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 ### value function 
 vf <- values_summary |> 
@@ -813,11 +804,10 @@ vf <- values_summary |>
        fill = "Switch\nRate") +
   geom_line() +
   geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T)
-ggsave(file = "manuscript/figures/cpt_value_summary.jpg" , plot=value_plot, units="mm" , width = 190, height = 120)
+value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T, labels = "AUTO")
+ggsave(file = "manuscript/figures/fig_7_cpt_value_summary.jpg" , plot=value_plot, units="mm" , width = 190, height = 120)
 
 # roundwise comparison 
 
@@ -839,8 +829,7 @@ alpha <- cpt_round |>
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width = .1) +
   geom_point() +
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 ### value function 
 vf <- values_round |> 
@@ -858,36 +847,37 @@ vf <- values_round |>
        fill = "Switch\nRate") +
   geom_line() +
   geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T)
-ggsave(file = "manuscript/figures/cpt_value_roundwise.jpg" , plot=value_plot, units="mm" , width = 190, height = 120)
+value_plot <- ggarrange(vf, alpha, nrow = 2, legend = "right", common.legend = T, labels = "AUTO")
+ggsave(file = "manuscript/figures/fig_8_cpt_value_roundwise.jpg" , plot=value_plot, units="mm" , width = 190, height = 120)
 
 
 ## Figure 9: rare events -----------------------------------------------------------------
 
 rates <- choices_main |>  
-  mutate(risk = ifelse(choice == higher_risk, 1, 0)) %>% # risk seeking choice
+  mutate(risk = ifelse(choice == higher_risk, 1, 0) , 
+         model = if_else(model=="roundwise", "Roundwise", "Summary")) |>  # risk seeking choice
   group_by(model, psi, theta, o1_rare) |> 
   summarise(rate = mean(risk, na.rm=T)) |> 
   ungroup() 
 
 risk_plot <- rates |> 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_grid(factor(o1_rare, levels = c("none", "attractive", "unattractive"))~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) +
+  facet_grid(factor(o1_rare, levels = c("none", "attractive", "unattractive") , 
+                    labels = c("No Rare Event", "Rare Attractive Event", "Rare Unattractive Event"))~factor(model, levels=c("Summary", "Roundwise"))) +
   scale_color_scico(palette = "imola", end = .9) + 
   #scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
   labs(x = "Switch Rate\n(Search Rule)",
-       y = "Risky Choice Rate",
+       y = "Proportion of Choices\nOf the Risky Option",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size=3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme + 
+  theme(strip.text.y = element_text(size = 9))
 
-ggsave(file = "manuscript/figures/risk_eco.png", plot=risk_plot, units = "mm", width = 190, height = 190*.75)
+ggsave(file = "manuscript/figures/fig_9_risk_eco.jpg", plot=risk_plot, units = "mm", width = 190, height = 190*.75)
 
 
 # appendix --------------------------------------------------------------
@@ -914,16 +904,16 @@ median_n <- effort |>
   scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   #scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)",
+  labs(x = "Switch Rate\n(Search Rule)",
        y = "Median Sample Size",
        fill = "Threshold\n(Stopping Rule)",
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth=1) + 
   geom_point(size = 3) +
   geom_hline(yintercept = 14, color="gray", linewidth=1) +
-  theme_bw()
+  custom_theme
 
-ggsave("manuscript/figures/effort_median.jpg", plot=median_n, units="mm" , width = 190, height = 190*.50)
+ggsave("manuscript/figures/appendix/fig_a1_effort_median.jpg", plot=median_n, units="mm" , width = 190, height = 190*.50)
 
 density_n <- choices_main |> 
   ggplot(aes(n_smp, group=theta, color=theta, fill=theta)) +
@@ -940,9 +930,9 @@ density_n <- choices_main |>
        y = "Density",
        fill = "Threshold\n(Stopping Rule)",
        color = "Threshold\n(Stopping Rule)") +
-  theme_bw()
+  custom_theme
 
-ggsave("manuscript/figures/effort_density.jpg", plot=density_n, units="mm" , width = 190, height = 190*.75)
+ggsave("manuscript/figures/appendix/fig_a2_effort_density.jpg", plot=density_n, units="mm" , width = 190, height = 190*.75)
 
 ## B: primacy bias ---------------------------------------------------------
 
@@ -982,11 +972,9 @@ choices_summary |>
   labs(x = TeX("Difference in Sample Size ($\\N_{Initial \\, Option} - \\N_{Second \\,  Option} $)"), 
        y = "Frequency",
        fill = "Sampled Option") +
-  theme_bw() +
-  #theme(legend.position =  "none") + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave("manuscript/figures/appendix/initial_bias_sample_sizes.jpg", units = "mm", width = 190, height = 190)
+ggsave("manuscript/figures/appendix/fig_b1_initial_bias_sample_sizes.jpg", units = "mm", width = 190, height = 190)
 
 # starting bias choice
 
@@ -1005,10 +993,9 @@ choices_summary |>
   labs(x = "Switch Rate\n(Search Rule)",
        y = "Proportion of\nStarting Option Choices",
        color = "Threshold\n(Stopping Rule)") +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
-ggsave("manuscript/figures/appendix/initial_bias_choices.jpg", units = "mm", width = 140, height = 140*.75)
+  custom_theme
+  
+ggsave("manuscript/figures/appendix/fig_b2_initial_bias_choices.jpg", units = "mm", width = 140, height = 140*.75)
 
 
 # starting bias sampled probabilities 
@@ -1031,10 +1018,9 @@ choices_summary |>
   labs(x = "Switch Rate\n(Search Rule)",
        y = "Proportion of Choices Without\nSampling Both Risky Outcomes",
        color = "Threshold\n(Stopping Rule)") +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave("manuscript/figures/appendix/initial_bias_sampled_probabilities.jpg", units = "mm", width = 140, height = 140*.50)
+ggsave("manuscript/figures/appendix/fig_b3_initial_bias_sampled_probabilities.jpg", units = "mm", width = 190, height = 190*.50)
 
 
 # starting option bias risk aversion 
@@ -1059,10 +1045,9 @@ rates |>
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave("manuscript/figures/appendix/initial_bias_risk_seeking.jpg", units = "mm", width = 140, height = 140*.75)
+ggsave("manuscript/figures/appendix/fig_b4_initial_bias_risk_seeking.jpg", units = "mm", width = 140, height = 140*.75)
 
 # starting bias risky choice proportions
 
@@ -1076,7 +1061,7 @@ left_join(choices_summary, pbs, by=join_by(id)) |>
   summarize(n = n()) |>  
   mutate(prop = round(n/sum(n),2)) |>  
   filter(choice == "o1") |>  
-  mutate(bias = if_else(sp_o1_high == 1, "p=0 or p=1", if_else(sp_o1_high == 0, "p=0 or p=1", "0 < p < 1"))) |>  
+  mutate(bias = if_else(sp_o1_high == 1, "p = 0 or p = 1", if_else(sp_o1_high == 0, "p = 0 or p = 1", "0 < p < 1"))) |>  
   ggplot(aes(x=sp_o1_high, y = prop)) +
   geom_point(aes(color = bias, shape = bias, alpha =bias), size = 2) +
   #geom_line() + 
@@ -1092,18 +1077,17 @@ left_join(choices_summary, pbs, by=join_by(id)) |>
        shape = "") +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0,1,.5)) + 
-  theme_bw() + 
-  theme(legend.position = "top") + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme + 
+  theme(legend.position = "top") 
 
-ggsave("manuscript/figures/appendix/initial_bias_risky_choice_proportions.jpg", units = "mm", width = 190, height = 190)
+ggsave("manuscript/figures/appendix/fig_b5_initial_bias_risky_choice_proportions.jpg", units = "mm", width = 190, height = 190)
 
 
 ## C: undersampling --------------------------------------------------------
 
 # prepare data 
 round <- left_join(round, pbs, by=join_by(id))
-names(round)
+
 ## compute trial-level and round-level frequencies
 
 ### higher risky outcome
@@ -1167,7 +1151,7 @@ undersampling <- bind_rows(freq_trial_median, freq_latent_median)
 
 undersampling_plot <- undersampling |>  
   ggplot(aes(x = p, y = median_round_sp, color = theta)) +
-  geom_point(size = 1, alpha = .7) + 
+  geom_point(size = 1.5, alpha = .7) + 
   facet_grid(psi~benchmark, labeller = labeller(psi = as_labeller(label_psi, default = label_parsed))) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
@@ -1176,11 +1160,9 @@ undersampling_plot <- undersampling |>
        color = "Threshold\n(Stopping Rule)") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
   scale_color_scico(palette = "imola", end = .8) + 
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), 
-        panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave(file = "manuscript/figures/appendix/undersampling.jpg",units = "mm", height = 190, width=190)
+ggsave(file = "manuscript/figures/appendix/fig_c1_undersampling.jpg",units = "mm", height = 190, width=190)
 
 ## D: cpt fit --------------------------------------------------------------
 
@@ -1282,9 +1264,10 @@ max_rates_p <- max_rates |>
        y = "Proportion of\nMaximizing Choices" ,
        color = "Better Average",
        shape = "") + 
-  theme_bw() + 
-  theme(strip.text.y = element_blank(), legend.position = "top") + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme +
+  theme(strip.text.y = element_blank(), 
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size=10)) 
 
 pp_acc_p <- pp_acc |> 
   filter(model=="summary") |> 
@@ -1297,14 +1280,14 @@ pp_acc_p <- pp_acc |>
   labs(x = "Switch Rate (Search Rule)" , 
        y = "Proportion of\nCorrect Predictions", 
        color = "Choice Consistency") + 
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
+  custom_theme
+  
 ppc_plot <- ggarrange(max_rates_p, pp_acc_p, nrow = 2, 
                       common.legend = TRUE, 
                       labels = "AUTO", 
-                      font.label = list(size = 22))
-ggsave("manuscript/figures/appendix/cpt_ppc_summary.jpg", plot=ppc_plot, units="mm" , width = 190, height = 190)
+                      font.label = list(size = 14))
+
+ggsave("manuscript/figures/appendix/fig_d1_cpt_ppc_summary.jpg", plot=ppc_plot, units="mm" , width = 190, height = 190)
 
 # roundwise
 
@@ -1322,9 +1305,10 @@ max_rates_p <- max_rates |>
        y = "Proportion of\nMaximizing Choices" ,
        color = "Better Average",
        shape = "") + 
-  theme_bw() + 
-  theme(strip.text.y = element_blank(), legend.position = "top") + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme +
+  theme(strip.text.y = element_blank(), 
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size=10)) 
 
 pp_acc_p <- pp_acc |> 
   filter(model=="roundwise") |> 
@@ -1337,14 +1321,13 @@ pp_acc_p <- pp_acc |>
   labs(x = "Switch Rate (Search Rule)" , 
        y = "Proportion of\nCorrect Predictions", 
        color = "Choice Consistency") + 
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 ppc_plot <- ggarrange(max_rates_p, pp_acc_p, nrow = 2, 
                       common.legend = TRUE, 
                       labels = "AUTO", 
-                      font.label = list(size = 22))
-ggsave("manuscript/figures/appendix/cpt_ppc_roundwise.jpg", plot=ppc_plot, units="mm" , width = 190, height = 190)
+                      font.label = list(size = 14))
+ggsave("manuscript/figures/appendix/fig_d2_cpt_ppc_roundwise.jpg", plot=ppc_plot, units="mm" , width = 190, height = 190)
 
 
 # supplements -------------------------------------------------------------
@@ -1385,8 +1368,7 @@ max_plot <- rates |>
        color = "Threshold\n(Stopping Rule)") +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 ggsave("manuscript/figures/supplements/supp1_maximization.jpg", plot=max_plot, units="mm", width = 190, height = 190)
 

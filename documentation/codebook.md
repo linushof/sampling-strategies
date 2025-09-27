@@ -40,4 +40,4 @@
 | `Rhat` | potential scale reduction factor |
 | `n_eff` | effective sample size |
 
-[^codebook-1]: The codebook for the `exp.txt` dataset of Wulff et al. (2018) can be retrieved from: [https://www.dirkwulff.org/#data)](https://www.dirkwulff.org/#data))
+[^codebook-1]: The codebook for the `exp.txt` dataset of Wulff et al. (2018) can be retrieved from: <https://github.com/dwulff/dwulff.github.io/blob/master/_data/WulffEtAl_TwoModes_Data.zip>)

@@ -8,6 +8,8 @@ label_theta <- function(string) {
   TeX(paste("$\\theta=$", string, sep = ""))
 }
 
+title_theta <- TeX(paste("Threshold", "$\\theta$", sep = " "))
+
 label_gamma <- function(string) {
   TeX(paste("Curvature", "$\\gamma$"))
 }
@@ -32,6 +34,8 @@ label_v <- function(string) {
 label_psi <- function(string) {
   TeX(paste("$\\psi=$", string, sep = ""))
 }
+
+title_psi <- TeX(paste("Switch Rate", "$\\psi$", sep = " "))
 
 # probability of high risky outcome
 label_rare <- function(string) {

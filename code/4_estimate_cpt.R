@@ -85,7 +85,7 @@ for (sim in 1:length(choices)){
     
     # fit model
     cpt_fit <- stan(
-      file = "code/models/CPT.stan", # use CPT_LL.stan to also extract the pointwise log-likelihood 
+      file = "code/models/CPT.stan", 
       init = inits,
       data = dat_stan,    
       chains = n_chains,           

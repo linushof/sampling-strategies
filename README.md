@@ -2,7 +2,7 @@
 
 Linus Hof [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-2257-2136), Veronika Zilker [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0002-9551-800X), and Thorsten Pachur [![ORCID iD](https://orcid.org/sites/default/files/images/orcid_16x16.png)](https://orcid.org/0000-0001-6391-4107).
 
-### Abstract
+## Abstract
 
 Hallmark phenomena of risky choice, such as risk aversion and deviations from expected value (EV) maximization, are commonly modeled with psychoeconomic curves (e.g., utility function, probability weighting function). 
 Yet these functions describe choices rather than the cognitive processes that generate them. 
@@ -16,7 +16,7 @@ Finally, an empirical analysis suggests that people combine switching behavior a
 Our results underscore the possible contribution of search processes to patterns in risky choice.
 
 
-### How to reproduce this project?
+## How to reproduce this project?
 
 To ensure full reproducibility, recreate the software setup using the following steps:
 

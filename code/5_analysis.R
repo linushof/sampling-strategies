@@ -591,9 +591,9 @@ max_plot <- rates |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(.5, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Proportion of Maximizing Choices",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   custom_theme
@@ -614,9 +614,9 @@ risk_plot <- rates |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Proportion of Choices\nof the Risky Option",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   geom_line(linewidth=1, alpha = .5) + 
   geom_point(size = 3) +
   custom_theme
@@ -656,9 +656,9 @@ gamma <- cpt_summary |>
     facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_gamma, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
     scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
     scale_y_continuous(limits =c(-.1, 2.1), breaks = seq(0,2, length.out = 3)) +
-    labs(x = "Switch Rate (Search Rule)", 
+    labs(x = title_psi, 
          y = "Estimate",
-         color = "Switch\nRate") +
+         color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
@@ -671,9 +671,9 @@ delta <- cpt_summary |>
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_delta, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
   scale_y_continuous(limits = c(-0.1, 5.1), breaks = seq(0, 5, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
+  labs(x = title_psi, 
        y = "Estimate", 
-       color = "Switch\nRate") +
+       color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
@@ -689,8 +689,8 @@ wf <- weights_summary %>%
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
   labs(x = "p (Sampled Relative Frequency)",
        y = "w(p)",
-       color = "Switch\nRate",
-       fill = "Switch\nRate") +
+       color = expression(psi),
+       fill = expression(psi)) +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
   custom_theme
@@ -709,9 +709,9 @@ gamma <- cpt_round |>
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_gamma, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits =c(-.1, 10.1), breaks = seq(0,10, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
+  labs(x = title_psi, 
        y = "Estimate",
-       color = "Switch\nRate") +
+       color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
@@ -724,9 +724,9 @@ delta <- cpt_round |>
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_delta, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1,1.1), breaks = seq(0,1, length.out = 3)) +
   scale_y_continuous(limits = c(-0.1, 5.1), breaks = seq(0, 5, length.out = 3)) +
-  labs(x = "Switch Rate (Search Rule)", 
+  labs(x = title_psi, 
        y = "Estimate", 
-       color = "Switch\nRate") +
+       color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width=.1) + 
   geom_point() +
   geom_line() +
@@ -742,8 +742,8 @@ wf <- weights_round %>%
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
   labs(x = "p (Sampled Relative Frequency)",
        y = "w(p)",
-       color = "Switch\nRate",
-       fill = "Switch\nRate") +
+       color = expression(psi),
+       fill = expression(psi)) +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
   custom_theme
@@ -780,9 +780,9 @@ alpha <- cpt_summary |>
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_alpha, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = "Switch Rate (Search Rule)" ,
+  labs(x = title_psi ,
        y = "Estimate",
-       color = "Switch\nRate") +
+       color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width = .1) +
   geom_point() +
   geom_line() +
@@ -800,8 +800,8 @@ vf <- values_summary |>
   scale_y_continuous(limits = c(-1, upper_range), breaks = seq(0, upper_range, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
-       color = "Switch\nRate" , 
-       fill = "Switch\nRate") +
+       color = expression(psi) , 
+       fill = expression(psi)) +
   geom_line() +
   geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
   custom_theme
@@ -823,9 +823,9 @@ alpha <- cpt_round |>
   facet_grid(parameter~theta, labeller = labeller(parameter=as_labeller(label_alpha, default = label_parsed),  theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0,1, length.out = 3)) + 
   scale_y_continuous(limits = c(-0.1, 2.1), breaks = seq(0,2, length.out = 3)) + 
-  labs(x = "Switch Rate (Search Rule)" ,
+  labs(x = title_psi ,
        y = "Estimate",
-       color = "Switch\nRate") +
+       color = expression(psi)) +
   geom_errorbar(aes(ymin=`2.5%`, ymax=`97.5%`), width = .1) +
   geom_point() +
   geom_line() +
@@ -843,8 +843,8 @@ vf <- values_round |>
   scale_y_continuous(limits = c(-1, upper_range), breaks = seq(0, upper_range, length.out = 3)) +
   labs(x = "Sampled Outcome",
        y = "Subjective Value",
-       color = "Switch\nRate" , 
-       fill = "Switch\nRate") +
+       color = expression(psi) , 
+       fill = expression(psi)) +
   geom_line() +
   geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
   custom_theme
@@ -869,9 +869,9 @@ risk_plot <- rates |>
   scale_color_scico(palette = "imola", end = .9) + 
   #scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Proportion of Choices\nOf the Risky Option",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   geom_line(linewidth = 1) + 
   geom_point(size=3) +
   custom_theme + 
@@ -904,10 +904,10 @@ median_n <- effort |>
   scale_shape_manual(values = 21:25, guide = guide_legend(reverse = TRUE)) + 
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   #scale_y_continuous(limits = c(.4, 1), breaks = seq(.5, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Median Sample Size",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)") +
+       fill = title_theta,
+       color = title_theta) +
   geom_line(linewidth=1) + 
   geom_point(size = 3) +
   geom_hline(yintercept = 14, color="gray", linewidth=1) +
@@ -928,8 +928,8 @@ density_n <- choices_main |>
   scale_color_scico(palette = "imola", end = .9) +
   labs(x = "Sample Size",
        y = "Density",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)") +
+       fill = title_theta,
+       color = title_theta) +
   custom_theme
 
 ggsave("manuscript/figures/appendix/fig_a2_effort_density.jpg", plot=density_n, units="mm" , width = 190, height = 190*.75)
@@ -990,9 +990,9 @@ choices_summary |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_y_continuous(limits = c(.5,1), breaks = seq(.5,1,.25)) + 
   scale_x_continuous(breaks = seq(0,1,.5)) + 
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Proportion of\nStarting Option Choices",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   custom_theme
   
 ggsave("manuscript/figures/appendix/fig_b2_initial_bias_choices.jpg", units = "mm", width = 140, height = 140*.75)
@@ -1015,9 +1015,9 @@ choices_summary |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_y_continuous(limits = c(-.1,1), breaks = c(0, 1, .5)) + 
   scale_x_continuous(limits = c(-.1,1.1), breaks = seq(0,1,.5)) + 
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Proportion of Choices Without\nSampling Both Risky Outcomes",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   custom_theme
 
 ggsave("manuscript/figures/appendix/fig_b3_initial_bias_sampled_probabilities.jpg", units = "mm", width = 190, height = 190*.50)
@@ -1040,9 +1040,9 @@ rates |>
   scale_color_scico(palette = "imola", end = .9) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "% Safe Choices",
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
   custom_theme
@@ -1157,7 +1157,7 @@ undersampling_plot <- undersampling |>
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, .5)) + 
   labs(x = "Probability",
        y = "Sampled Probability\nWithin Comparison Round", 
-       color = "Threshold\n(Stopping Rule)") +
+       color = title_theta) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
   scale_color_scico(palette = "imola", end = .8) + 
   custom_theme
@@ -1260,7 +1260,7 @@ max_rates_p <- max_rates |>
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_shape_manual(values = c(15, 19)) + 
   scale_color_scico_d(palette = "managua", begin = .1, end = .9) + 
-  labs(x = "Switch Rate (Search Rule)" ,
+  labs(x = title_psi ,
        y = "Proportion of\nMaximizing Choices" ,
        color = "Better Average",
        shape = "") + 
@@ -1277,7 +1277,7 @@ pp_acc_p <- pp_acc |>
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   geom_point(size = 3, shape = 18) +
   geom_line() +
-  labs(x = "Switch Rate (Search Rule)" , 
+  labs(x = title_psi , 
        y = "Proportion of\nCorrect Predictions", 
        color = "Choice Consistency") + 
   custom_theme
@@ -1301,7 +1301,7 @@ max_rates_p <- max_rates |>
   scale_y_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
   scale_shape_manual(values = c(15, 19)) + 
   scale_color_scico_d(palette = "managua", begin = .1, end = .9) + 
-  labs(x = "Switch Rate (Search Rule)" ,
+  labs(x = title_psi ,
        y = "Proportion of\nMaximizing Choices" ,
        color = "Better Average",
        shape = "") + 
@@ -1318,7 +1318,7 @@ pp_acc_p <- pp_acc |>
   facet_wrap(~theta, nrow = 1, labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) + 
   geom_point(size = 3, shape = 18) +
   geom_line() +
-  labs(x = "Switch Rate (Search Rule)" , 
+  labs(x = title_psi , 
        y = "Proportion of\nCorrect Predictions", 
        color = "Choice Consistency") + 
   custom_theme
@@ -1340,12 +1340,22 @@ in the supplementary materials. The analyses include all problem sets.'
 choices_S1 <- choices |> 
   bind_rows(.id="gamble") |>
   mutate(gamble = str_remove(gamble, "choices_(roundwise|summary)_")) |> 
-  filter(gamble != "RR2")
+  filter(gamble != "RR2") |> 
+  mutate(gamble = case_when(gamble=="RR" ~ "R--R" , 
+                            gamble=="SR_large" ~ "R--S (L)" ,
+                            gamble=="SR_small" ~ "R--S (S)") , 
+         o1_rare = case_when(o1_rare=="none" ~ "None" , 
+                             o1_rare=="attractive" ~ "Attr.",
+                             o1_rare=="unattractive" ~ "Unattr.")
+         ) 
 
 cpt_S1 <- cpt_estimates |> 
   bind_rows(.id="gamble") |>
   mutate(gamble = str_remove(gamble, "cpt_choices_(roundwise|summary)_")) |> 
-  filter(gamble != "RR2")
+  filter(gamble != "RR2") |> 
+  mutate(gamble = case_when(gamble=="RR" ~ "R--R" , 
+                            gamble=="SR_large" ~ "R--S (L)" ,
+                            gamble=="SR_small" ~ "R--S (S)")) 
 
 
 ### maximization ------------------------------------------------------------
@@ -1359,15 +1369,15 @@ rates <- choices_S1 |>
 
 max_plot <- rates |> 
   ggplot(aes(psi, rate_ev, group = theta, color = theta)) +
-  facet_grid(factor(o1_rare, levels=c("none", "attractive", "unattractive"))~gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) +
+  facet_grid(factor(o1_rare, levels=c("None", "Attr.", "Unattr."))~gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) +
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(.5, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
-       y = "EV Maximization Rate",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth = 1) + 
-  geom_point(size = 3) +
+  labs(x = title_psi,
+       y = "Proportion of Maximizing Choices",
+       color = title_theta) +
+  geom_line() + 
+  geom_point(size = 2) +
   custom_theme
 
 ggsave("manuscript/figures/supplements/supp1_maximization.jpg", plot=max_plot, units="mm", width = 190, height = 190)
@@ -1382,17 +1392,16 @@ rates <- choices_S1 |>
 
 risk_plot <- rates |> 
   ggplot(aes(psi, rate, group = theta, color = theta)) +
-  facet_grid(factor(o1_rare, levels=c("none", "attractive", "unattractive"))~gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) +
+  facet_grid(factor(o1_rare, levels=c("None", "Attr.", "Unattr."))~gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) +
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
-       y = "Risky Choice Rate",
-       color = "Threshold\n(Stopping Rule)") +
-  geom_line(linewidth=1, alpha = .5) + 
-  geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  labs(x = title_psi,
+       y = "Proportion of Choices\nof the Risky Option",
+       color = title_theta) +
+  geom_line(alpha = .5) + 
+  geom_point(size = 2) +
+  custom_theme
 
 ggsave(file = "manuscript/figures/supplements/supp1_risk.jpg", plot=risk_plot, units="mm", width = 190, height = 190)
 
@@ -1429,19 +1438,18 @@ wf <- weights_theta1 |>
   facet_grid(gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) + 
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "p (Sampled Probability)",
+  labs(x = "p (Sampled Relative Probability)",
        y = "w(p)",
-       color = "Switch Rate\n(Search Rule)" , 
-       fill = "Switch Rate\n(Search Rule)", 
-       linetype = "Threshold\n(Stopping Rule)") +
+       color = title_psi , 
+       fill = title_psi, 
+       linetype = title_theta) +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_ribbon(data=weights_theta2, aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_ribbon(data=weights_theta3, aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
   geom_line(data=weights_theta2) +
   geom_line(data=weights_theta3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
 ggsave(file = "manuscript/figures/supplements/supp1_weighting.jpg", plot=wf, units="mm", width = 190, height = 190)
 
@@ -1461,7 +1469,7 @@ max_n <- choices_S1 |>
             max_n = sum(max))
 
 # plot data
-base <- tibble(gamble=c("SR_small", "SR_large", "RR"), 
+base <- tibble(gamble=c("R--S (S)", "R--S (L)", "R--R"), 
                base=c(14,14,22)) |> 
   expand_grid(model=c("summary", "roundwise"))
 
@@ -1471,17 +1479,15 @@ effort_plot <- max_n |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_fill_scico(palette = "imola", end = .9) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi,
        y = "Median Sample Size",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)",  
-       shape = "Switch Rate\n(Search Rule)") +
+       fill = title_theta,
+       color = title_theta) +
   geom_line(linewidth=1) + 
   geom_point(size = 3) +
   geom_hline(data=base, aes(yintercept = base), color="gray", linetype="dashed", linewidth=1) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
-
+  custom_theme
+  
 ggsave(file = "manuscript/figures/supplements/supp1_effort.jpg", plot=effort_plot, units="mm", width = 190, height = 190)
 
 ## S2: gamble variations 2 -------------------------------------------------------------
@@ -1512,15 +1518,14 @@ max_plot <- rates |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(.5, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
-       y = "Maximization Rate",
-       color = "Threshold\n(Stopping Rule)") +
+  labs(x = title_psi,
+       y = "Proportion of Maximizing Choices",
+       color = title_theta) +
   geom_line(linewidth = 1) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave(file = 'manuscript/figures/supplements/supp2_maximization.png', plot=max_plot, units="mm", width = 190, height = 190*.75)
+ggsave(file = 'manuscript/figures/supplements/supp2_maximization.jpg', plot=max_plot, units="mm", width = 190, height = 190*.75)
 
 ### risk --------------------------------------------------------------------
 
@@ -1536,16 +1541,14 @@ risk_plot <- rates |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_x_continuous(limits = c(-.05, 1.05), breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
-       y = "Risky Choice Rate",
-       color = "Threshold\n(Stopping Rule)") +
+  labs(x = title_psi,
+       y = "Proportion of Choices\nof the Risky Option",
+       color = title_theta) +
   geom_line(linewidth=1, alpha = .5) + 
   geom_point(size = 3) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-
-ggsave(file = 'manuscript/figures/supplements/supp2_risk.png', plot=risk_plot, units="mm", width = 190, height = 190*.50)
+ggsave(file = 'manuscript/figures/supplements/supp2_risk.jpg', plot=risk_plot, units="mm", width = 190, height = 190*.50)
 
 ### cpt ---------------------------------------------------------------------
 
@@ -1570,8 +1573,7 @@ weights <- cpt_S2 |>
   )
 
 
-
-wf <- weights %>% 
+wf <- weights |>  
   mutate(parameter="Weighting Function") |> 
   ggplot(aes(p, w, group = psi, color = psi, fill = psi)) +
   scale_color_scico(palette = "tokyo", end = .8) +
@@ -1579,17 +1581,15 @@ wf <- weights %>%
   facet_grid(theta~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise")), labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
   scale_x_continuous(breaks = seq(0, 1, length.out = 3)) +
   scale_y_continuous(breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "p (Sampled Frequency)",
+  labs(x = "p (Sampled Relative Frequency)",
        y = "w(p)",
-       color = "Switch\nRate",
-       fill = "Switch\nRate") +
+       color = expression(psi),
+       fill = expression(psi)) +
   geom_ribbon(aes(ymin = w_low, ymax = w_high), alpha = 0.3, color = NA) + 
   geom_line() +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25),
-        panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave(file = 'manuscript/figures/supplements/supp2_weighting.png', plot=wf, units="mm", width = 190, height = 190*.75)
+ggsave(file = 'manuscript/figures/supplements/supp2_weighting.jpg', plot=wf, units="mm", width = 190, height = 190*.75)
 
 
 ### search effort -----------------------------------------------------------
@@ -1612,28 +1612,13 @@ effort_plot <- max_n |>
   scale_color_scico(palette = "imola", end = .9) + 
   scale_fill_scico(palette = "imola", end = .9) +
   scale_x_continuous(limits = c(-.1, 1.1), breaks = seq(0, 1, length.out = 3)) +
-  labs(x = "Switch Rate\n(Search Rule)",
+  labs(x = title_psi ,
        y = "Median Sample Size",
-       fill = "Threshold\n(Stopping Rule)",
-       color = "Threshold\n(Stopping Rule)",  
-       shape = "Switch Rate\n(Search Rule)") +
+       fill = title_theta,
+       color = title_theta) +
   geom_line(linewidth=1) + 
   geom_point(size = 3) +
   geom_hline(yintercept = 22, color="gray", linetype="dashed", linewidth=1) +
-  theme_bw() + 
-  theme(panel.grid.minor = element_line(linewidth = .25), panel.grid.major = element_line(linewidth = .25))
+  custom_theme
 
-ggsave('manuscript/figures/supplements/supp2_effort.png', plot=effort_plot, units="mm", width = 190, height = 190*.5)
-
-
-
-
-
-
-
-
-
-
-
-
-
+ggsave('manuscript/figures/supplements/supp2_effort.jpg', plot=effort_plot, units="mm", width = 190, height = 190*.5)

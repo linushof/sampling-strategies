@@ -1409,6 +1409,9 @@ ggsave(file = "manuscript/figures/supplements/supp1_risk.jpg", plot=risk_plot, u
 
 cpt_S1 <- cpt_S1 |> filter(!(model=="roundwise" & near(psi,1) & theta==1))
 
+
+#### weighting ---------------------------------------------------------------
+
 weights <- cpt_S1 |> 
   select(gamble, model, psi, theta, parameter, mean, `2.5%`, `97.5%`) |> 
   pivot_wider(names_from = parameter, values_from = c(mean, `2.5%`, `97.5%`)) |>  
@@ -1454,6 +1457,53 @@ wf <- weights_theta1 |>
 ggsave(file = "manuscript/figures/supplements/supp1_weighting.jpg", plot=wf, units="mm", width = 190, height = 190)
 
 
+#### value ---------------------------------------------------------------
+
+## value function
+upper_range <- 20
+values <- cpt_S1 |> 
+  select(gamble, model, psi, theta, parameter, mean, `2.5%`, `97.5%`) |> 
+  pivot_wider(names_from = parameter, values_from = c(mean, `2.5%`, `97.5%`)) |> 
+  select(gamble, model, psi, theta, 
+         alpha_mean = mean_alpha, 
+         alpha_low = `2.5%_alpha`, 
+         alpha_high = `97.5%_alpha`) |> 
+  expand_grid(x = seq(0, upper_range, .01)) |> # create vector of possible outcomes
+  mutate(v = x^alpha_mean ,
+         v_low = x^alpha_low , 
+         v_high = x^alpha_high
+  ) # compute subjective values on the basis of estimated parameters
+
+values_theta1 <- values |> filter(theta==1) |>  mutate(v_high = if_else(v_high > upper_range, upper_range, v_high )) 
+values_theta2 <- values |> filter(theta==2) |>  mutate(v_high = if_else(v_high > upper_range, upper_range, v_high )) 
+values_theta3 <- values |> filter(theta==3) |>  mutate(v_high = if_else(v_high > upper_range, upper_range, v_high )) 
+
+### value function 
+vf <- values_theta1 |> 
+  mutate(parameter="Value Function") |> 
+  ggplot(aes(x, v, group = psi, color = psi, fill = psi, linetype = as.factor(theta))) +
+  scale_color_scico(palette = "tokyo", end = .8) +
+  scale_fill_scico(palette = "tokyo", end = .8) +
+  facet_grid(gamble~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise"))) + 
+  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, upper_range), breaks = seq(0, upper_range, length.out = 3)) +
+  labs(x = "Sampled Outcome",
+       y = "Subjective Value",
+       color = expression(psi) , 
+       fill = expression(psi),
+       linetype=expression(theta)) +
+  geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
+  geom_ribbon(data=values_theta2, aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
+  geom_ribbon(data=values_theta3, aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
+  geom_line(linewidth=1) +
+  geom_line(data=values_theta2, linewidth=1) +
+  geom_line(data=values_theta3, linewidth=1) +
+  custom_theme
+
+ggsave(file = 'manuscript/figures/supplements/supp1_value.jpg', plot=vf, units="mm", width = 190, height = 190)
+
+
+
 ### search effort -------------------------------------------------------------
 
 # prepare data
@@ -1495,7 +1545,7 @@ ggsave(file = "manuscript/figures/supplements/supp1_effort.jpg", plot=effort_plo
 choices_S2 <- choices[str_detect(names(choices), "RR2")] |> 
   bind_rows()
 
-cpt_S2 <- cpt_estimates[str_detect(names(choices), "RR2")] |> 
+cpt_S2 <- cpt_estimates[str_detect(names(cpt_estimates), "RR2")] |> 
   bind_rows()
 
 ### maximization ------------------------------------------------------------
@@ -1554,6 +1604,9 @@ ggsave(file = 'manuscript/figures/supplements/supp2_risk.jpg', plot=risk_plot, u
 
 cpt_S2 <- cpt_S2 |> filter(!(model=="roundwise" & near(psi,1) & theta==1))
 
+
+#### weighting ---------------------------------------------------------------
+
 # compute decision weights based on cpt estimates
 weights <- cpt_S2 |> 
   select(model, psi, theta, parameter, mean, `2.5%`, `97.5%`) |> 
@@ -1589,7 +1642,47 @@ wf <- weights |>
   geom_line() +
   custom_theme
 
-ggsave(file = 'manuscript/figures/supplements/supp2_weighting.jpg', plot=wf, units="mm", width = 190, height = 190*.75)
+ggsave(file = 'manuscript/figures/supplements/supp2_weighting.jpg', plot=wf, units="mm", width = 190, height = 190)
+
+
+#### value -------------------------------------------------------------------
+
+## value function
+upper_range <- 20
+values <- cpt_S2 |> 
+  select(model, psi, theta, parameter, mean, `2.5%`, `97.5%`) |> 
+  pivot_wider(names_from = parameter, values_from = c(mean, `2.5%`, `97.5%`)) |> 
+  select(model, psi, theta, 
+         alpha_mean = mean_alpha, 
+         alpha_low = `2.5%_alpha`, 
+         alpha_high = `97.5%_alpha`) |> 
+  expand_grid(x = seq(0, upper_range, .01)) |> # create vector of possible outcomes
+  mutate(v = x^alpha_mean ,
+         v_low = x^alpha_low , 
+         v_high = x^alpha_high
+  ) # compute subjective values on the basis of estimated parameters
+
+values <- values |>  mutate(v_high = if_else(v_high > upper_range, upper_range, v_high )) 
+
+### value function 
+vf <- values |> 
+  mutate(parameter="Value Function") |> 
+  ggplot(aes(x, v, group = psi, color = psi, fill = psi, linetype = as.factor(theta))) +
+  scale_color_scico(palette = "tokyo", end = .8) +
+  scale_fill_scico(palette = "tokyo", end = .8) +
+  facet_grid(theta~factor(model, levels=c("summary", "roundwise"), labels=c("Summary", "Roundwise")), labeller = labeller(theta = as_labeller(label_theta, default = label_parsed))) +
+  scale_x_continuous(limits = c(-1, 21), breaks = seq(0, 20, length.out = 3)) +
+  scale_y_continuous(limits = c(-1, upper_range), breaks = seq(0, upper_range, length.out = 3)) +
+  labs(x = "Sampled Outcome",
+       y = "Subjective Value",
+       color = expression(psi) , 
+       fill = expression(psi),
+       linetype=expression(theta)) +
+  geom_ribbon(aes(ymin = v_low, ymax = v_high), alpha = 0.3, color = NA) + 
+  geom_line(linewidth=1) +
+  custom_theme
+
+ggsave(file = 'manuscript/figures/supplements/supp2_value.jpg', plot=vf, units="mm", width = 190, height = 190)
 
 
 ### search effort -----------------------------------------------------------
